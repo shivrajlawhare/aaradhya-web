@@ -3,7 +3,13 @@ node_modules/
 
 # Build output
 dist/
+dist-ssr/
 *.tsbuildinfo
+*.local
+
+# Vite cache
+.vite/
+vite.config.*.timestamp-*
 
 # Environment — real values stay local; .env.example is tracked
 .env
@@ -12,6 +18,9 @@ dist/
 
 # Test / coverage
 coverage/
+
+# Lint cache (no lint config yet, but harmless to pre-ignore)
+.eslintcache
 
 # Logs
 *.log
