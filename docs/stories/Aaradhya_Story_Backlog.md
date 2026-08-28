@@ -132,6 +132,26 @@ Referenced by short name in each story's **Tokens** line.
 **UI:** User Management screen — table + "New user" form (name, username, password, role dropdown), row-level deactivate toggle and role dropdown.
 **Tokens:** `surface`, `line` (table rows), `text`, `text-soft`, `status-tentative`/`status-completed` tints repurposed as active/inactive indicators, `type-title-l`, `type-label-s` (column headers), `radius-md` (cards).
 **Edge cases:** Deactivating the account that is currently logged in and viewing this exact screen; role list must exactly match the four SRS roles, no free text.
+**Decisions (v1):**
+- Route guard is a reusable `<RequireRole roles={[...]}>` (`src/components/ui/`):
+  no session → `/login`; wrong role → `/dashboard`. Neither branch renders the
+  guarded screen, even briefly.
+- Self-deactivation while viewing this screen (the flagged edge case) is
+  handled generically, not with page-specific logic: a global
+  `handleAuthError` wired into `QueryClient`'s `queryCache`/`mutationCache`
+  (`src/api/handle-auth-error.ts`) clears the session and hard-redirects to
+  `/login` on any 401 from a call that started with a session — covers this
+  screen and every future authenticated page the same way, for free.
+- Token/role dropdowns (both the "New user" form and the row-level control)
+  render only `Object.values(Role)` — never free text, satisfying the "must
+  match the four SRS roles" edge case by construction.
+- `status-tentative`/`status-completed` tints → active/inactive is one
+  reasonable reading of an ambiguous Tokens line (active = tentative's warm
+  amber = "currently live"; inactive = completed's muted grey = "done").
+  Flagged in code for easy correction if that's not the intended mapping.
+- The contract mirror (`src/contract/index.ts`) now also duplicates
+  aaradhya-api's `createUser`/`listUsers`/`updateUser` — same "local until
+  @aaradhya/contracts is settled" caveat as STORY-004, growing.
 
 ---
 

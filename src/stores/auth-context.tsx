@@ -22,16 +22,18 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const STORAGE_KEY = 'aaradhya.session';
+// Exported so src/api/client.ts can read the current token for outgoing
+// requests without a second parsing implementation.
+export const SESSION_STORAGE_KEY = 'aaradhya.session';
 
 const storedSessionSchema = z.object({
   token: z.string(),
   user: z.object({ id: z.string(), name: z.string(), role: z.nativeEnum(Role) }),
 });
 
-const readStoredSession = (): AuthState => {
+export const readStoredSession = (): AuthState => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(SESSION_STORAGE_KEY);
     if (!raw) {
       return { token: null, user: null };
     }
@@ -50,11 +52,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     () => ({
       ...state,
       login: (token: string, user: AuthUser) => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ token, user }));
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ token, user }));
         setState({ token, user });
       },
       logout: () => {
-        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(SESSION_STORAGE_KEY);
         setState({ token: null, user: null });
       },
     }),

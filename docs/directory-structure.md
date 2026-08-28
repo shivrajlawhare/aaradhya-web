@@ -27,7 +27,8 @@ aaradhya-web/
 ├── tsconfig.json
 ├── src/
 │   ├── api/
-│   │   └── client.ts              # @ts-rest/react-query client built from the contract
+│   │   ├── client.ts              # @ts-rest/react-query client built from the contract
+│   │   └── handle-auth-error.ts   # QueryClient-wide 401 handler — forces logout+redirect
 │   ├── contract/                  # local, hand-kept mirror of aaradhya-api's contract until @aaradhya/contracts is settled — only routes this app calls
 │   ├── components/
 │   │   └── ui/                    # shared/common components — check here before building a new one
