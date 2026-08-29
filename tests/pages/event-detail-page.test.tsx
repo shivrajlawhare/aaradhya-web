@@ -78,6 +78,25 @@ const computePaymentResponse = (
   };
 };
 
+interface MockDocumentsChecklist {
+  aadharCard: boolean;
+  panCard: boolean;
+  leavingBirthCertificate: boolean;
+  rationCard: boolean;
+  passportPhotos: boolean;
+  weddingCard: boolean;
+}
+
+const makeDocumentsChecklist = (overrides: Partial<MockDocumentsChecklist> = {}): MockDocumentsChecklist => ({
+  aadharCard: false,
+  panCard: false,
+  leavingBirthCertificate: false,
+  rationCard: false,
+  passportPhotos: false,
+  weddingCard: false,
+  ...overrides,
+});
+
 interface MockEvent {
   id: string;
   eventId: string;
@@ -87,6 +106,7 @@ interface MockEvent {
   clientContacts: MockClientContact[];
   accommodation: MockAccommodation;
   payment: MockPayment;
+  documentsChecklist: MockDocumentsChecklist;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -159,6 +179,7 @@ const makeEvent = (overrides: Partial<MockEvent> = {}): MockEvent => ({
   ],
   accommodation: makeAccommodation(),
   payment: makePayment(),
+  documentsChecklist: makeDocumentsChecklist(),
   createdBy: 'manager-1',
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
@@ -190,6 +211,7 @@ const mockEventDetailApi = ({
   const patchRequests: Record<string, unknown>[] = [];
   const accommodationPatchRequests: Record<string, unknown>[] = [];
   const paymentPatchRequests: Record<string, unknown>[] = [];
+  const documentsChecklistPatchRequests: Record<string, unknown>[] = [];
 
   vi.stubGlobal(
     'fetch',
@@ -223,6 +245,12 @@ const mockEventDetailApi = ({
         currentEvent = { ...currentEvent, payment: computePaymentResponse(body, currentEvent.payment) };
         return jsonResponse(200, currentEvent.payment);
       }
+      if (method === 'PATCH' && currentEvent && url.endsWith(`/events/${currentEvent.id}/documents`)) {
+        const body: Partial<MockDocumentsChecklist> = JSON.parse(String(init?.body));
+        documentsChecklistPatchRequests.push(body);
+        currentEvent = { ...currentEvent, documentsChecklist: { ...currentEvent.documentsChecklist, ...body } };
+        return jsonResponse(200, currentEvent.documentsChecklist);
+      }
       if (method === 'PATCH' && currentEvent && url.endsWith(`/events/${currentEvent.id}`)) {
         const body: Record<string, unknown> = JSON.parse(String(init?.body));
         patchRequests.push(body);
@@ -243,6 +271,7 @@ const mockEventDetailApi = ({
     patchRequests,
     accommodationPatchRequests,
     paymentPatchRequests,
+    documentsChecklistPatchRequests,
     getCurrentEvent: () => currentEvent,
   };
 };
@@ -526,5 +555,49 @@ describe('EventDetailPage', () => {
     fireEvent.click(await screen.findByRole('tab', { name: 'Payments' }));
 
     expect(await screen.findByText('-10000')).toBeInTheDocument();
+  });
+
+  it('does not render the Documents tab in the DOM at all for a non-EventManager session', async () => {
+    seedSession('Reception');
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    await screen.findByText('ARD-EVT-2026-001');
+    expect(screen.queryByRole('tab', { name: 'Documents' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Aadhar Card')).not.toBeInTheDocument();
+  });
+
+  it('renders exactly the six fixed Document Checklist items, in a stable order, with no add-item control', async () => {
+    seedSession();
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Documents' }));
+
+    const labels = ['Aadhar Card', 'PAN Card', 'Leaving/Birth Certificate', 'Ration Card', 'Passport Photos', 'Wedding Card'];
+    for (const label of labels) {
+      expect(await screen.findByText(label)).toBeInTheDocument();
+    }
+    expect(screen.getAllByRole('switch')).toHaveLength(6);
+    expect(screen.queryByRole('button', { name: /add item/i })).not.toBeInTheDocument();
+  });
+
+  it('toggling a Document Checklist item persists immediately and survives a reload', async () => {
+    seedSession();
+    const { documentsChecklistPatchRequests } = mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Documents' }));
+    fireEvent.click(await screen.findByLabelText('Aadhar Card'));
+
+    await waitFor(() => expect(documentsChecklistPatchRequests).toHaveLength(1));
+    expect(documentsChecklistPatchRequests[0]).toEqual({ aadharCard: true });
+    expect(screen.getByLabelText('Aadhar Card')).toBeChecked();
+
+    // Simulate a reload: re-render against whatever the mock server now
+    // holds as current state, exactly like a fresh GET /events/:id would.
+    fireEvent.click(await screen.findByRole('tab', { name: 'Overview' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Documents' }));
+    expect(await screen.findByLabelText('Aadhar Card')).toBeChecked();
   });
 });

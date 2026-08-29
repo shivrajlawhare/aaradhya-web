@@ -7,12 +7,13 @@ import StatusChip from '../../components/ui/status-chip';
 import { Role } from '../../contract';
 import { EVENT_LIST_PATH } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
+import DocumentsTab from './documents-tab';
 import OverviewTab from './overview-tab';
 import PaymentsTab from './payments-tab';
 import RoomsTab from './rooms-tab';
 import { headerStyles, pageStyles, tabPanelStyles } from './event-detail-page.styles';
 
-type DetailTab = 'overview' | 'rooms' | 'payments' | 'activity';
+type DetailTab = 'overview' | 'rooms' | 'payments' | 'documents' | 'activity';
 
 const EventDetailPage = () => {
   const { id } = useParams();
@@ -40,7 +41,13 @@ const EventDetailPage = () => {
   // own named flag (not reused from canSeeActivity) even though both
   // currently evaluate the same way — they're separate business rules that
   // happen to coincide today, not one rule.
-  // Rooms, unlike Activity/Payments, is NOT EventManager-only to view —
+  // Documents is EventManager-only for the same "not listed for any other
+  // role" reasoning as Payments: the SRS's §3.1 names the Documents
+  // Checklist under the Event Manager's full-access scope, but never once
+  // under F&B Head/Housekeeping/Reception's own "Sees:" lists (§3.2-3.4).
+  // Also its own named flag, not reused from canSeePayments — same
+  // "coincide today, not one rule" reasoning.
+  // Rooms, unlike Activity/Payments/Documents, is NOT EventManager-only to view —
   // GET /events/:id (which now includes accommodation, STORY-020) has no
   // role restriction, and SRS §3.4 explicitly lists "rooms booked" as
   // something Reception sees. canEdit still gates the actual editing
@@ -48,6 +55,7 @@ const EventDetailPage = () => {
   // Contacts.
   const canSeeActivity = user?.role === Role.EventManager;
   const canSeePayments = user?.role === Role.EventManager;
+  const canSeeDocuments = user?.role === Role.EventManager;
   const canEdit = user?.role === Role.EventManager;
 
   let content: ReactNode;
@@ -77,6 +85,8 @@ const EventDetailPage = () => {
       tabPanel = <ActivityTab entityType="Event" entityId={event.id} />;
     } else if (activeTab === 'payments' && canSeePayments) {
       tabPanel = <PaymentsTab key={event.id} event={event} onEventChanged={() => eventQuery.refetch()} />;
+    } else if (activeTab === 'documents' && canSeeDocuments) {
+      tabPanel = <DocumentsTab key={event.id} event={event} onEventChanged={() => eventQuery.refetch()} />;
     } else if (activeTab === 'rooms') {
       tabPanel = (
         <RoomsTab key={event.id} event={event} canEdit={canEdit} onEventChanged={() => eventQuery.refetch()} />
@@ -105,6 +115,7 @@ const EventDetailPage = () => {
           <Tab label="Overview" value="overview" />
           <Tab label="Rooms" value="rooms" />
           {canSeePayments && <Tab label="Payments" value="payments" />}
+          {canSeeDocuments && <Tab label="Documents" value="documents" />}
           {canSeeActivity && <Tab label="Activity" value="activity" />}
         </Tabs>
         <Box sx={tabPanelStyles}>{tabPanel}</Box>

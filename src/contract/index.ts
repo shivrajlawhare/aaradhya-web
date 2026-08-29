@@ -11,7 +11,8 @@ const c = initContract();
  * in sync by hand with the backend contract for every route this app calls;
  * only routes this app actually consumes are mirrored (currently: login,
  * createUser, listUsers, updateUser, listChangeLog, createEvent, listEvents,
- * getEvent, updateEvent, updateEventAccommodation, updateEventPayment).
+ * getEvent, updateEvent, updateEventAccommodation, updateEventPayment,
+ * updateDocumentsChecklist).
  */
 export enum Role {
   EventManager = 'EventManager',
@@ -206,11 +207,48 @@ export const paymentResultSchema = z.object({
   balance: z.number(),
 });
 
+// The six fixed Document Checklist item keys (STORY-024) — a server-defined
+// constant on the backend; mirrored here as a literal array (not derived
+// from documentsChecklistResultSchema's own keys) since this file has no
+// shared-package way to introspect a zod object's key list without an `as`
+// cast, and this is the one place a stable render order for the tab's
+// toggles is defined.
+export const DOCUMENT_CHECKLIST_ITEM_KEYS = [
+  'aadharCard',
+  'panCard',
+  'leavingBirthCertificate',
+  'rationCard',
+  'passportPhotos',
+  'weddingCard',
+] as const;
+
+export const updateDocumentsChecklistBodySchema = z.object({
+  aadharCard: z.boolean().optional(),
+  panCard: z.boolean().optional(),
+  leavingBirthCertificate: z.boolean().optional(),
+  rationCard: z.boolean().optional(),
+  passportPhotos: z.boolean().optional(),
+  weddingCard: z.boolean().optional(),
+});
+
+// Every item always present, always a boolean — STORY-024's "always
+// instantiated with false defaults" shape, not accommodation's "may be
+// entirely absent" shape.
+export const documentsChecklistResultSchema = z.object({
+  aadharCard: z.boolean(),
+  panCard: z.boolean(),
+  leavingBirthCertificate: z.boolean(),
+  rationCard: z.boolean(),
+  passportPhotos: z.boolean(),
+  weddingCard: z.boolean(),
+});
+
 // The public Event shape. createdAt/updatedAt are wire-format strings, same
 // reasoning as userResultSchema above. accommodation added STORY-020,
-// payment added STORY-023 — GET /events/:id returned neither until the
-// screen that needed to read current state on first render actually landed
-// (see aaradhya-api's STORY-020/STORY-023 Decisions for why these live on
+// payment added STORY-023, documentsChecklist added STORY-025 — GET
+// /events/:id returned none of them until the screen that needed to read
+// current state on first render actually landed (see aaradhya-api's
+// STORY-020/STORY-023/STORY-025 Decisions for why these live on
 // eventResultSchema and not a dedicated GET each).
 export const eventResultSchema = z.object({
   id: z.string(),
@@ -221,6 +259,7 @@ export const eventResultSchema = z.object({
   clientContacts: z.array(clientContactSchema),
   accommodation: accommodationResultSchema,
   payment: paymentResultSchema,
+  documentsChecklist: documentsChecklistResultSchema,
   createdBy: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -336,5 +375,16 @@ export const contract = c.router({
       404: apiErrorSchema,
     },
     summary: "Edit an Event's Payment Record (Event Manager only)",
+  },
+  updateDocumentsChecklist: {
+    method: 'PATCH',
+    path: '/events/:id/documents',
+    pathParams: eventIdParamsSchema,
+    body: updateDocumentsChecklistBodySchema,
+    responses: {
+      200: documentsChecklistResultSchema,
+      404: apiErrorSchema,
+    },
+    summary: "Toggle items on an Event's Documents Checklist (Event Manager only)",
   },
 });
