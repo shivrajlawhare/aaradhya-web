@@ -10,7 +10,7 @@ const c = initContract();
  * docs/directory-structure.md. Until it's settled, this file has to be kept
  * in sync by hand with the backend contract for every route this app calls;
  * only routes this app actually consumes are mirrored (currently: login,
- * createUser, listUsers, updateUser, listChangeLog).
+ * createUser, listUsers, updateUser, listChangeLog, createEvent).
  */
 export enum Role {
   EventManager = 'EventManager',
@@ -94,6 +94,51 @@ export const changeLogEntryResultSchema = z.object({
   timestamp: z.string(),
 });
 
+// SRS §5.1 FR-EVT-6 — the only four states an Event can be in.
+export enum EventStatus {
+  Tentative = 'Tentative',
+  Confirmed = 'Confirmed',
+  Completed = 'Completed',
+  Cancelled = 'Cancelled',
+}
+
+// SRS §5.3 — the default rows a Client Contact can be, plus a free-form one.
+export enum ClientContactRole {
+  Bride = 'Bride',
+  Groom = 'Groom',
+  POC = 'POC',
+  Custom = 'Custom',
+}
+
+export const CLIENT_CONTACT_ROLE_OPTIONS: ClientContactRole[] = Object.values(ClientContactRole);
+
+const clientContactSchema = z.object({
+  name: z.string().trim().min(1),
+  contactNumber: z.string().trim().min(1),
+  role: z.nativeEnum(ClientContactRole),
+});
+
+export const createEventBodySchema = z.object({
+  eventFamilyType: z.string().trim().min(1),
+  status: z.nativeEnum(EventStatus).optional(),
+  eventManager: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid event_manager id.'),
+  clientContacts: z.array(clientContactSchema).min(1),
+});
+
+// The public Event shape. createdAt/updatedAt are wire-format strings, same
+// reasoning as userResultSchema above.
+export const eventResultSchema = z.object({
+  id: z.string(),
+  eventId: z.string(),
+  eventFamilyType: z.string(),
+  status: z.nativeEnum(EventStatus),
+  eventManager: z.string(),
+  clientContacts: z.array(clientContactSchema),
+  createdBy: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
 export const contract = c.router({
   login: {
     method: 'POST',
@@ -142,5 +187,15 @@ export const contract = c.router({
       200: z.array(changeLogEntryResultSchema),
     },
     summary: 'List Change Log Entries for one entity (Event Manager only)',
+  },
+  createEvent: {
+    method: 'POST',
+    path: '/events',
+    body: createEventBodySchema,
+    responses: {
+      201: eventResultSchema,
+      400: apiErrorSchema,
+    },
+    summary: 'Create an Event (Event Manager only)',
   },
 });

@@ -1,7 +1,7 @@
 import { Box, Link, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { Role } from '../../contract';
-import { USER_MANAGEMENT_PATH } from '../../routes';
+import { EVENT_CREATE_PATH, USER_MANAGEMENT_PATH } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
 import { pageStyles } from './dashboard-placeholder-page.styles';
 
@@ -26,6 +26,13 @@ const DashboardPlaceholderPage = () => {
         <Typography variant="bodyM">
           <Link component={RouterLink} to={USER_MANAGEMENT_PATH}>
             User Management
+          </Link>
+        </Typography>
+      )}
+      {user?.role === Role.EventManager && (
+        <Typography variant="bodyM">
+          <Link component={RouterLink} to={EVENT_CREATE_PATH}>
+            New Event
           </Link>
         </Typography>
       )}
