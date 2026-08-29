@@ -10,7 +10,7 @@ const c = initContract();
  * docs/directory-structure.md. Until it's settled, this file has to be kept
  * in sync by hand with the backend contract for every route this app calls;
  * only routes this app actually consumes are mirrored (currently: login,
- * createUser, listUsers, updateUser, listChangeLog, createEvent).
+ * createUser, listUsers, updateUser, listChangeLog, createEvent, listEvents).
  */
 export enum Role {
   EventManager = 'EventManager',
@@ -197,5 +197,13 @@ export const contract = c.router({
       400: apiErrorSchema,
     },
     summary: 'Create an Event (Event Manager only)',
+  },
+  listEvents: {
+    method: 'GET',
+    path: '/events',
+    responses: {
+      200: z.array(eventResultSchema),
+    },
+    summary: 'List all Events (any authenticated caller)',
   },
 });

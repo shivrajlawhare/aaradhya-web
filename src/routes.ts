@@ -3,6 +3,7 @@
 export const LOGIN_PATH = '/login';
 export const DASHBOARD_PATH = '/dashboard';
 export const USER_MANAGEMENT_PATH = '/users';
+export const EVENT_LIST_PATH = '/events';
 export const EVENT_CREATE_PATH = '/events/new';
 // STORY-017 hasn't landed yet — this is the URL a successful Event creation
 // navigates to. EVENT_DETAIL_PATH_PATTERN is the <Route path> registered

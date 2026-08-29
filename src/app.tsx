@@ -5,11 +5,13 @@ import LoginPage from './pages/login/login-page';
 import DashboardPlaceholderPage from './pages/dashboard-placeholder/dashboard-placeholder-page';
 import EventCreationPage from './pages/event-creation/event-creation-page';
 import EventDetailPlaceholderPage from './pages/event-detail-placeholder/event-detail-placeholder-page';
+import EventListPage from './pages/event-list/event-list-page';
 import UserManagementPage from './pages/user-management/user-management-page';
 import {
   DASHBOARD_PATH,
   EVENT_CREATE_PATH,
   EVENT_DETAIL_PATH_PATTERN,
+  EVENT_LIST_PATH,
   LOGIN_PATH,
   USER_MANAGEMENT_PATH,
 } from './routes';
@@ -28,6 +30,9 @@ const App = () => {
           </RequireRole>
         }
       />
+      {/* No RequireRole — GET /events (STORY-013) has no role restriction;
+          every authenticated caller sees the same unfiltered list. */}
+      <Route path={EVENT_LIST_PATH} element={<EventListPage />} />
       <Route
         path={EVENT_CREATE_PATH}
         element={
