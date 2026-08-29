@@ -8,9 +8,10 @@ import { Role } from '../../contract';
 import { EVENT_LIST_PATH } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
 import OverviewTab from './overview-tab';
+import RoomsTab from './rooms-tab';
 import { headerStyles, pageStyles, tabPanelStyles } from './event-detail-page.styles';
 
-type DetailTab = 'overview' | 'activity';
+type DetailTab = 'overview' | 'rooms' | 'activity';
 
 const EventDetailPage = () => {
   const { id } = useParams();
@@ -30,6 +31,11 @@ const EventDetailPage = () => {
   // Activity is EventManager-only — re-checking STORY-010's flagged item:
   // GET /change-log itself is EventManager-only on the backend, so showing
   // this tab to anyone else would just render a 403, not real log entries.
+  // Rooms, unlike Activity, is NOT EventManager-only to view — GET
+  // /events/:id (which now includes accommodation, STORY-020) has no role
+  // restriction, and SRS §3.4 explicitly lists "rooms booked" as something
+  // Reception sees. canEdit still gates the actual editing controls,
+  // exactly like Overview already does for status/Client Contacts.
   const canSeeActivity = user?.role === Role.EventManager;
   const canEdit = user?.role === Role.EventManager;
 
@@ -58,6 +64,10 @@ const EventDetailPage = () => {
     let tabPanel: ReactNode;
     if (activeTab === 'activity' && canSeeActivity) {
       tabPanel = <ActivityTab entityType="Event" entityId={event.id} />;
+    } else if (activeTab === 'rooms') {
+      tabPanel = (
+        <RoomsTab key={event.id} event={event} canEdit={canEdit} onEventChanged={() => eventQuery.refetch()} />
+      );
     } else {
       tabPanel = (
         <OverviewTab
@@ -80,6 +90,7 @@ const EventDetailPage = () => {
         </Box>
         <Tabs value={activeTab} onChange={(_changeEvent, value: DetailTab) => setActiveTab(value)}>
           <Tab label="Overview" value="overview" />
+          <Tab label="Rooms" value="rooms" />
           {canSeeActivity && <Tab label="Activity" value="activity" />}
         </Tabs>
         <Box sx={tabPanelStyles}>{tabPanel}</Box>

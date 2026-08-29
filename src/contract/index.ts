@@ -11,7 +11,7 @@ const c = initContract();
  * in sync by hand with the backend contract for every route this app calls;
  * only routes this app actually consumes are mirrored (currently: login,
  * createUser, listUsers, updateUser, listChangeLog, createEvent, listEvents,
- * getEvent, updateEvent).
+ * getEvent, updateEvent, updateEventAccommodation).
  */
 export enum Role {
   EventManager = 'EventManager',
@@ -143,8 +143,51 @@ export const updateEventBodySchema = z.object({
   clientContacts: z.array(clientContactSchema).min(1).optional(),
 });
 
+// Exported for the same reason as clientContactSchema — one place a Room
+// Line's input shape is defined, so the Rooms tab form derives its row type
+// from here instead of a hand-declared duplicate.
+export const roomLineSchema = z.object({
+  roomType: z.string().trim().min(1),
+  occupancy: z.number().min(0),
+  tariff: z.number().min(0),
+  // A no_of_rooms of 0 is a valid placeholder row (STORY-018's decision,
+  // mirrored here) — min(0), not min(1).
+  noOfRooms: z.number().min(0),
+});
+
+// Every field optional (PATCH semantics) — a caller sends only what
+// changed. checkIn/checkOut are plain strings here, not coerced dates: the
+// Rooms tab never constructs a JS Date at all (native <input type="date">
+// values are already 'YYYY-MM-DD' strings), so there's nothing to coerce.
+export const updateAccommodationBodySchema = z.object({
+  checkIn: z.string().optional(),
+  checkOut: z.string().optional(),
+  roomLines: z.array(roomLineSchema).optional(),
+});
+
+const roomLineResultSchema = roomLineSchema.extend({
+  // Derived (STORY-018) — never accepted as input, always present on output.
+  totalInclGst: z.number(),
+});
+
+// checkIn/checkOut/totalDays are nullable, not just absent — an Event can
+// genuinely have no accommodation entered yet. Wire-format strings, same
+// reasoning as every other date field in this file.
+export const accommodationResultSchema = z.object({
+  checkIn: z.string().nullable(),
+  checkOut: z.string().nullable(),
+  totalDays: z.number().nullable(),
+  roomLines: z.array(roomLineResultSchema),
+  totalOccupancy: z.number(),
+  totalCharges: z.number(),
+});
+
 // The public Event shape. createdAt/updatedAt are wire-format strings, same
-// reasoning as userResultSchema above.
+// reasoning as userResultSchema above. accommodation added STORY-020 —
+// GET /events/:id never returned it until the Rooms tab needed a way to
+// read the current Accommodation Block on first render (see aaradhya-api's
+// STORY-020 Decisions for why this lives on eventResultSchema and not a
+// dedicated GET).
 export const eventResultSchema = z.object({
   id: z.string(),
   eventId: z.string(),
@@ -152,6 +195,7 @@ export const eventResultSchema = z.object({
   status: z.nativeEnum(EventStatus),
   eventManager: z.string(),
   clientContacts: z.array(clientContactSchema),
+  accommodation: accommodationResultSchema,
   createdBy: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -245,5 +289,16 @@ export const contract = c.router({
       404: apiErrorSchema,
     },
     summary: 'Edit core fields and/or Client Contacts on an Event (Event Manager only)',
+  },
+  updateEventAccommodation: {
+    method: 'PATCH',
+    path: '/events/:id/accommodation',
+    pathParams: eventIdParamsSchema,
+    body: updateAccommodationBodySchema,
+    responses: {
+      200: accommodationResultSchema,
+      404: apiErrorSchema,
+    },
+    summary: "Edit an Event's Accommodation Block (Event Manager only)",
   },
 });
