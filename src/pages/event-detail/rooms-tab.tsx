@@ -4,6 +4,7 @@ import { Alert, Button, Stack, TextField, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import { roomLineSchema, type eventResultSchema } from '../../contract';
+import { toDateInputValue } from './date-input';
 import RoomLineRows from './room-line-rows';
 import {
   dateFieldsStyles,
@@ -22,10 +23,6 @@ export interface AccommodationFormValues {
   checkOut: string;
   roomLines: RoomLineFormValue[];
 }
-
-// Native <input type="date"> needs exactly 'YYYY-MM-DD' — the API returns a
-// full ISO timestamp (or null when nothing's been entered yet).
-const toDateInputValue = (isoString: string | null): string => (isoString ? isoString.slice(0, 10) : '');
 
 const toFormRoomLines = (roomLines: AccommodationResult['roomLines']): RoomLineFormValue[] =>
   roomLines.map(({ roomType, occupancy, tariff, noOfRooms }) => ({ roomType, occupancy, tariff, noOfRooms }));

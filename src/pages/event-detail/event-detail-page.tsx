@@ -8,10 +8,11 @@ import { Role } from '../../contract';
 import { EVENT_LIST_PATH } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
 import OverviewTab from './overview-tab';
+import PaymentsTab from './payments-tab';
 import RoomsTab from './rooms-tab';
 import { headerStyles, pageStyles, tabPanelStyles } from './event-detail-page.styles';
 
-type DetailTab = 'overview' | 'rooms' | 'activity';
+type DetailTab = 'overview' | 'rooms' | 'payments' | 'activity';
 
 const EventDetailPage = () => {
   const { id } = useParams();
@@ -31,12 +32,22 @@ const EventDetailPage = () => {
   // Activity is EventManager-only — re-checking STORY-010's flagged item:
   // GET /change-log itself is EventManager-only on the backend, so showing
   // this tab to anyone else would just render a 403, not real log entries.
-  // Rooms, unlike Activity, is NOT EventManager-only to view — GET
-  // /events/:id (which now includes accommodation, STORY-020) has no role
-  // restriction, and SRS §3.4 explicitly lists "rooms booked" as something
-  // Reception sees. canEdit still gates the actual editing controls,
-  // exactly like Overview already does for status/Client Contacts.
+  // Payments is EventManager-only too, but for a different reason: the SRS
+  // states Payment Record visibility as "Event Manager only" outright
+  // (§4.4), and separately states Reception explicitly does not see
+  // payment data (§3.4) — this story's own AC requires the tab not be in
+  // the DOM at all for anyone else, not just visually hidden. Kept as its
+  // own named flag (not reused from canSeeActivity) even though both
+  // currently evaluate the same way — they're separate business rules that
+  // happen to coincide today, not one rule.
+  // Rooms, unlike Activity/Payments, is NOT EventManager-only to view —
+  // GET /events/:id (which now includes accommodation, STORY-020) has no
+  // role restriction, and SRS §3.4 explicitly lists "rooms booked" as
+  // something Reception sees. canEdit still gates the actual editing
+  // controls, exactly like Overview already does for status/Client
+  // Contacts.
   const canSeeActivity = user?.role === Role.EventManager;
+  const canSeePayments = user?.role === Role.EventManager;
   const canEdit = user?.role === Role.EventManager;
 
   let content: ReactNode;
@@ -64,6 +75,8 @@ const EventDetailPage = () => {
     let tabPanel: ReactNode;
     if (activeTab === 'activity' && canSeeActivity) {
       tabPanel = <ActivityTab entityType="Event" entityId={event.id} />;
+    } else if (activeTab === 'payments' && canSeePayments) {
+      tabPanel = <PaymentsTab key={event.id} event={event} onEventChanged={() => eventQuery.refetch()} />;
     } else if (activeTab === 'rooms') {
       tabPanel = (
         <RoomsTab key={event.id} event={event} canEdit={canEdit} onEventChanged={() => eventQuery.refetch()} />
@@ -91,6 +104,7 @@ const EventDetailPage = () => {
         <Tabs value={activeTab} onChange={(_changeEvent, value: DetailTab) => setActiveTab(value)}>
           <Tab label="Overview" value="overview" />
           <Tab label="Rooms" value="rooms" />
+          {canSeePayments && <Tab label="Payments" value="payments" />}
           {canSeeActivity && <Tab label="Activity" value="activity" />}
         </Tabs>
         <Box sx={tabPanelStyles}>{tabPanel}</Box>

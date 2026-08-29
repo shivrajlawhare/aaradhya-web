@@ -35,6 +35,49 @@ interface MockAccommodation {
   totalCharges: number;
 }
 
+interface MockPayment {
+  totalEstimatedAmount: number;
+  advanceRequired: number;
+  advancePaid: number;
+  advancePaidDate: string | null;
+  paymentMode: string | null;
+  balance: number;
+}
+
+const makePayment = (overrides: Partial<MockPayment> = {}): MockPayment => ({
+  totalEstimatedAmount: 0,
+  advanceRequired: 0,
+  advancePaid: 0,
+  advancePaidDate: null,
+  paymentMode: null,
+  balance: 0,
+  ...overrides,
+});
+
+// A plain-JS reimplementation of STORY-021's math, same reasoning as
+// computeAccommodationResponse above.
+const computePaymentResponse = (
+  body: {
+    totalEstimatedAmount?: number;
+    advanceRequired?: number;
+    advancePaid?: number;
+    advancePaidDate?: string;
+    paymentMode?: string;
+  },
+  current: MockPayment,
+): MockPayment => {
+  const totalEstimatedAmount = body.totalEstimatedAmount ?? current.totalEstimatedAmount;
+  const advancePaid = body.advancePaid ?? current.advancePaid;
+  return {
+    totalEstimatedAmount,
+    advanceRequired: body.advanceRequired ?? current.advanceRequired,
+    advancePaid,
+    advancePaidDate: body.advancePaidDate ?? current.advancePaidDate,
+    paymentMode: body.paymentMode ?? current.paymentMode,
+    balance: roundToCurrency(totalEstimatedAmount - advancePaid),
+  };
+};
+
 interface MockEvent {
   id: string;
   eventId: string;
@@ -43,6 +86,7 @@ interface MockEvent {
   eventManager: string;
   clientContacts: MockClientContact[];
   accommodation: MockAccommodation;
+  payment: MockPayment;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -114,6 +158,7 @@ const makeEvent = (overrides: Partial<MockEvent> = {}): MockEvent => ({
     { name: 'Rohan Nair', contactNumber: '9123456780', role: 'Groom' },
   ],
   accommodation: makeAccommodation(),
+  payment: makePayment(),
   createdBy: 'manager-1',
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
@@ -144,6 +189,7 @@ const mockEventDetailApi = ({
   let currentEvent = event;
   const patchRequests: Record<string, unknown>[] = [];
   const accommodationPatchRequests: Record<string, unknown>[] = [];
+  const paymentPatchRequests: Record<string, unknown>[] = [];
 
   vi.stubGlobal(
     'fetch',
@@ -165,6 +211,18 @@ const mockEventDetailApi = ({
         };
         return jsonResponse(200, currentEvent.accommodation);
       }
+      if (method === 'PATCH' && currentEvent && url.endsWith(`/events/${currentEvent.id}/payment`)) {
+        const body: {
+          totalEstimatedAmount?: number;
+          advanceRequired?: number;
+          advancePaid?: number;
+          advancePaidDate?: string;
+          paymentMode?: string;
+        } = JSON.parse(String(init?.body));
+        paymentPatchRequests.push(body);
+        currentEvent = { ...currentEvent, payment: computePaymentResponse(body, currentEvent.payment) };
+        return jsonResponse(200, currentEvent.payment);
+      }
       if (method === 'PATCH' && currentEvent && url.endsWith(`/events/${currentEvent.id}`)) {
         const body: Record<string, unknown> = JSON.parse(String(init?.body));
         patchRequests.push(body);
@@ -181,7 +239,12 @@ const mockEventDetailApi = ({
     }),
   );
 
-  return { patchRequests, accommodationPatchRequests, getCurrentEvent: () => currentEvent };
+  return {
+    patchRequests,
+    accommodationPatchRequests,
+    paymentPatchRequests,
+    getCurrentEvent: () => currentEvent,
+  };
 };
 
 const renderPage = (id = 'event-1') => {
@@ -417,5 +480,51 @@ describe('EventDetailPage', () => {
     expect(screen.queryByLabelText(/Tariff for room line/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add room line' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Save accommodation' })).not.toBeInTheDocument();
+  });
+
+  it('does not render the Payments tab in the DOM at all for a non-EventManager session', async () => {
+    seedSession('Reception');
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    await screen.findByText('ARD-EVT-2026-001');
+    expect(screen.queryByRole('tab', { name: 'Payments' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Total estimated amount')).not.toBeInTheDocument();
+  });
+
+  it('lets an Event Manager save payment fields, updating the balance immediately without a full reload', async () => {
+    seedSession();
+    const { paymentPatchRequests } = mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Payments' }));
+
+    fireEvent.change(await screen.findByLabelText('Total estimated amount'), { target: { value: '50000' } });
+    fireEvent.change(screen.getByLabelText('Advance paid'), { target: { value: '20000' } });
+    fireEvent.change(screen.getByLabelText('Payment mode'), { target: { value: 'UPI' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save payment' }));
+
+    await waitFor(() => expect(paymentPatchRequests).toHaveLength(1));
+    expect(paymentPatchRequests[0]).toMatchObject({
+      totalEstimatedAmount: 50000,
+      advancePaid: 20000,
+      paymentMode: 'UPI',
+    });
+    // 50000 - 20000 = 30000 — same render tree throughout, no full reload.
+    expect(await screen.findByText('30000')).toBeInTheDocument();
+  });
+
+  it('renders a negative balance from overpayment, matching STORY-022s response as-is', async () => {
+    seedSession();
+    mockEventDetailApi({
+      event: makeEvent({
+        payment: makePayment({ totalEstimatedAmount: 50000, advancePaid: 60000, balance: -10000 }),
+      }),
+    });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Payments' }));
+
+    expect(await screen.findByText('-10000')).toBeInTheDocument();
   });
 });

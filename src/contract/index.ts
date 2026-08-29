@@ -11,7 +11,7 @@ const c = initContract();
  * in sync by hand with the backend contract for every route this app calls;
  * only routes this app actually consumes are mirrored (currently: login,
  * createUser, listUsers, updateUser, listChangeLog, createEvent, listEvents,
- * getEvent, updateEvent, updateEventAccommodation).
+ * getEvent, updateEvent, updateEventAccommodation, updateEventPayment).
  */
 export enum Role {
   EventManager = 'EventManager',
@@ -182,12 +182,36 @@ export const accommodationResultSchema = z.object({
   totalCharges: z.number(),
 });
 
+// Every field optional (PATCH semantics). No cross-field validation between
+// advancePaidDate and advancePaid — a caller may set an expected/planned
+// advance-payment date before advance_paid actually reflects a real
+// payment (STORY-022's decision, mirrored here).
+export const updateEventPaymentBodySchema = z.object({
+  totalEstimatedAmount: z.number().min(0).optional(),
+  advanceRequired: z.number().min(0).optional(),
+  advancePaid: z.number().min(0).optional(),
+  advancePaidDate: z.string().optional(),
+  paymentMode: z.string().trim().min(1).optional(),
+});
+
+// balance is derived (STORY-021) — never accepted as input, always present
+// on output. advancePaidDate/paymentMode are nullable, matching
+// accommodation's checkIn/checkOut convention for "genuinely unset yet".
+export const paymentResultSchema = z.object({
+  totalEstimatedAmount: z.number(),
+  advanceRequired: z.number(),
+  advancePaid: z.number(),
+  advancePaidDate: z.string().nullable(),
+  paymentMode: z.string().nullable(),
+  balance: z.number(),
+});
+
 // The public Event shape. createdAt/updatedAt are wire-format strings, same
-// reasoning as userResultSchema above. accommodation added STORY-020 —
-// GET /events/:id never returned it until the Rooms tab needed a way to
-// read the current Accommodation Block on first render (see aaradhya-api's
-// STORY-020 Decisions for why this lives on eventResultSchema and not a
-// dedicated GET).
+// reasoning as userResultSchema above. accommodation added STORY-020,
+// payment added STORY-023 — GET /events/:id returned neither until the
+// screen that needed to read current state on first render actually landed
+// (see aaradhya-api's STORY-020/STORY-023 Decisions for why these live on
+// eventResultSchema and not a dedicated GET each).
 export const eventResultSchema = z.object({
   id: z.string(),
   eventId: z.string(),
@@ -196,6 +220,7 @@ export const eventResultSchema = z.object({
   eventManager: z.string(),
   clientContacts: z.array(clientContactSchema),
   accommodation: accommodationResultSchema,
+  payment: paymentResultSchema,
   createdBy: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -300,5 +325,16 @@ export const contract = c.router({
       404: apiErrorSchema,
     },
     summary: "Edit an Event's Accommodation Block (Event Manager only)",
+  },
+  updateEventPayment: {
+    method: 'PATCH',
+    path: '/events/:id/payment',
+    pathParams: eventIdParamsSchema,
+    body: updateEventPaymentBodySchema,
+    responses: {
+      200: paymentResultSchema,
+      404: apiErrorSchema,
+    },
+    summary: "Edit an Event's Payment Record (Event Manager only)",
   },
 });
