@@ -191,6 +191,23 @@ Built early because every write in every later module needs it. Placed here, not
 **UI:** Activity list — one row per entry (field name, old→new values, actor, timestamp).
 **Tokens:** `surface`, `line` (row dividers), `text`, `text-faint` (timestamps), `type-body-m`, `space-8`.
 **Edge cases:** A change where `oldValue` is empty/null (new field being set for the first time — render as "— → value", not "null → value").
+**Decisions (v1):**
+- Lives in `src/components/ui/` (not `pages/`) — it's meant to be embedded into
+  multiple future screens, not tied to one. Flat files (`activity-tab.tsx` +
+  `.styles.ts`), matching `require-role.tsx`'s existing precedent for a
+  single reusable component, not the `pages/user-management/`-style folder
+  (that's for a group of page-specific sub-components).
+- No role-gating inside the component itself — deliberately, per the AC:
+  visibility is the embedding page's job, re-checked once STORY-017 actually
+  embeds it (added as an explicit AC there).
+- `changedBy` renders the raw User id from the API — STORY-008/009 kept it a
+  plain string with no name resolution. Renders whatever it's given; a later
+  story can resolve it to a display name once the API returns one.
+- Non-primitive `oldValue`/`newValue` (e.g. `client_contacts`, an array)
+  render via `JSON.stringify` — no diffing, matching STORY-008's own "full
+  value, not a diff" choice carried through to display.
+- Relative timestamps use the browser's native `Intl.RelativeTimeFormat` —
+  no date library needed for this.
 
 ---
 
@@ -270,6 +287,7 @@ Built early because every write in every later module needs it. Placed here, not
 - [ ] Status control lets an Event Manager move to any of the four statuses (not just the "next" one in sequence) and persists via STORY-014.
 - [ ] Client Contact rows are editable in place and persist via STORY-014.
 - [ ] Activity sub-tab (STORY-010) renders real log entries after an edit is made on this screen — confirms the two stories actually connect, not just pass their own isolated tests.
+- [ ] Re-check item from STORY-010: the embedded Activity sub-tab is not visible/reachable for a non-EventManager session (STORY-010 built the component with no role-gating of its own, deliberately — this is the first and only place that matters until it's checked here).
 - [ ] Screen is reachable by navigating from both STORY-016's list and (later) STORY-031's calendar chip.
 **UI:** Event Detail shell (header + tab strip) with Overview tab content; Activity sub-tab embedded.
 **Tokens:** `surface`, `text`, status tokens (header chip), `type-title-l` (event name/id), `type-label-s` (tab labels), `line` (tab underline), `radius-md`.

@@ -10,7 +10,7 @@ const c = initContract();
  * docs/directory-structure.md. Until it's settled, this file has to be kept
  * in sync by hand with the backend contract for every route this app calls;
  * only routes this app actually consumes are mirrored (currently: login,
- * createUser, listUsers, updateUser).
+ * createUser, listUsers, updateUser, listChangeLog).
  */
 export enum Role {
   EventManager = 'EventManager',
@@ -75,6 +75,25 @@ export const updateUserBodySchema = z.object({
   role: z.nativeEnum(Role).optional(),
 });
 
+export const listChangeLogQuerySchema = z.object({
+  entityType: z.string().min(1),
+  entityId: z.string().min(1),
+});
+
+// oldValue/newValue are whatever JSON-serialisable shape the changed field
+// held (STORY-008) — not a fixed shape here either. timestamp is a string
+// over the wire, same reasoning as createdAt/updatedAt above.
+export const changeLogEntryResultSchema = z.object({
+  id: z.string(),
+  entityType: z.string(),
+  entityId: z.string(),
+  field: z.string(),
+  oldValue: z.unknown(),
+  newValue: z.unknown(),
+  changedBy: z.string(),
+  timestamp: z.string(),
+});
+
 export const contract = c.router({
   login: {
     method: 'POST',
@@ -114,5 +133,14 @@ export const contract = c.router({
       404: apiErrorSchema,
     },
     summary: 'Toggle active and/or change role on a User Account (Event Manager only)',
+  },
+  listChangeLog: {
+    method: 'GET',
+    path: '/change-log',
+    query: listChangeLogQuerySchema,
+    responses: {
+      200: z.array(changeLogEntryResultSchema),
+    },
+    summary: 'List Change Log Entries for one entity (Event Manager only)',
   },
 });
