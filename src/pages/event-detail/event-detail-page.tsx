@@ -11,9 +11,10 @@ import DocumentsTab from './documents-tab';
 import OverviewTab from './overview-tab';
 import PaymentsTab from './payments-tab';
 import RoomsTab from './rooms-tab';
+import SessionsTab from './sessions-tab';
 import { headerStyles, pageStyles, tabPanelStyles } from './event-detail-page.styles';
 
-type DetailTab = 'overview' | 'rooms' | 'payments' | 'documents' | 'activity';
+type DetailTab = 'overview' | 'rooms' | 'sessions' | 'payments' | 'documents' | 'activity';
 
 const EventDetailPage = () => {
   const { id } = useParams();
@@ -53,6 +54,10 @@ const EventDetailPage = () => {
   // something Reception sees. canEdit still gates the actual editing
   // controls, exactly like Overview already does for status/Client
   // Contacts.
+  // Sessions is visible-to-all/edit-gated too, same reasoning as Rooms —
+  // every role's own "Sees:" list includes venue/pax/date(s), and
+  // Housekeeping's explicitly includes "seating/setup requirements"
+  // (Session's own setup sub-object).
   const canSeeActivity = user?.role === Role.EventManager;
   const canSeePayments = user?.role === Role.EventManager;
   const canSeeDocuments = user?.role === Role.EventManager;
@@ -91,6 +96,10 @@ const EventDetailPage = () => {
       tabPanel = (
         <RoomsTab key={event.id} event={event} canEdit={canEdit} onEventChanged={() => eventQuery.refetch()} />
       );
+    } else if (activeTab === 'sessions') {
+      tabPanel = (
+        <SessionsTab key={event.id} event={event} canEdit={canEdit} onEventChanged={() => eventQuery.refetch()} />
+      );
     } else {
       tabPanel = (
         <OverviewTab
@@ -114,6 +123,7 @@ const EventDetailPage = () => {
         <Tabs value={activeTab} onChange={(_changeEvent, value: DetailTab) => setActiveTab(value)}>
           <Tab label="Overview" value="overview" />
           <Tab label="Rooms" value="rooms" />
+          <Tab label="Sessions" value="sessions" />
           {canSeePayments && <Tab label="Payments" value="payments" />}
           {canSeeDocuments && <Tab label="Documents" value="documents" />}
           {canSeeActivity && <Tab label="Activity" value="activity" />}

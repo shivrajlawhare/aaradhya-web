@@ -12,7 +12,7 @@ const c = initContract();
  * only routes this app actually consumes are mirrored (currently: login,
  * createUser, listUsers, updateUser, listChangeLog, createEvent, listEvents,
  * getEvent, updateEvent, updateEventAccommodation, updateEventPayment,
- * updateDocumentsChecklist).
+ * updateDocumentsChecklist, createSession, updateSession).
  */
 export enum Role {
   EventManager = 'EventManager',
@@ -243,13 +243,121 @@ export const documentsChecklistResultSchema = z.object({
   weddingCard: z.boolean(),
 });
 
+// SRS §4.2 — Session Status, independent of the parent Event's own status.
+export enum SessionStatus {
+  Active = 'Active',
+  Cancelled = 'Cancelled',
+}
+
+// SRS §4.2's setup.seating — a closed list with an Other catch-all member
+// (no "+ custom" wording, unlike sessionType/venue below), mirrored from
+// aaradhya-api's own SeatingArrangement enum.
+export enum SeatingArrangement {
+  Theatre = 'Theatre',
+  RoundTables = 'RoundTables',
+  Classroom = 'Classroom',
+  UShape = 'UShape',
+  Cluster = 'Cluster',
+  Other = 'Other',
+}
+
+export const SEATING_ARRANGEMENT_OPTIONS: SeatingArrangement[] = Object.values(SeatingArrangement);
+
+// Exported for the same reason as clientContactSchema/roomLineSchema — the
+// one place a Session's own setup shape is defined, so the Session form
+// derives its form-value type from here instead of a hand-declared
+// duplicate. Every field optional, matching aaradhya-api's own
+// sessionSetupInputSchema — a caller sends only what it's chosen so far.
+export const sessionSetupSchema = z.object({
+  seating: z.nativeEnum(SeatingArrangement).optional(),
+  tableCount: z.number().min(0).optional(),
+  chairCount: z.number().min(0).optional(),
+  stage: z.boolean().optional(),
+  buffet: z.boolean().optional(),
+  registrationDesk: z.boolean().optional(),
+  vipSeating: z.boolean().optional(),
+  brideGroomSeating: z.boolean().optional(),
+  notes: z.string().trim().min(1).optional(),
+});
+
+// sessionType/venue required, matching aaradhya-api's own
+// createSessionBodySchema; startDate/endDate are plain strings, same
+// "native <input type=date> already gives 'YYYY-MM-DD', nothing to coerce"
+// reasoning updateAccommodationBodySchema already established. No
+// session_status — a new Session always starts Active.
+export const createSessionBodySchema = z.object({
+  sessionType: z.string().trim().min(1),
+  venue: z.string().trim().min(1),
+  venueCost: z.number().min(0).optional(),
+  startDate: z.string(),
+  endDate: z.string(),
+  startTime: z.string().trim().min(1).optional(),
+  endTime: z.string().trim().min(1).optional(),
+  pax: z.number().min(0).optional(),
+  setup: sessionSetupSchema.optional(),
+});
+
+// Every field optional (PATCH semantics), unlike createSessionBodySchema —
+// a caller sends only what changed. session_status IS accepted here,
+// mirroring aaradhya-api's own updateSessionBodySchema — cancelling an
+// existing Session is an edit, not something a brand-new Session starts as.
+export const updateSessionBodySchema = z.object({
+  sessionType: z.string().trim().min(1).optional(),
+  venue: z.string().trim().min(1).optional(),
+  venueCost: z.number().min(0).optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  startTime: z.string().trim().min(1).optional(),
+  endTime: z.string().trim().min(1).optional(),
+  pax: z.number().min(0).optional(),
+  sessionStatus: z.nativeEnum(SessionStatus).optional(),
+  setup: sessionSetupSchema.optional(),
+});
+
+const sessionSetupResultSchema = z.object({
+  seating: z.nativeEnum(SeatingArrangement).nullable(),
+  tableCount: z.number(),
+  chairCount: z.number(),
+  stage: z.boolean(),
+  buffet: z.boolean(),
+  registrationDesk: z.boolean(),
+  vipSeating: z.boolean(),
+  brideGroomSeating: z.boolean(),
+  notes: z.string().nullable(),
+});
+
+// durationDays/isMultiDay are derived (STORY-026) — never accepted as
+// input, always present on output. startTime/endTime/startDate/endDate are
+// wire-format strings, same reasoning as every other date field in this
+// file.
+export const sessionResultSchema = z.object({
+  id: z.string(),
+  sessionType: z.string(),
+  venue: z.string(),
+  venueCost: z.number(),
+  startDate: z.string(),
+  endDate: z.string(),
+  startTime: z.string().nullable(),
+  endTime: z.string().nullable(),
+  pax: z.number(),
+  sessionStatus: z.nativeEnum(SessionStatus),
+  durationDays: z.number(),
+  isMultiDay: z.boolean(),
+  setup: sessionSetupResultSchema,
+});
+
+export const eventSessionParamsSchema = z.object({
+  id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid event id.'),
+  sid: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid session id.'),
+});
+
 // The public Event shape. createdAt/updatedAt are wire-format strings, same
 // reasoning as userResultSchema above. accommodation added STORY-020,
-// payment added STORY-023, documentsChecklist added STORY-025 — GET
-// /events/:id returned none of them until the screen that needed to read
-// current state on first render actually landed (see aaradhya-api's
-// STORY-020/STORY-023/STORY-025 Decisions for why these live on
-// eventResultSchema and not a dedicated GET each).
+// payment added STORY-023, documentsChecklist added STORY-025, sessions
+// added STORY-029 — GET /events/:id returned none of them until the screen
+// that needed to read current state on first render actually landed (see
+// aaradhya-api's STORY-020/STORY-023/STORY-025/STORY-028 Decisions for why
+// these live on eventResultSchema and not a dedicated GET each).
 export const eventResultSchema = z.object({
   id: z.string(),
   eventId: z.string(),
@@ -260,6 +368,7 @@ export const eventResultSchema = z.object({
   accommodation: accommodationResultSchema,
   payment: paymentResultSchema,
   documentsChecklist: documentsChecklistResultSchema,
+  sessions: z.array(sessionResultSchema),
   createdBy: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -386,5 +495,29 @@ export const contract = c.router({
       404: apiErrorSchema,
     },
     summary: "Toggle items on an Event's Documents Checklist (Event Manager only)",
+  },
+  createSession: {
+    method: 'POST',
+    path: '/events/:id/sessions',
+    pathParams: eventIdParamsSchema,
+    body: createSessionBodySchema,
+    responses: {
+      201: sessionResultSchema,
+      400: apiErrorSchema,
+      404: apiErrorSchema,
+    },
+    summary: 'Add a Session to an Event (Event Manager only)',
+  },
+  updateSession: {
+    method: 'PATCH',
+    path: '/events/:id/sessions/:sid',
+    pathParams: eventSessionParamsSchema,
+    body: updateSessionBodySchema,
+    responses: {
+      200: sessionResultSchema,
+      400: apiErrorSchema,
+      404: apiErrorSchema,
+    },
+    summary: "Edit one of an Event's Sessions (Event Manager only)",
   },
 });

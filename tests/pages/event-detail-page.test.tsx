@@ -97,6 +97,52 @@ const makeDocumentsChecklist = (overrides: Partial<MockDocumentsChecklist> = {})
   ...overrides,
 });
 
+interface MockSessionSetup {
+  seating: string | null;
+  tableCount: number;
+  chairCount: number;
+  stage: boolean;
+  buffet: boolean;
+  registrationDesk: boolean;
+  vipSeating: boolean;
+  brideGroomSeating: boolean;
+  notes: string | null;
+}
+
+const makeSessionSetup = (overrides: Partial<MockSessionSetup> = {}): MockSessionSetup => ({
+  seating: null,
+  tableCount: 0,
+  chairCount: 0,
+  stage: false,
+  buffet: false,
+  registrationDesk: false,
+  vipSeating: false,
+  brideGroomSeating: false,
+  notes: null,
+  ...overrides,
+});
+
+interface MockSession {
+  id: string;
+  sessionType: string;
+  venue: string;
+  venueCost: number;
+  startDate: string;
+  endDate: string;
+  startTime: string | null;
+  endTime: string | null;
+  pax: number;
+  sessionStatus: string;
+  durationDays: number;
+  isMultiDay: boolean;
+  setup: MockSessionSetup;
+}
+
+// A plain-JS reimplementation of STORY-026's math, same reasoning as
+// computeAccommodationResponse above.
+const computeSessionDurationDays = (startDate: string, endDate: string) =>
+  Math.floor((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000) + 1;
+
 interface MockEvent {
   id: string;
   eventId: string;
@@ -107,6 +153,7 @@ interface MockEvent {
   accommodation: MockAccommodation;
   payment: MockPayment;
   documentsChecklist: MockDocumentsChecklist;
+  sessions: MockSession[];
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -180,6 +227,7 @@ const makeEvent = (overrides: Partial<MockEvent> = {}): MockEvent => ({
   accommodation: makeAccommodation(),
   payment: makePayment(),
   documentsChecklist: makeDocumentsChecklist(),
+  sessions: [],
   createdBy: 'manager-1',
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
@@ -212,6 +260,9 @@ const mockEventDetailApi = ({
   const accommodationPatchRequests: Record<string, unknown>[] = [];
   const paymentPatchRequests: Record<string, unknown>[] = [];
   const documentsChecklistPatchRequests: Record<string, unknown>[] = [];
+  const sessionPostRequests: Record<string, unknown>[] = [];
+  const sessionPatchRequests: Record<string, unknown>[] = [];
+  let sessionIdCounter = 0;
 
   vi.stubGlobal(
     'fetch',
@@ -251,6 +302,83 @@ const mockEventDetailApi = ({
         currentEvent = { ...currentEvent, documentsChecklist: { ...currentEvent.documentsChecklist, ...body } };
         return jsonResponse(200, currentEvent.documentsChecklist);
       }
+      if (method === 'POST' && currentEvent && url.endsWith(`/events/${currentEvent.id}/sessions`)) {
+        const body: {
+          sessionType: string;
+          venue: string;
+          venueCost?: number;
+          startDate: string;
+          endDate: string;
+          startTime?: string;
+          endTime?: string;
+          pax?: number;
+          setup?: Partial<MockSessionSetup>;
+        } = JSON.parse(String(init?.body));
+        sessionPostRequests.push(body);
+        sessionIdCounter += 1;
+        const newSession: MockSession = {
+          id: `session-${sessionIdCounter}`,
+          sessionType: body.sessionType,
+          venue: body.venue,
+          venueCost: body.venueCost ?? 0,
+          startDate: body.startDate,
+          endDate: body.endDate,
+          startTime: body.startTime ?? null,
+          endTime: body.endTime ?? null,
+          pax: body.pax ?? 0,
+          sessionStatus: 'Active',
+          durationDays: computeSessionDurationDays(body.startDate, body.endDate),
+          isMultiDay: computeSessionDurationDays(body.startDate, body.endDate) > 1,
+          setup: makeSessionSetup(body.setup),
+        };
+        currentEvent = { ...currentEvent, sessions: [...currentEvent.sessions, newSession] };
+        return jsonResponse(201, newSession);
+      }
+      if (method === 'PATCH' && currentEvent && url.includes(`/events/${currentEvent.id}/sessions/`)) {
+        const sid = url.split('/sessions/')[1];
+        const body: Partial<{
+          sessionType: string;
+          venue: string;
+          venueCost: number;
+          startDate: string;
+          endDate: string;
+          startTime: string;
+          endTime: string;
+          pax: number;
+          sessionStatus: string;
+          setup: Partial<MockSessionSetup>;
+        }> = JSON.parse(String(init?.body));
+        sessionPatchRequests.push(body);
+        const existingSession = currentEvent.sessions.find((session) => session.id === sid);
+        if (!existingSession) {
+          return jsonResponse(404, {
+            error: { code: 'SESSION_NOT_FOUND', message: 'No Session with that id on this Event.' },
+          });
+        }
+        const nextStartDate = body.startDate ?? existingSession.startDate;
+        const nextEndDate = body.endDate ?? existingSession.endDate;
+        if (nextEndDate < nextStartDate) {
+          return jsonResponse(400, {
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: 'Invalid request body.',
+              details: [{ field: 'endDate', message: 'end_date must be on or after start_date.' }],
+            },
+          });
+        }
+        const updatedSession: MockSession = {
+          ...existingSession,
+          ...body,
+          setup: body.setup ? { ...existingSession.setup, ...body.setup } : existingSession.setup,
+          durationDays: computeSessionDurationDays(nextStartDate, nextEndDate),
+          isMultiDay: computeSessionDurationDays(nextStartDate, nextEndDate) > 1,
+        };
+        currentEvent = {
+          ...currentEvent,
+          sessions: currentEvent.sessions.map((session) => (session.id === sid ? updatedSession : session)),
+        };
+        return jsonResponse(200, updatedSession);
+      }
       if (method === 'PATCH' && currentEvent && url.endsWith(`/events/${currentEvent.id}`)) {
         const body: Record<string, unknown> = JSON.parse(String(init?.body));
         patchRequests.push(body);
@@ -272,6 +400,8 @@ const mockEventDetailApi = ({
     accommodationPatchRequests,
     paymentPatchRequests,
     documentsChecklistPatchRequests,
+    sessionPostRequests,
+    sessionPatchRequests,
     getCurrentEvent: () => currentEvent,
   };
 };
@@ -599,5 +729,175 @@ describe('EventDetailPage', () => {
     fireEvent.click(await screen.findByRole('tab', { name: 'Overview' }));
     fireEvent.click(await screen.findByRole('tab', { name: 'Documents' }));
     expect(await screen.findByLabelText('Aadhar Card')).toBeChecked();
+  });
+
+  it('renders the Sessions tab for a non-EventManager session too, unlike Payments/Documents', async () => {
+    seedSession('Reception');
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    await screen.findByText('ARD-EVT-2026-001');
+    expect(screen.getByRole('tab', { name: 'Sessions' })).toBeInTheDocument();
+  });
+
+  it('shows Sessions read-only, with no Add/Edit controls, for a non-EventManager session', async () => {
+    seedSession('Reception');
+    mockEventDetailApi({
+      event: makeEvent({
+        sessions: [
+          {
+            id: 'session-1',
+            sessionType: 'Wedding',
+            venue: 'Lawn',
+            venueCost: 50000,
+            startDate: '2026-06-15T00:00:00.000Z',
+            endDate: '2026-06-15T00:00:00.000Z',
+            startTime: null,
+            endTime: null,
+            pax: 200,
+            sessionStatus: 'Active',
+            durationDays: 1,
+            isMultiDay: false,
+            setup: makeSessionSetup(),
+          },
+        ],
+      }),
+    });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+
+    expect(await screen.findByText('Wedding — Lawn')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add Session' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+  });
+
+  it('renders the Session form with two explicit date fields and the full setup section', async () => {
+    seedSession();
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
+
+    expect(await screen.findByLabelText('Start date')).toBeInTheDocument();
+    expect(screen.getByLabelText('End date')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Seating' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Tables')).toBeInTheDocument();
+    expect(screen.getByLabelText('Chairs')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Stage' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Buffet' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Registration desk' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'VIP seating' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bride/Groom seating' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Notes')).toBeInTheDocument();
+  });
+
+  it('auto-fills venue_cost from the lookup table on venue selection, remaining editable afterward', async () => {
+    seedSession();
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
+
+    const venueSelect = await screen.findByRole('combobox', { name: 'Venue' });
+    fireEvent.mouseDown(venueSelect);
+    fireEvent.click(screen.getByRole('option', { name: 'Full Banquet' }));
+
+    const venueCostField = screen.getByLabelText('Venue cost');
+    expect(venueCostField).toHaveValue(100000);
+
+    fireEvent.change(venueCostField, { target: { value: '95000' } });
+    expect(venueCostField).toHaveValue(95000);
+  });
+
+  it('adds a Session via POST and shows it in the list afterward', async () => {
+    seedSession();
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
+
+    fireEvent.change(await screen.findByLabelText('Start date'), { target: { value: '2026-06-15' } });
+    fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-06-15' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add session' }));
+
+    expect(await screen.findByText('Engagement — Poolside')).toBeInTheDocument();
+  });
+
+  it('persists a boolean toggled off after being turned on, not omitted', async () => {
+    seedSession();
+    const { sessionPostRequests } = mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
+
+    fireEvent.change(await screen.findByLabelText('Start date'), { target: { value: '2026-06-15' } });
+    fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-06-15' } });
+
+    const stageToggle = screen.getByRole('button', { name: 'Stage' });
+    fireEvent.click(stageToggle); // on
+    fireEvent.click(stageToggle); // off again
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add session' }));
+
+    await waitFor(() => expect(sessionPostRequests).toHaveLength(1));
+    expect(sessionPostRequests[0]?.setup).toMatchObject({ stage: false });
+  });
+
+  it('blocks submit client-side when end date is before start date, without calling the server', async () => {
+    seedSession();
+    const { sessionPostRequests } = mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
+
+    fireEvent.change(await screen.findByLabelText('Start date'), { target: { value: '2026-06-15' } });
+    fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-06-14' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add session' }));
+
+    expect(await screen.findByText('End date must be on or after start date.')).toBeInTheDocument();
+    expect(sessionPostRequests).toHaveLength(0);
+    // Inline on the date field, not a generic banner.
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('calls PATCH (STORY-028), not POST, for the edit entry point on an existing Session', async () => {
+    seedSession();
+    const existingSession = {
+      id: 'session-1',
+      sessionType: 'Wedding',
+      venue: 'Lawn',
+      venueCost: 50000,
+      startDate: '2026-06-15T00:00:00.000Z',
+      endDate: '2026-06-15T00:00:00.000Z',
+      startTime: null,
+      endTime: null,
+      pax: 200,
+      sessionStatus: 'Active',
+      durationDays: 1,
+      isMultiDay: false,
+      setup: makeSessionSetup(),
+    };
+    const { sessionPatchRequests, sessionPostRequests } = mockEventDetailApi({
+      event: makeEvent({ sessions: [existingSession] }),
+    });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+
+    expect(await screen.findByDisplayValue('200')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Pax'), { target: { value: '250' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save session' }));
+
+    await waitFor(() => expect(sessionPatchRequests).toHaveLength(1));
+    expect(sessionPostRequests).toHaveLength(0);
+    expect(sessionPatchRequests[0]).toMatchObject({ pax: 250 });
   });
 });
