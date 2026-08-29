@@ -1,10 +1,11 @@
 import type { KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Chip, Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { Box, Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import type { z } from 'zod';
+import StatusChip from '../../components/ui/status-chip';
 import { ClientContactRole, type eventResultSchema } from '../../contract';
 import { eventDetailPath } from '../../routes';
-import { emptyStateStyles, familyTypeCellStyles, rowStyles, STATUS_CHIP_COLORS, tableCardStyles } from './events-table.styles';
+import { emptyStateStyles, familyTypeCellStyles, rowStyles, tableCardStyles } from './events-table.styles';
 
 type PublicEvent = z.infer<typeof eventResultSchema>;
 
@@ -96,7 +97,7 @@ const EventsTable = ({ events }: EventsTableProps) => {
                 </Typography>
               </TableCell>
               <TableCell>
-                <Chip label={event.status} size="small" style={STATUS_CHIP_COLORS[event.status]} />
+                <StatusChip status={event.status} />
               </TableCell>
               <TableCell>
                 <Typography variant="bodyM">{event.eventManager}</Typography>

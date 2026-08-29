@@ -1,0 +1,93 @@
+import { useState, type ReactNode } from 'react';
+import { Link as RouterLink, useParams } from 'react-router-dom';
+import { Box, CircularProgress, Link, Tab, Tabs, Typography } from '@mui/material';
+import { tsr } from '../../api/client';
+import ActivityTab from '../../components/ui/activity-tab';
+import StatusChip from '../../components/ui/status-chip';
+import { Role } from '../../contract';
+import { EVENT_LIST_PATH } from '../../routes';
+import { useAuth } from '../../stores/auth-context';
+import OverviewTab from './overview-tab';
+import { headerStyles, pageStyles, tabPanelStyles } from './event-detail-page.styles';
+
+type DetailTab = 'overview' | 'activity';
+
+const EventDetailPage = () => {
+  const { id } = useParams();
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<DetailTab>('overview');
+
+  const eventQuery = tsr.getEvent.useQuery({
+    queryKey: ['event', id ?? ''],
+    queryData: { params: { id: id ?? '' } },
+    enabled: Boolean(id),
+    // A 404 for a fixed id won't become a 200 by retrying — TanStack's
+    // default (retry every failure up to 3 times) would just delay the
+    // "not found" state by several seconds for no benefit.
+    retry: false,
+  });
+
+  // Activity is EventManager-only — re-checking STORY-010's flagged item:
+  // GET /change-log itself is EventManager-only on the backend, so showing
+  // this tab to anyone else would just render a 403, not real log entries.
+  const canSeeActivity = user?.role === Role.EventManager;
+  const canEdit = user?.role === Role.EventManager;
+
+  let content: ReactNode;
+  if (!id || eventQuery.isPending) {
+    content = <CircularProgress aria-label="Loading event" />;
+  } else if (eventQuery.isError) {
+    const error = eventQuery.error;
+    const message =
+      !(error instanceof Error) && error.status === 404
+        ? 'No Event with that id.'
+        : 'Something went wrong. Please try again.';
+    content = (
+      <Box>
+        <Typography variant="bodyM">{message}</Typography>
+        <Typography variant="bodyM">
+          <Link component={RouterLink} to={EVENT_LIST_PATH}>
+            Back to Events
+          </Link>
+        </Typography>
+      </Box>
+    );
+  } else {
+    const event = eventQuery.data.body;
+
+    let tabPanel: ReactNode;
+    if (activeTab === 'activity' && canSeeActivity) {
+      tabPanel = <ActivityTab entityType="Event" entityId={event.id} />;
+    } else {
+      tabPanel = (
+        <OverviewTab
+          key={event.id}
+          event={event}
+          canEdit={canEdit}
+          onEventChanged={() => eventQuery.refetch()}
+        />
+      );
+    }
+
+    content = (
+      <>
+        <Box sx={headerStyles}>
+          <Typography variant="titleL" component="h1">
+            {event.eventId}
+          </Typography>
+          <StatusChip status={event.status} />
+          <Typography variant="bodyM">{event.eventFamilyType}</Typography>
+        </Box>
+        <Tabs value={activeTab} onChange={(_changeEvent, value: DetailTab) => setActiveTab(value)}>
+          <Tab label="Overview" value="overview" />
+          {canSeeActivity && <Tab label="Activity" value="activity" />}
+        </Tabs>
+        <Box sx={tabPanelStyles}>{tabPanel}</Box>
+      </>
+    );
+  }
+
+  return <Box sx={pageStyles}>{content}</Box>;
+};
+
+export default EventDetailPage;

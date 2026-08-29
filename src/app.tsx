@@ -4,7 +4,7 @@ import { Role } from './contract';
 import LoginPage from './pages/login/login-page';
 import DashboardPlaceholderPage from './pages/dashboard-placeholder/dashboard-placeholder-page';
 import EventCreationPage from './pages/event-creation/event-creation-page';
-import EventDetailPlaceholderPage from './pages/event-detail-placeholder/event-detail-placeholder-page';
+import EventDetailPage from './pages/event-detail/event-detail-page';
 import EventListPage from './pages/event-list/event-list-page';
 import UserManagementPage from './pages/user-management/user-management-page';
 import {
@@ -41,7 +41,10 @@ const App = () => {
           </RequireRole>
         }
       />
-      <Route path={EVENT_DETAIL_PATH_PATTERN} element={<EventDetailPlaceholderPage />} />
+      {/* No RequireRole — GET /events/:id (STORY-013) has no role
+          restriction either; EventDetailPage itself gates editing and the
+          Activity sub-tab to Event Manager internally. */}
+      <Route path={EVENT_DETAIL_PATH_PATTERN} element={<EventDetailPage />} />
       <Route path="*" element={<Navigate to={LOGIN_PATH} replace />} />
     </Routes>
   );

@@ -10,7 +10,8 @@ const c = initContract();
  * docs/directory-structure.md. Until it's settled, this file has to be kept
  * in sync by hand with the backend contract for every route this app calls;
  * only routes this app actually consumes are mirrored (currently: login,
- * createUser, listUsers, updateUser, listChangeLog, createEvent, listEvents).
+ * createUser, listUsers, updateUser, listChangeLog, createEvent, listEvents,
+ * getEvent, updateEvent).
  */
 export enum Role {
   EventManager = 'EventManager',
@@ -112,10 +113,17 @@ export enum ClientContactRole {
 
 export const CLIENT_CONTACT_ROLE_OPTIONS: ClientContactRole[] = Object.values(ClientContactRole);
 
-const clientContactSchema = z.object({
+// Exported (not local) — the one place a Client Contact row's shape is
+// defined, so any form editing rows (create or edit) derives its row type
+// from here instead of a hand-declared duplicate (typescript-rules rule 3).
+export const clientContactSchema = z.object({
   name: z.string().trim().min(1),
   contactNumber: z.string().trim().min(1),
   role: z.nativeEnum(ClientContactRole),
+});
+
+export const eventIdParamsSchema = z.object({
+  id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid event id.'),
 });
 
 export const createEventBodySchema = z.object({
@@ -123,6 +131,16 @@ export const createEventBodySchema = z.object({
   status: z.nativeEnum(EventStatus).optional(),
   eventManager: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid event_manager id.'),
   clientContacts: z.array(clientContactSchema).min(1),
+});
+
+// Every field optional (PATCH semantics) — same shape as createEventBodySchema
+// otherwise, including clientContacts still needing at least one row (STORY-014
+// rejects removing the last remaining Client Contact).
+export const updateEventBodySchema = z.object({
+  eventFamilyType: z.string().trim().min(1).optional(),
+  status: z.nativeEnum(EventStatus).optional(),
+  eventManager: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid event_manager id.').optional(),
+  clientContacts: z.array(clientContactSchema).min(1).optional(),
 });
 
 // The public Event shape. createdAt/updatedAt are wire-format strings, same
@@ -205,5 +223,27 @@ export const contract = c.router({
       200: z.array(eventResultSchema),
     },
     summary: 'List all Events (any authenticated caller)',
+  },
+  getEvent: {
+    method: 'GET',
+    path: '/events/:id',
+    pathParams: eventIdParamsSchema,
+    responses: {
+      200: eventResultSchema,
+      404: apiErrorSchema,
+    },
+    summary: 'Get one Event by id (any authenticated caller)',
+  },
+  updateEvent: {
+    method: 'PATCH',
+    path: '/events/:id',
+    pathParams: eventIdParamsSchema,
+    body: updateEventBodySchema,
+    responses: {
+      200: eventResultSchema,
+      400: apiErrorSchema,
+      404: apiErrorSchema,
+    },
+    summary: 'Edit core fields and/or Client Contacts on an Event (Event Manager only)',
   },
 });

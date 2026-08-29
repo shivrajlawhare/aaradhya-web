@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { Alert, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
-import type { z } from 'zod';
 import { tsr } from '../../api/client';
-import { ClientContactRole, Role, createEventBodySchema } from '../../contract';
+import ClientContactRows, { type ClientContactFormValue } from '../../components/ui/client-contact-rows';
+import { ClientContactRole, Role } from '../../contract';
 import { eventDetailPath } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
-import ClientContactRows from './client-contact-rows';
 import { fieldStackStyles, formStyles } from './event-creation-form.styles';
 
 export const FAMILY_TYPE_PRESETS = ['Wedding', 'Corporate', 'Birthday', 'Other'];
@@ -17,12 +16,6 @@ export const FAMILY_TYPE_PRESETS = ['Wedding', 'Corporate', 'Birthday', 'Other']
 // 'Other' submits literally as 'Other', 'Custom…' submits whatever the
 // caller types.
 export const CUSTOM_FAMILY_TYPE_OPTION = 'Custom…';
-
-// Derived from the contract rather than hand-declared — this is exactly
-// createEventBodySchema's clientContacts row shape, and typescript-rules
-// rule 3 says import/derive from the contract instead of redeclaring a
-// shape it already defines.
-export type ClientContactFormValue = z.infer<typeof createEventBodySchema>['clientContacts'][number];
 
 export interface EventCreationFormValues {
   eventFamilyTypeOption: string;
@@ -63,6 +56,21 @@ const EventCreationForm = () => {
       clientContacts: defaultClientContacts,
     },
   });
+
+  const { fields, append, remove, update } = useFieldArray({ control, name: 'clientContacts' });
+  const handleContactRowChange = (index: number, patch: Partial<ClientContactFormValue>) => {
+    const row = fields[index];
+    if (!row) {
+      return;
+    }
+    update(index, { ...row, ...patch });
+  };
+  const handleAddContactRow = () => {
+    // A row added beyond the three defaults (Bride/Groom/POC) has no
+    // obvious role to start on, so it starts as Custom — freely changeable
+    // via the row's own Select either way.
+    append({ name: '', contactNumber: '', role: ClientContactRole.Custom });
+  };
 
   const clientContacts = watch('clientContacts');
   const eventFamilyTypeOption = watch('eventFamilyTypeOption');
@@ -155,7 +163,12 @@ const EventCreationForm = () => {
             </TextField>
           )}
         />
-        <ClientContactRows control={control} register={register} />
+        <ClientContactRows
+          rows={fields}
+          onRowChange={handleContactRowChange}
+          onAddRow={handleAddContactRow}
+          onRemoveRow={remove}
+        />
         {submitError && (
           <Alert severity="error">
             <Typography variant="bodyM">{submitError}</Typography>

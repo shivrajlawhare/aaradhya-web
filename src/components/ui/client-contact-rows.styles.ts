@@ -13,6 +13,10 @@ export const rowStyles: SxProps<Theme> = {
   pb: `${spaceTokens.space12}px`, // space-12
 };
 
+export const roleFieldStyles: SxProps<Theme> = {
+  minWidth: 140,
+};
+
 export const addButtonStyles: SxProps<Theme> = {
   alignSelf: 'flex-start',
 };
