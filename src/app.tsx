@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import RequireRole from './components/ui/require-role';
 import { Role } from './contract';
+import CalendarPage from './pages/calendar/calendar-page';
 import LoginPage from './pages/login/login-page';
 import DashboardPlaceholderPage from './pages/dashboard-placeholder/dashboard-placeholder-page';
 import EventCreationPage from './pages/event-creation/event-creation-page';
@@ -8,6 +9,7 @@ import EventDetailPage from './pages/event-detail/event-detail-page';
 import EventListPage from './pages/event-list/event-list-page';
 import UserManagementPage from './pages/user-management/user-management-page';
 import {
+  CALENDAR_PATH,
   DASHBOARD_PATH,
   EVENT_CREATE_PATH,
   EVENT_DETAIL_PATH_PATTERN,
@@ -45,6 +47,9 @@ const App = () => {
           restriction either; EventDetailPage itself gates editing and the
           Activity sub-tab to Event Manager internally. */}
       <Route path={EVENT_DETAIL_PATH_PATTERN} element={<EventDetailPage />} />
+      {/* No RequireRole — GET /calendar (STORY-034) has no role restriction
+          either, same as GET /events. */}
+      <Route path={CALENDAR_PATH} element={<CalendarPage />} />
       <Route path="*" element={<Navigate to={LOGIN_PATH} replace />} />
     </Routes>
   );

@@ -13,7 +13,7 @@ const c = initContract();
  * createUser, listUsers, updateUser, listChangeLog, createEvent, listEvents,
  * getEvent, updateEvent, updateEventAccommodation, updateEventPayment,
  * updateDocumentsChecklist, createSession, updateSession, listMenuItems,
- * createItem, updateItem, deleteItem).
+ * createItem, updateItem, deleteItem, getCalendar).
  */
 export enum Role {
   EventManager = 'EventManager',
@@ -468,6 +468,24 @@ export const eventResultSchema = z.object({
   updatedAt: z.string(),
 });
 
+export const getCalendarQuerySchema = z.object({
+  month: z.coerce.number().int().min(1).max(12),
+  year: z.coerce.number().int().min(1970).max(2100),
+});
+
+// A slim summary of the parent Event — id/eventFamilyType/status, enough
+// for the calendar to render one chip without a second round-trip per
+// session (STORY-034's own AC).
+export const calendarEventSummarySchema = z.object({
+  id: z.string(),
+  eventFamilyType: z.string(),
+  status: z.nativeEnum(EventStatus),
+});
+
+export const calendarSessionResultSchema = sessionResultSchema.extend({
+  event: calendarEventSummarySchema,
+});
+
 export const contract = c.router({
   login: {
     method: 'POST',
@@ -656,5 +674,14 @@ export const contract = c.router({
       404: apiErrorSchema,
     },
     summary: "Remove one of a Session's Items (Event Manager only)",
+  },
+  getCalendar: {
+    method: 'GET',
+    path: '/calendar',
+    query: getCalendarQuerySchema,
+    responses: {
+      200: z.array(calendarSessionResultSchema),
+    },
+    summary: 'Active Sessions overlapping any date within a given month (any authenticated caller)',
   },
 });

@@ -1,7 +1,7 @@
 import { Box, Link, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { Role } from '../../contract';
-import { EVENT_CREATE_PATH, EVENT_LIST_PATH, USER_MANAGEMENT_PATH } from '../../routes';
+import { CALENDAR_PATH, EVENT_CREATE_PATH, EVENT_LIST_PATH, USER_MANAGEMENT_PATH } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
 import { pageStyles } from './dashboard-placeholder-page.styles';
 
@@ -22,12 +22,20 @@ const DashboardPlaceholderPage = () => {
         {greeting}
       </Typography>
       <Typography variant="bodyM">{subtitle}</Typography>
-      {/* Unlike the two links below, this one isn't EventManager-only — GET
-          /events (STORY-013) has no role restriction, so every role sees it. */}
+      {/* Unlike the two links below, these two aren't EventManager-only —
+          GET /events (STORY-013) and GET /calendar (STORY-034) both have no
+          role restriction, so every role sees them. */}
       {user && (
         <Typography variant="bodyM">
           <Link component={RouterLink} to={EVENT_LIST_PATH}>
             Events
+          </Link>
+        </Typography>
+      )}
+      {user && (
+        <Typography variant="bodyM">
+          <Link component={RouterLink} to={CALENDAR_PATH}>
+            Calendar
           </Link>
         </Typography>
       )}

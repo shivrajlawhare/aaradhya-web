@@ -12,3 +12,4 @@ export const EVENT_CREATE_PATH = '/events/new';
 // URL to navigate to.
 export const EVENT_DETAIL_PATH_PATTERN = '/events/:id';
 export const eventDetailPath = (id: string): string => `/events/${id}`;
+export const CALENDAR_PATH = '/calendar';
