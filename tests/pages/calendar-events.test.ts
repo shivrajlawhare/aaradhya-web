@@ -5,13 +5,13 @@ import { getEventsOnDate } from '../../src/pages/calendar/calendar-events';
 interface MockSessionOverlap {
   startDate: string;
   endDate: string;
-  event: { id: string; eventFamilyType: string; status: EventStatus };
+  event: { id: string; eventFamilyType: string; status: EventStatus; eventManager: string };
 }
 
 const makeSession = (overrides: Partial<MockSessionOverlap> = {}): MockSessionOverlap => ({
   startDate: '2026-09-12T00:00:00.000Z',
   endDate: '2026-09-14T00:00:00.000Z',
-  event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative },
+  event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-1' },
   ...overrides,
 });
 
@@ -35,12 +35,12 @@ describe('getEventsOnDate', () => {
       makeSession({
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative },
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-1' },
       }),
       makeSession({
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative },
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-1' },
       }),
     ];
 
@@ -54,12 +54,17 @@ describe('getEventsOnDate', () => {
       makeSession({
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative },
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-1' },
       }),
       makeSession({
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-2', eventFamilyType: 'Corporate Offsite', status: EventStatus.Confirmed },
+        event: {
+          id: 'event-2',
+          eventFamilyType: 'Corporate Offsite',
+          status: EventStatus.Confirmed,
+          eventManager: 'manager-2',
+        },
       }),
     ];
 

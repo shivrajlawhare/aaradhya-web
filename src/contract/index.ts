@@ -13,7 +13,7 @@ const c = initContract();
  * createUser, listUsers, updateUser, listChangeLog, createEvent, listEvents,
  * getEvent, updateEvent, updateEventAccommodation, updateEventPayment,
  * updateDocumentsChecklist, createSession, updateSession, listMenuItems,
- * createItem, updateItem, deleteItem, getCalendar).
+ * createItem, updateItem, deleteItem, getCalendar, listEventManagers).
  */
 export enum Role {
   EventManager = 'EventManager',
@@ -76,6 +76,13 @@ export const userIdParamsSchema = z.object({
 export const updateUserBodySchema = z.object({
   active: z.boolean().optional(),
   role: z.nativeEnum(Role).optional(),
+});
+
+// {id, name} only — GET /event-managers (STORY-037 dependency) is
+// deliberately narrower than userResultSchema, any authenticated caller.
+export const eventManagerSummarySchema = z.object({
+  id: z.string(),
+  name: z.string(),
 });
 
 export const listChangeLogQuerySchema = z.object({
@@ -476,10 +483,13 @@ export const getCalendarQuerySchema = z.object({
 // A slim summary of the parent Event — id/eventFamilyType/status, enough
 // for the calendar to render one chip without a second round-trip per
 // session (STORY-034's own AC).
+// eventManager added STORY-037 — the calendar's own Event Manager filter
+// chip filters the already-fetched month's data client-side.
 export const calendarEventSummarySchema = z.object({
   id: z.string(),
   eventFamilyType: z.string(),
   status: z.nativeEnum(EventStatus),
+  eventManager: z.string(),
 });
 
 export const calendarSessionResultSchema = sessionResultSchema.extend({
@@ -525,6 +535,14 @@ export const contract = c.router({
       404: apiErrorSchema,
     },
     summary: 'Toggle active and/or change role on a User Account (Event Manager only)',
+  },
+  listEventManagers: {
+    method: 'GET',
+    path: '/event-managers',
+    responses: {
+      200: z.array(eventManagerSummarySchema),
+    },
+    summary: 'List {id, name} for every Event Manager account (any authenticated caller)',
   },
   listChangeLog: {
     method: 'GET',

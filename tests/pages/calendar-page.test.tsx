@@ -34,7 +34,7 @@ interface MockCalendarSession {
     notes: string | null;
   };
   items: unknown[];
-  event: { id: string; eventFamilyType: string; status: string };
+  event: { id: string; eventFamilyType: string; status: string; eventManager: string };
 }
 
 const makeSession = (overrides: Partial<MockCalendarSession> = {}): MockCalendarSession => ({
@@ -62,18 +62,26 @@ const makeSession = (overrides: Partial<MockCalendarSession> = {}): MockCalendar
     notes: null,
   },
   items: [],
-  event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative' },
+  event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
   ...overrides,
 });
+
+interface MockEventManager {
+  id: string;
+  name: string;
+}
 
 const jsonResponse = (status: number, body: unknown) =>
   Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
 
-const mockCalendarApi = (sessions: MockCalendarSession[]) => {
+const mockCalendarApi = (sessions: MockCalendarSession[], eventManagers: MockEventManager[] = []) => {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
+      if (url.includes('/event-managers')) {
+        return jsonResponse(200, eventManagers);
+      }
       if (url.includes('/calendar')) {
         return jsonResponse(200, sessions);
       }
@@ -151,14 +159,14 @@ describe('CalendarPage', () => {
         sessionType: 'Haldi',
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative' },
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
       }),
       makeSession({
         id: 'session-2',
         sessionType: 'Vendor Setup',
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative' },
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
       }),
     ]);
     renderPage();
@@ -174,13 +182,13 @@ describe('CalendarPage', () => {
         id: 'session-1',
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative' },
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
       }),
       makeSession({
         id: 'session-2',
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-2', eventFamilyType: 'Corporate Offsite', status: 'Confirmed' },
+        event: { id: 'event-2', eventFamilyType: 'Corporate Offsite', status: 'Confirmed', eventManager: 'manager-1' },
       }),
     ]);
     renderPage();
@@ -201,7 +209,7 @@ describe('CalendarPage', () => {
       makeSession({
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status },
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status, eventManager: 'manager-1' },
       }),
     ]);
     renderPage();
@@ -221,7 +229,7 @@ describe('CalendarPage', () => {
       makeSession({
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-42', eventFamilyType: 'Wedding', status: 'Tentative' },
+        event: { id: 'event-42', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
       }),
     ]);
     renderPage();
@@ -258,5 +266,255 @@ describe('CalendarPage', () => {
     for (const label of ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']) {
       expect(await screen.findByText(label)).toBeInTheDocument();
     }
+  });
+
+  it('renders the All/Tentative/Confirmed status chips, with "All" active by default', async () => {
+    mockCalendarApi([]);
+    renderPage();
+
+    const allChip = (await screen.findByText('All')).closest('.MuiChip-root');
+    expect(allChip).toHaveAttribute('aria-pressed', 'true');
+    const tentativeChip = (await screen.findByText('Tentative')).closest('.MuiChip-root');
+    expect(tentativeChip).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('selecting a status chip hides Events of a different status and marks the chip active', async () => {
+    mockCalendarApi([
+      makeSession({
+        id: 'session-1',
+        startDate: '2026-09-12T00:00:00.000Z',
+        endDate: '2026-09-12T00:00:00.000Z',
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+      }),
+      makeSession({
+        id: 'session-2',
+        startDate: '2026-09-12T00:00:00.000Z',
+        endDate: '2026-09-12T00:00:00.000Z',
+        event: {
+          id: 'event-2',
+          eventFamilyType: 'Corporate Offsite',
+          status: 'Confirmed',
+          eventManager: 'manager-1',
+        },
+      }),
+    ]);
+    renderPage();
+    await navigateToSeptember2026();
+    await screen.findByText('Wedding');
+
+    fireEvent.click(screen.getByText('Confirmed'));
+
+    expect(screen.queryByText('Wedding')).not.toBeInTheDocument();
+    expect(await screen.findByText('Corporate Offsite')).toBeInTheDocument();
+    const confirmedChip = screen.getByText('Confirmed').closest('.MuiChip-root');
+    expect(confirmedChip).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('"All" clears the status filter, restoring every Event regardless of status', async () => {
+    mockCalendarApi([
+      makeSession({
+        id: 'session-1',
+        startDate: '2026-09-12T00:00:00.000Z',
+        endDate: '2026-09-12T00:00:00.000Z',
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+      }),
+      makeSession({
+        id: 'session-2',
+        startDate: '2026-09-12T00:00:00.000Z',
+        endDate: '2026-09-12T00:00:00.000Z',
+        event: {
+          id: 'event-2',
+          eventFamilyType: 'Corporate Offsite',
+          status: 'Confirmed',
+          eventManager: 'manager-1',
+        },
+      }),
+    ]);
+    renderPage();
+    await navigateToSeptember2026();
+    fireEvent.click(await screen.findByText('Confirmed'));
+    expect(screen.queryByText('Wedding')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('All'));
+
+    expect(await screen.findByText('Wedding')).toBeInTheDocument();
+    expect(screen.getByText('Corporate Offsite')).toBeInTheDocument();
+  });
+
+  it('the Venue filter picker lists actual venues from the visible month, not a hardcoded list', async () => {
+    mockCalendarApi([
+      makeSession({
+        id: 'session-1',
+        venue: 'Lawn',
+        startDate: '2026-09-12T00:00:00.000Z',
+        endDate: '2026-09-12T00:00:00.000Z',
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+      }),
+      makeSession({
+        id: 'session-2',
+        venue: 'Poolside',
+        startDate: '2026-09-12T00:00:00.000Z',
+        endDate: '2026-09-12T00:00:00.000Z',
+        event: {
+          id: 'event-2',
+          eventFamilyType: 'Corporate Offsite',
+          status: 'Tentative',
+          eventManager: 'manager-1',
+        },
+      }),
+    ]);
+    renderPage();
+    await navigateToSeptember2026();
+
+    fireEvent.click(await screen.findByText('Venue'));
+
+    expect(await screen.findByRole('menuitem', { name: 'Lawn' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Poolside' })).toBeInTheDocument();
+  });
+
+  it('selecting a venue narrows the grid to Events at that venue and marks the chip active with the venue as its label', async () => {
+    mockCalendarApi([
+      makeSession({
+        id: 'session-1',
+        venue: 'Lawn',
+        startDate: '2026-09-12T00:00:00.000Z',
+        endDate: '2026-09-12T00:00:00.000Z',
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+      }),
+      makeSession({
+        id: 'session-2',
+        venue: 'Poolside',
+        startDate: '2026-09-12T00:00:00.000Z',
+        endDate: '2026-09-12T00:00:00.000Z',
+        event: {
+          id: 'event-2',
+          eventFamilyType: 'Corporate Offsite',
+          status: 'Tentative',
+          eventManager: 'manager-1',
+        },
+      }),
+    ]);
+    renderPage();
+    await navigateToSeptember2026();
+    fireEvent.click(await screen.findByText('Venue'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Lawn' }));
+
+    expect(await screen.findByText('Wedding')).toBeInTheDocument();
+    expect(screen.queryByText('Corporate Offsite')).not.toBeInTheDocument();
+    const venueChip = screen.getByText('Lawn').closest('.MuiChip-root');
+    expect(venueChip).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('the Event Manager filter picker lists real manager names from GET /event-managers', async () => {
+    mockCalendarApi(
+      [
+        makeSession({
+          startDate: '2026-09-12T00:00:00.000Z',
+          endDate: '2026-09-12T00:00:00.000Z',
+          event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+        }),
+      ],
+      [
+        { id: 'manager-1', name: 'Priya Sharma' },
+        { id: 'manager-2', name: 'Rohan Mehta' },
+      ],
+    );
+    renderPage();
+    await navigateToSeptember2026();
+
+    fireEvent.click(await screen.findByText('Event Manager'));
+
+    expect(await screen.findByRole('menuitem', { name: 'Priya Sharma' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Rohan Mehta' })).toBeInTheDocument();
+  });
+
+  it('selecting an Event Manager narrows the grid to that manager\'s Events', async () => {
+    mockCalendarApi(
+      [
+        makeSession({
+          id: 'session-1',
+          startDate: '2026-09-12T00:00:00.000Z',
+          endDate: '2026-09-12T00:00:00.000Z',
+          event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+        }),
+        makeSession({
+          id: 'session-2',
+          startDate: '2026-09-12T00:00:00.000Z',
+          endDate: '2026-09-12T00:00:00.000Z',
+          event: {
+            id: 'event-2',
+            eventFamilyType: 'Corporate Offsite',
+            status: 'Tentative',
+            eventManager: 'manager-2',
+          },
+        }),
+      ],
+      [
+        { id: 'manager-1', name: 'Priya Sharma' },
+        { id: 'manager-2', name: 'Rohan Mehta' },
+      ],
+    );
+    renderPage();
+    await navigateToSeptember2026();
+    fireEvent.click(await screen.findByText('Event Manager'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Priya Sharma' }));
+
+    expect(await screen.findByText('Wedding')).toBeInTheDocument();
+    expect(screen.queryByText('Corporate Offsite')).not.toBeInTheDocument();
+  });
+
+  it('selecting an Event Type narrows the grid accordingly', async () => {
+    mockCalendarApi([
+      makeSession({
+        id: 'session-1',
+        startDate: '2026-09-12T00:00:00.000Z',
+        endDate: '2026-09-12T00:00:00.000Z',
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+      }),
+      makeSession({
+        id: 'session-2',
+        startDate: '2026-09-12T00:00:00.000Z',
+        endDate: '2026-09-12T00:00:00.000Z',
+        event: {
+          id: 'event-2',
+          eventFamilyType: 'Corporate Offsite',
+          status: 'Tentative',
+          eventManager: 'manager-1',
+        },
+      }),
+    ]);
+    renderPage();
+    await navigateToSeptember2026();
+    fireEvent.click(await screen.findByText('Event Type'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Wedding' }));
+
+    // "Open Event Wedding" (EventChip's own aria-label) unambiguously
+    // targets the calendar chip, distinct from the Event Type filter
+    // chip's own label (which also now reads "Wedding" once selected).
+    expect(await screen.findByRole('button', { name: 'Open Event Wedding' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open Event Corporate Offsite' })).not.toBeInTheDocument();
+  });
+
+  it('combining two filters that together match nothing shows a message, not a stuck spinner', async () => {
+    mockCalendarApi([
+      makeSession({
+        id: 'session-1',
+        venue: 'Lawn',
+        startDate: '2026-09-12T00:00:00.000Z',
+        endDate: '2026-09-12T00:00:00.000Z',
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+      }),
+    ]);
+    renderPage();
+    await navigateToSeptember2026();
+    await screen.findByText('Wedding');
+
+    fireEvent.click(screen.getByText('Confirmed'));
+
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(await screen.findByText('No Events match the selected filters.')).toBeInTheDocument();
+    // The grid itself still renders (day-of-week header present), not
+    // replaced by the message.
+    expect(screen.getByText('Sun')).toBeInTheDocument();
   });
 });

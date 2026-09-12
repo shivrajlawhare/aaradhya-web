@@ -4,7 +4,16 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { Box, CircularProgress, IconButton, Typography } from '@mui/material';
 import { tsr } from '../../api/client';
 import { formatMonthLabel, shiftMonth, type MonthShift } from './calendar-dates';
+import {
+  DEFAULT_CALENDAR_FILTERS,
+  filterCalendarSessions,
+  getDistinctEventFamilyTypes,
+  getDistinctVenues,
+  isCalendarFiltered,
+  type CalendarFilters,
+} from './calendar-filters';
 import { monthNavStyles, pageStyles } from './calendar-page.styles';
+import FilterChipRow from './filter-chip-row';
 import MonthGrid from './month-grid';
 
 const currentMonthShift = (): MonthShift => {
@@ -14,11 +23,20 @@ const currentMonthShift = (): MonthShift => {
 
 const CalendarPage = () => {
   const [{ month, year }, setMonthShift] = useState<MonthShift>(currentMonthShift);
+  const [filters, setFilters] = useState<CalendarFilters>(DEFAULT_CALENDAR_FILTERS);
 
   const calendarQuery = tsr.getCalendar.useQuery({
     queryKey: ['calendar', month, year],
     queryData: { query: { month, year } },
   });
+  const eventManagersQuery = tsr.listEventManagers.useQuery({ queryKey: ['event-managers'] });
+
+  const monthSessions = calendarQuery.data?.body ?? [];
+  const filteredSessions = filterCalendarSessions(monthSessions, filters);
+  const eventManagerOptions = (eventManagersQuery.data?.body ?? []).map((manager) => ({
+    value: manager.id,
+    label: manager.name,
+  }));
 
   return (
     <Box sx={pageStyles}>
@@ -37,10 +55,22 @@ const CalendarPage = () => {
           <ChevronRightIcon />
         </IconButton>
       </Box>
+      <FilterChipRow
+        filters={filters}
+        onFiltersChange={setFilters}
+        venueOptions={getDistinctVenues(monthSessions)}
+        eventFamilyTypeOptions={getDistinctEventFamilyTypes(monthSessions)}
+        eventManagerOptions={eventManagerOptions}
+      />
       {calendarQuery.isPending ? (
         <CircularProgress aria-label="Loading calendar" />
       ) : (
-        <MonthGrid month={month} year={year} sessions={calendarQuery.data?.body ?? []} />
+        <>
+          {isCalendarFiltered(filters) && filteredSessions.length === 0 && (
+            <Typography variant="bodyM">No Events match the selected filters.</Typography>
+          )}
+          <MonthGrid month={month} year={year} sessions={filteredSessions} />
+        </>
       )}
     </Box>
   );
