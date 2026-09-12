@@ -136,12 +136,57 @@ interface MockSession {
   durationDays: number;
   isMultiDay: boolean;
   setup: MockSessionSetup;
+  items: MockItem[];
 }
 
 // A plain-JS reimplementation of STORY-026's math, same reasoning as
 // computeAccommodationResponse above.
 const computeSessionDurationDays = (startDate: string, endDate: string) =>
   Math.floor((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000) + 1;
+
+interface MockMenuItem {
+  id: string;
+  name: string;
+  defaultCostPerPlate: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const makeMenuItem = (overrides: Partial<MockMenuItem> & { id: string }): MockMenuItem => ({
+  name: 'Menu Item',
+  defaultCostPerPlate: 0,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+  ...overrides,
+});
+
+interface MockItem {
+  id: string;
+  type: string;
+  mealName: string | null;
+  pax: number | null;
+  costPerPlate: number | null;
+  menuItems: string[];
+  eventName: string | null;
+  venue: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  totalCost: number | null;
+}
+
+const makeMealItem = (overrides: Partial<MockItem> & { id: string }): MockItem => ({
+  type: 'Meal',
+  mealName: 'Lunch',
+  pax: 100,
+  costPerPlate: 500,
+  menuItems: [],
+  eventName: null,
+  venue: null,
+  startTime: null,
+  endTime: null,
+  totalCost: 50000,
+  ...overrides,
+});
 
 interface MockEvent {
   id: string;
@@ -203,6 +248,11 @@ const computeAccommodationResponse = (
   };
 };
 
+// A plain-JS reimplementation of STORY-031's math, same reasoning as
+// computeAccommodationResponse above.
+const computeItemTotalCost = (pax: number | null, costPerPlate: number | null): number | null =>
+  pax === null || costPerPlate === null ? null : roundToCurrency(pax * costPerPlate);
+
 interface MockChangeLogEntry {
   id: string;
   entityType: string;
@@ -249,20 +299,27 @@ const seedSession = (role = 'EventManager') => {
 const mockEventDetailApi = ({
   event,
   changeLogEntries = [],
+  menuItems = [],
   notFound = false,
 }: {
   event?: MockEvent;
   changeLogEntries?: MockChangeLogEntry[];
+  menuItems?: MockMenuItem[];
   notFound?: boolean;
 }) => {
   let currentEvent = event;
+  let currentMenuItems = menuItems;
   const patchRequests: Record<string, unknown>[] = [];
   const accommodationPatchRequests: Record<string, unknown>[] = [];
   const paymentPatchRequests: Record<string, unknown>[] = [];
   const documentsChecklistPatchRequests: Record<string, unknown>[] = [];
   const sessionPostRequests: Record<string, unknown>[] = [];
   const sessionPatchRequests: Record<string, unknown>[] = [];
+  const itemPostRequests: Record<string, unknown>[] = [];
+  const itemPatchRequests: Record<string, unknown>[] = [];
   let sessionIdCounter = 0;
+  let itemIdCounter = 0;
+  let menuItemIdCounter = 0;
 
   vi.stubGlobal(
     'fetch',
@@ -302,6 +359,139 @@ const mockEventDetailApi = ({
         currentEvent = { ...currentEvent, documentsChecklist: { ...currentEvent.documentsChecklist, ...body } };
         return jsonResponse(200, currentEvent.documentsChecklist);
       }
+      if (method === 'GET' && url.includes('/menu-items')) {
+        const search = new URL(url).searchParams.get('search')?.trim().toLowerCase() ?? '';
+        const results = search
+          ? currentMenuItems.filter((item) => item.name.toLowerCase().includes(search))
+          : currentMenuItems;
+        return jsonResponse(200, results);
+      }
+      // Checked ahead of the session POST/PATCH handlers below — a plain
+      // `url.includes('/sessions/')` (the session PATCH handler's own
+      // check) would otherwise also match these deeper Item URLs, since
+      // `/events/X/sessions/Y/items/Z` still contains that substring.
+      if (method === 'POST' && currentEvent && /\/events\/[^/]+\/sessions\/[^/]+\/items$/.test(url)) {
+        const sid = url.split('/sessions/')[1]?.split('/items')[0];
+        const body: {
+          type: string;
+          mealName?: string;
+          pax?: number;
+          costPerPlate?: number;
+          menuItems?: ({ id: string } | { name: string })[];
+          eventName?: string;
+          venue?: string;
+          startTime?: string;
+          endTime?: string;
+        } = JSON.parse(String(init?.body));
+        itemPostRequests.push(body);
+        const resolvedMenuItemIds = (body.menuItems ?? []).map((ref) => {
+          if ('id' in ref) {
+            return ref.id;
+          }
+          const existing = currentMenuItems.find((item) => item.name.toLowerCase() === ref.name.toLowerCase());
+          if (existing) {
+            return existing.id;
+          }
+          menuItemIdCounter += 1;
+          const created = makeMenuItem({ id: `menu-item-${menuItemIdCounter}`, name: ref.name });
+          currentMenuItems = [...currentMenuItems, created];
+          return created.id;
+        });
+        itemIdCounter += 1;
+        const pax = body.type === 'Meal' ? (body.pax ?? 0) : null;
+        const costPerPlate = body.type === 'Meal' ? (body.costPerPlate ?? 0) : null;
+        const newItem: MockItem = {
+          id: `item-${itemIdCounter}`,
+          type: body.type,
+          mealName: body.type === 'Meal' ? (body.mealName ?? '') : null,
+          pax,
+          costPerPlate,
+          menuItems: body.type === 'Meal' ? resolvedMenuItemIds : [],
+          eventName: body.type === 'Event' ? (body.eventName ?? '') : null,
+          venue: body.type === 'Event' ? (body.venue ?? '') : null,
+          startTime: body.startTime ?? null,
+          endTime: body.endTime ?? null,
+          totalCost: computeItemTotalCost(pax, costPerPlate),
+        };
+        currentEvent = {
+          ...currentEvent,
+          sessions: currentEvent.sessions.map((session) =>
+            session.id === sid ? { ...session, items: [...session.items, newItem] } : session,
+          ),
+        };
+        return jsonResponse(201, newItem);
+      }
+      if (method === 'PATCH' && currentEvent && /\/events\/[^/]+\/sessions\/[^/]+\/items\/[^/]+$/.test(url)) {
+        const [, sid, iid] = /\/sessions\/([^/]+)\/items\/([^/]+)$/.exec(url) ?? [];
+        const body: Partial<{
+          mealName: string;
+          pax: number;
+          costPerPlate: number;
+          menuItems: ({ id: string } | { name: string })[];
+          eventName: string;
+          venue: string;
+          startTime: string;
+          endTime: string;
+        }> = JSON.parse(String(init?.body));
+        itemPatchRequests.push(body);
+        const session = currentEvent.sessions.find((candidate) => candidate.id === sid);
+        const existingItem = session?.items.find((candidate) => candidate.id === iid);
+        if (!session || !existingItem) {
+          return jsonResponse(404, {
+            error: { code: 'ITEM_NOT_FOUND', message: 'No Item with that id on this Session.' },
+          });
+        }
+        const resolvedMenuItemIds =
+          body.menuItems === undefined
+            ? existingItem.menuItems
+            : body.menuItems.map((ref) => {
+                if ('id' in ref) {
+                  return ref.id;
+                }
+                const existing = currentMenuItems.find(
+                  (item) => item.name.toLowerCase() === ref.name.toLowerCase(),
+                );
+                if (existing) {
+                  return existing.id;
+                }
+                menuItemIdCounter += 1;
+                const created = makeMenuItem({ id: `menu-item-${menuItemIdCounter}`, name: ref.name });
+                currentMenuItems = [...currentMenuItems, created];
+                return created.id;
+              });
+        const pax = body.pax ?? existingItem.pax;
+        const costPerPlate = body.costPerPlate ?? existingItem.costPerPlate;
+        const updatedItem: MockItem = {
+          ...existingItem,
+          ...body,
+          menuItems: resolvedMenuItemIds,
+          totalCost: computeItemTotalCost(pax, costPerPlate),
+        };
+        currentEvent = {
+          ...currentEvent,
+          sessions: currentEvent.sessions.map((candidate) =>
+            candidate.id === sid
+              ? {
+                  ...candidate,
+                  items: candidate.items.map((item) => (item.id === iid ? updatedItem : item)),
+                }
+              : candidate,
+          ),
+        };
+        return jsonResponse(200, updatedItem);
+      }
+      if (method === 'DELETE' && currentEvent && /\/events\/[^/]+\/sessions\/[^/]+\/items\/[^/]+$/.test(url)) {
+        const [, sid, iid] = /\/sessions\/([^/]+)\/items\/([^/]+)$/.exec(url) ?? [];
+        currentEvent = {
+          ...currentEvent,
+          sessions: currentEvent.sessions.map((candidate) =>
+            candidate.id === sid
+              ? { ...candidate, items: candidate.items.filter((item) => item.id !== iid) }
+              : candidate,
+          ),
+        };
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
       if (method === 'POST' && currentEvent && url.endsWith(`/events/${currentEvent.id}/sessions`)) {
         const body: {
           sessionType: string;
@@ -330,6 +520,7 @@ const mockEventDetailApi = ({
           durationDays: computeSessionDurationDays(body.startDate, body.endDate),
           isMultiDay: computeSessionDurationDays(body.startDate, body.endDate) > 1,
           setup: makeSessionSetup(body.setup),
+          items: [],
         };
         currentEvent = { ...currentEvent, sessions: [...currentEvent.sessions, newSession] };
         return jsonResponse(201, newSession);
@@ -402,7 +593,10 @@ const mockEventDetailApi = ({
     documentsChecklistPatchRequests,
     sessionPostRequests,
     sessionPatchRequests,
+    itemPostRequests,
+    itemPatchRequests,
     getCurrentEvent: () => currentEvent,
+    getCurrentMenuItems: () => currentMenuItems,
   };
 };
 
@@ -759,6 +953,7 @@ describe('EventDetailPage', () => {
             durationDays: 1,
             isMultiDay: false,
             setup: makeSessionSetup(),
+            items: [],
           },
         ],
       }),
@@ -882,6 +1077,7 @@ describe('EventDetailPage', () => {
       durationDays: 1,
       isMultiDay: false,
       setup: makeSessionSetup(),
+      items: [],
     };
     const { sessionPatchRequests, sessionPostRequests } = mockEventDetailApi({
       event: makeEvent({ sessions: [existingSession] }),
@@ -899,5 +1095,163 @@ describe('EventDetailPage', () => {
     await waitFor(() => expect(sessionPatchRequests).toHaveLength(1));
     expect(sessionPostRequests).toHaveLength(0);
     expect(sessionPatchRequests[0]).toMatchObject({ pax: 250 });
+  });
+
+  const makeSessionWithItems = (itemOverrides: (Partial<MockItem> & { id: string })[] = []): MockSession => ({
+    id: 'session-1',
+    sessionType: 'Wedding',
+    venue: 'Lawn',
+    venueCost: 50000,
+    startDate: '2026-06-15T00:00:00.000Z',
+    endDate: '2026-06-15T00:00:00.000Z',
+    startTime: null,
+    endTime: null,
+    pax: 200,
+    sessionStatus: 'Active',
+    durationDays: 1,
+    isMultiDay: false,
+    setup: makeSessionSetup(),
+    items: itemOverrides.map((overrides) => makeMealItem(overrides)),
+  });
+
+  it('shows the Items section, listing already-attached Items, when editing an existing Session', async () => {
+    seedSession();
+    const session = makeSessionWithItems([{ id: 'item-1', mealName: 'Lunch' }]);
+    mockEventDetailApi({ event: makeEvent({ sessions: [session] }) });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+
+    expect(await screen.findByText('Items')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Lunch')).toBeInTheDocument();
+  });
+
+  it('adds a Meal Item via POST, reflecting the server-computed total_cost', async () => {
+    seedSession();
+    const session = makeSessionWithItems();
+    const { itemPostRequests } = mockEventDetailApi({ event: makeEvent({ sessions: [session] }) });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Item' }));
+
+    fireEvent.change(screen.getByLabelText('Meal name for item 1'), { target: { value: 'Dinner' } });
+    fireEvent.change(screen.getByLabelText('Pax for item 1'), { target: { value: '100' } });
+    fireEvent.change(screen.getByLabelText('Cost per plate for item 1'), { target: { value: '500' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add item' }));
+
+    await waitFor(() => expect(itemPostRequests).toHaveLength(1));
+    expect(itemPostRequests[0]).toMatchObject({ type: 'Meal', mealName: 'Dinner', pax: 100, costPerPlate: 500 });
+    expect(await screen.findByText('Total cost: 50000')).toBeInTheDocument();
+  });
+
+  it("never shows a client-computed total_cost before save — an unsaved card reads '—'", async () => {
+    seedSession();
+    const session = makeSessionWithItems();
+    mockEventDetailApi({ event: makeEvent({ sessions: [session] }) });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Item' }));
+
+    fireEvent.change(screen.getByLabelText('Pax for item 1'), { target: { value: '100' } });
+    fireEvent.change(screen.getByLabelText('Cost per plate for item 1'), { target: { value: '500' } });
+
+    expect(screen.getByText('Total cost: —')).toBeInTheDocument();
+    expect(screen.queryByText('Total cost: 50000')).not.toBeInTheDocument();
+  });
+
+  it('attaches an existing Menu Item selected from search, referencing it by id on save', async () => {
+    seedSession();
+    const session = makeSessionWithItems();
+    const { itemPostRequests } = mockEventDetailApi({
+      event: makeEvent({ sessions: [session] }),
+      menuItems: [makeMenuItem({ id: 'menu-item-1', name: 'Paneer Tikka' })],
+    });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Item' }));
+
+    const searchInput = await screen.findByRole('combobox', { name: 'Menu items' });
+    // MUI's Autocomplete resets its typed inputValue back to '' on the next
+    // render if the field isn't focused yet (its multiple-mode "no selected
+    // label to show" reset effect) — a real user always focuses the field by
+    // clicking into it before typing, so this mirrors that.
+    fireEvent.focus(searchInput);
+    fireEvent.change(searchInput, { target: { value: 'Paneer' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'Paneer Tikka' }));
+
+    fireEvent.change(screen.getByLabelText('Meal name for item 1'), { target: { value: 'Dinner' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add item' }));
+
+    await waitFor(() => expect(itemPostRequests).toHaveLength(1));
+    expect(itemPostRequests[0]?.menuItems).toEqual([{ id: 'menu-item-1' }]);
+  });
+
+  it("offers \"Add '<name>' as a new menu item\" for a not-found search, attaching it by name", async () => {
+    seedSession();
+    const session = makeSessionWithItems();
+    const { itemPostRequests } = mockEventDetailApi({ event: makeEvent({ sessions: [session] }), menuItems: [] });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Item' }));
+
+    const searchInput = await screen.findByRole('combobox', { name: 'Menu items' });
+    fireEvent.focus(searchInput);
+    fireEvent.change(searchInput, { target: { value: 'Gulab Jamun' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'Add "Gulab Jamun" as a new menu item' }));
+
+    fireEvent.change(screen.getByLabelText('Meal name for item 1'), { target: { value: 'Dessert' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add item' }));
+
+    await waitFor(() => expect(itemPostRequests).toHaveLength(1));
+    expect(itemPostRequests[0]?.menuItems).toEqual([{ name: 'Gulab Jamun' }]);
+  });
+
+  it('does not add the same Menu Item twice to one Meal Item (de-duped, this story edge case)', async () => {
+    seedSession();
+    const session = makeSessionWithItems();
+    mockEventDetailApi({
+      event: makeEvent({ sessions: [session] }),
+      menuItems: [makeMenuItem({ id: 'menu-item-1', name: 'Paneer Tikka' })],
+    });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Item' }));
+
+    const searchInput = await screen.findByRole('combobox', { name: 'Menu items' });
+    fireEvent.focus(searchInput);
+    fireEvent.change(searchInput, { target: { value: 'Paneer' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'Paneer Tikka' }));
+    fireEvent.focus(searchInput);
+    fireEvent.change(searchInput, { target: { value: 'Paneer' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'Add "Paneer" as a new menu item' }));
+
+    expect(screen.getAllByText('Paneer Tikka')).toHaveLength(1);
+  });
+
+  it("removes an existing Item via a real DELETE — it's gone from the Event, not just hidden locally", async () => {
+    seedSession();
+    const session = makeSessionWithItems([{ id: 'item-1', mealName: 'Lunch' }]);
+    const { getCurrentEvent } = mockEventDetailApi({ event: makeEvent({ sessions: [session] }) });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+
+    expect(await screen.findByDisplayValue('Lunch')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+
+    await waitFor(() => expect(getCurrentEvent()?.sessions[0]?.items).toHaveLength(0));
+    await waitFor(() => expect(screen.queryByDisplayValue('Lunch')).not.toBeInTheDocument());
   });
 });

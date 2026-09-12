@@ -5,6 +5,7 @@ import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import { SEATING_ARRANGEMENT_OPTIONS, SeatingArrangement, type eventResultSchema } from '../../contract';
 import { toDateInputValue } from './date-input';
+import ItemsSection from './items-section';
 import {
   CUSTOM_SESSION_TYPE_OPTION,
   CUSTOM_VENUE_OPTION,
@@ -113,9 +114,15 @@ interface SessionFormProps {
   session?: SessionResult;
   onSaved: (session: SessionResult) => void;
   onCancel: () => void;
+  // Refetches the Event so session.items reflects a change made within
+  // the Items section below — STORY-033's own Items UI lives inside this
+  // form but persists each Item independently of the Session's own Save
+  // button (Items have their own POST/PATCH/DELETE, STORY-032). Only
+  // used when editing an existing Session (Items need a real :sid).
+  onItemsChanged?: () => void;
 }
 
-const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) => {
+const SessionForm = ({ eventId, session, onSaved, onCancel, onItemsChanged }: SessionFormProps) => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const { control, register, handleSubmit, setValue, setError, clearErrors } = useForm<SessionFormValues>({
     defaultValues: toFormValues(session),
@@ -359,6 +366,9 @@ const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) 
         </Stack>
         <TextField {...register('setup.notes')} label="Notes" multiline minRows={2} fullWidth />
       </Stack>
+      {session && onItemsChanged && (
+        <ItemsSection eventId={eventId} session={session} onItemsChanged={onItemsChanged} />
+      )}
       {submitError && (
         <Alert severity="error">
           <Typography variant="bodyM">{submitError}</Typography>

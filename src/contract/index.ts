@@ -12,7 +12,8 @@ const c = initContract();
  * only routes this app actually consumes are mirrored (currently: login,
  * createUser, listUsers, updateUser, listChangeLog, createEvent, listEvents,
  * getEvent, updateEvent, updateEventAccommodation, updateEventPayment,
- * updateDocumentsChecklist, createSession, updateSession).
+ * updateDocumentsChecklist, createSession, updateSession, listMenuItems,
+ * createItem, updateItem, deleteItem).
  */
 export enum Role {
   EventManager = 'EventManager',
@@ -326,10 +327,107 @@ const sessionSetupResultSchema = z.object({
   notes: z.string().nullable(),
 });
 
+export const eventSessionParamsSchema = z.object({
+  id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid event id.'),
+  sid: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid session id.'),
+});
+
+export const eventSessionItemParamsSchema = z.object({
+  id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid event id.'),
+  sid: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid session id.'),
+  iid: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid item id.'),
+});
+
+// SRS §4.5 — a single line within a Session: either a Meal Item or an
+// Event Item, mirrored from aaradhya-api's own ItemType enum.
+export enum ItemType {
+  Meal = 'Meal',
+  Event = 'Event',
+}
+
+export const listMenuItemsQuerySchema = z.object({
+  search: z.string().trim().optional(),
+});
+
+// The public Menu Item shape (STORY-030's master list).
+export const menuItemResultSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  defaultCostPerPlate: z.number(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+// Each entry either references an existing Menu Item by id (a search
+// result the user picked), or a name to find-or-create (the user typed a
+// name with no match and chose "Add '<name>' as a new menu item") —
+// mirrors aaradhya-api's own menuItemRefInputSchema exactly; STORY-032's
+// endpoint resolves either shape server-side, so this UI never has to
+// call POST /menu-items itself.
+export const menuItemRefSchema = z.union([
+  z.object({ id: z.string() }),
+  z.object({ name: z.string().trim().min(1) }),
+]);
+
+const mealItemBodySchema = z.object({
+  type: z.literal(ItemType.Meal),
+  mealName: z.string().trim().min(1),
+  pax: z.number().min(0),
+  costPerPlate: z.number().min(0),
+  menuItems: z.array(menuItemRefSchema).optional(),
+  startTime: z.string().trim().min(1).optional(),
+  endTime: z.string().trim().min(1).optional(),
+});
+
+const eventItemBodySchema = z.object({
+  type: z.literal(ItemType.Event),
+  eventName: z.string().trim().min(1),
+  venue: z.string().trim().min(1),
+  startTime: z.string().trim().min(1).optional(),
+  endTime: z.string().trim().min(1).optional(),
+});
+
+export const createItemBodySchema = z.discriminatedUnion('type', [mealItemBodySchema, eventItemBodySchema]);
+
+// Every field optional (PATCH semantics) — a caller sends only what
+// changed. No `type` — switching an Item between Meal/Event isn't
+// offered, mirroring aaradhya-api's own updateItemBodySchema.
+export const updateItemBodySchema = z.object({
+  mealName: z.string().trim().min(1).optional(),
+  pax: z.number().min(0).optional(),
+  costPerPlate: z.number().min(0).optional(),
+  menuItems: z.array(menuItemRefSchema).optional(),
+  eventName: z.string().trim().min(1).optional(),
+  venue: z.string().trim().min(1).optional(),
+  startTime: z.string().trim().min(1).optional(),
+  endTime: z.string().trim().min(1).optional(),
+});
+
+// total_cost is derived (STORY-031) — never accepted as input, always
+// present on output; null for an Event Item, where the concept doesn't
+// apply. This story's own AC: total_cost is never computed client-side,
+// only ever displayed from this field.
+export const itemResultSchema = z.object({
+  id: z.string(),
+  type: z.nativeEnum(ItemType),
+  mealName: z.string().nullable(),
+  pax: z.number().nullable(),
+  costPerPlate: z.number().nullable(),
+  menuItems: z.array(z.string()),
+  eventName: z.string().nullable(),
+  venue: z.string().nullable(),
+  startTime: z.string().nullable(),
+  endTime: z.string().nullable(),
+  totalCost: z.number().nullable(),
+});
+
 // durationDays/isMultiDay are derived (STORY-026) — never accepted as
 // input, always present on output. startTime/endTime/startDate/endDate are
 // wire-format strings, same reasoning as every other date field in this
-// file.
+// file. items added STORY-033 — GET /events/:id returned it only once the
+// Session form actually needed to read/edit current Item data (same
+// retroactive-addition pattern accommodation/payment/documentsChecklist/
+// sessions itself already went through).
 export const sessionResultSchema = z.object({
   id: z.string(),
   sessionType: z.string(),
@@ -344,11 +442,7 @@ export const sessionResultSchema = z.object({
   durationDays: z.number(),
   isMultiDay: z.boolean(),
   setup: sessionSetupResultSchema,
-});
-
-export const eventSessionParamsSchema = z.object({
-  id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid event id.'),
-  sid: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid session id.'),
+  items: z.array(itemResultSchema),
 });
 
 // The public Event shape. createdAt/updatedAt are wire-format strings, same
@@ -519,5 +613,48 @@ export const contract = c.router({
       404: apiErrorSchema,
     },
     summary: "Edit one of an Event's Sessions (Event Manager only)",
+  },
+  listMenuItems: {
+    method: 'GET',
+    path: '/menu-items',
+    query: listMenuItemsQuerySchema,
+    responses: {
+      200: z.array(menuItemResultSchema),
+    },
+    summary: 'Search the shared Menu Item master list (any authenticated caller)',
+  },
+  createItem: {
+    method: 'POST',
+    path: '/events/:id/sessions/:sid/items',
+    pathParams: eventSessionParamsSchema,
+    body: createItemBodySchema,
+    responses: {
+      201: itemResultSchema,
+      400: apiErrorSchema,
+      404: apiErrorSchema,
+    },
+    summary: 'Add a Meal or Event Item to a Session (Event Manager only)',
+  },
+  updateItem: {
+    method: 'PATCH',
+    path: '/events/:id/sessions/:sid/items/:iid',
+    pathParams: eventSessionItemParamsSchema,
+    body: updateItemBodySchema,
+    responses: {
+      200: itemResultSchema,
+      400: apiErrorSchema,
+      404: apiErrorSchema,
+    },
+    summary: "Edit one of a Session's Items (Event Manager only)",
+  },
+  deleteItem: {
+    method: 'DELETE',
+    path: '/events/:id/sessions/:sid/items/:iid',
+    pathParams: eventSessionItemParamsSchema,
+    responses: {
+      204: c.noBody(),
+      404: apiErrorSchema,
+    },
+    summary: "Remove one of a Session's Items (Event Manager only)",
   },
 });

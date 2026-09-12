@@ -44,7 +44,13 @@ const SessionsTab = ({ event, canEdit, onEventChanged }: SessionsTabProps) => {
   const editingSession = event.sessions.find((session) => session.id === editingSessionId);
   if (mode === 'edit' && editingSession) {
     return (
-      <SessionForm eventId={event.id} session={editingSession} onSaved={handleSaved} onCancel={handleCancel} />
+      <SessionForm
+        eventId={event.id}
+        session={editingSession}
+        onSaved={handleSaved}
+        onCancel={handleCancel}
+        onItemsChanged={onEventChanged}
+      />
     );
   }
 
