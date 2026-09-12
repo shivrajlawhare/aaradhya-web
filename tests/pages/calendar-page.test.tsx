@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { tsr } from '../../src/api/client';
 import CalendarPage from '../../src/pages/calendar/calendar-page';
@@ -90,6 +90,20 @@ const mockCalendarApi = (sessions: MockCalendarSession[], eventManagers: MockEve
   );
 };
 
+// A real browser's own Back button (or an in-app one calling navigate(-1))
+// pops the history stack the same way — this stands in for either, to
+// verify STORY-038's own "back navigation restores calendar state" AC
+// without needing an actual browser.
+const EventDetailPlaceholder = () => {
+  const navigate = useNavigate();
+  return (
+    <div>
+      <p>event detail placeholder</p>
+      <button onClick={() => navigate(-1)}>Go back</button>
+    </div>
+  );
+};
+
 const renderPage = () => {
   const queryClient = new QueryClient();
 
@@ -100,7 +114,7 @@ const renderPage = () => {
           <MemoryRouter initialEntries={[CALENDAR_PATH]}>
             <Routes>
               <Route path={CALENDAR_PATH} element={<CalendarPage />} />
-              <Route path={EVENT_DETAIL_PATH_PATTERN} element={<div>event detail placeholder</div>} />
+              <Route path={EVENT_DETAIL_PATH_PATTERN} element={<EventDetailPlaceholder />} />
             </Routes>
           </MemoryRouter>
         </ThemeProvider>
@@ -516,5 +530,36 @@ describe('CalendarPage', () => {
     // The grid itself still renders (day-of-week header present), not
     // replaced by the message.
     expect(screen.getByText('Sun')).toBeInTheDocument();
+  });
+
+  it("preserves the active month and filters after navigating to an Event's detail screen and back (STORY-038)", async () => {
+    mockCalendarApi([
+      makeSession({
+        id: 'session-1',
+        venue: 'Lawn',
+        startDate: '2026-09-12T00:00:00.000Z',
+        endDate: '2026-09-12T00:00:00.000Z',
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Confirmed', eventManager: 'manager-1' },
+      }),
+    ]);
+    renderPage();
+    await navigateToSeptember2026();
+
+    fireEvent.click(await screen.findByText('Confirmed'));
+    fireEvent.click(await screen.findByText('Venue'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Lawn' }));
+    const confirmedChip = await screen.findByText('Confirmed');
+    expect(confirmedChip.closest('.MuiChip-root')).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Open Event Wedding' }));
+    await screen.findByText('event detail placeholder');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
+
+    expect(await screen.findByText('September 2026')).toBeInTheDocument();
+    const confirmedChipAfterBack = await screen.findByText('Confirmed');
+    expect(confirmedChipAfterBack.closest('.MuiChip-root')).toHaveAttribute('aria-pressed', 'true');
+    const venueChipAfterBack = screen.getByText('Lawn').closest('.MuiChip-root');
+    expect(venueChipAfterBack).toHaveAttribute('aria-pressed', 'true');
   });
 });
