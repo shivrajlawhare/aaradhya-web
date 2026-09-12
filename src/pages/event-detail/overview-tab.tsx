@@ -15,6 +15,7 @@ import { tsr } from '../../api/client';
 import ClientContactRows, { type ClientContactFormValue } from '../../components/ui/client-contact-rows';
 import { ClientContactRole, EventStatus, type eventResultSchema } from '../../contract';
 import { contactsReadOnlyStyles, sectionStyles, statusFieldStyles } from './overview-tab.styles';
+import TotalCostSummaryPanel from './total-cost-summary-panel';
 
 type PublicEvent = z.infer<typeof eventResultSchema>;
 
@@ -176,6 +177,7 @@ const OverviewTab = ({ event, canEdit, onEventChanged }: OverviewTabProps) => {
         </Alert>
       )}
       {contactsSection}
+      <TotalCostSummaryPanel event={event} canEdit={canEdit} onEventChanged={onEventChanged} />
     </Stack>
   );
 };

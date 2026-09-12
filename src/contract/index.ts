@@ -12,8 +12,9 @@ const c = initContract();
  * only routes this app actually consumes are mirrored (currently: login,
  * createUser, listUsers, updateUser, listChangeLog, createEvent, listEvents,
  * getEvent, updateEvent, updateEventAccommodation, updateEventPayment,
- * updateDocumentsChecklist, createSession, updateSession, listMenuItems,
- * createItem, updateItem, deleteItem, getCalendar, listEventManagers).
+ * updateDocumentsChecklist, updateEventExtras, getQuotationSummary,
+ * createSession, updateSession, listMenuItems, createItem, updateItem,
+ * deleteItem, getCalendar, listEventManagers).
  */
 export enum Role {
   EventManager = 'EventManager',
@@ -251,6 +252,32 @@ export const documentsChecklistResultSchema = z.object({
   weddingCard: z.boolean(),
 });
 
+// One numeric field per fixed key — same "fixed, closed set of named keys"
+// shape documentsChecklistResultSchema above uses, mirroring aaradhya-api's
+// own extrasFieldsSchema (STORY-040).
+const extrasFieldsSchema = z.object({
+  decoration: z.number().min(0).optional(),
+  photographer: z.number().min(0).optional(),
+  bhatji: z.number().min(0).optional(),
+});
+
+export const updateEventExtrasBodySchema = extrasFieldsSchema.strict();
+
+// Every Event always has all three amounts (defaulted to 0), same "always
+// instantiated" convention payment/documentsChecklist already use.
+export const extrasResultSchema = extrasFieldsSchema.required();
+
+// The exact 6 fields aaradhya-api's computeTotalCostSummary produces
+// (STORY-039) — mirrors quotationSummaryResultSchema field-for-field.
+export const quotationSummaryResultSchema = z.object({
+  venueTotal: z.number(),
+  foodSubtotal: z.number(),
+  foodTotalInclGst: z.number(),
+  accommodationTotal: z.number(),
+  extrasTotal: z.number(),
+  grandTotal: z.number(),
+});
+
 // SRS §4.2 — Session Status, independent of the parent Event's own status.
 export enum SessionStatus {
   Active = 'Active',
@@ -455,10 +482,11 @@ export const sessionResultSchema = z.object({
 // The public Event shape. createdAt/updatedAt are wire-format strings, same
 // reasoning as userResultSchema above. accommodation added STORY-020,
 // payment added STORY-023, documentsChecklist added STORY-025, sessions
-// added STORY-029 — GET /events/:id returned none of them until the screen
-// that needed to read current state on first render actually landed (see
-// aaradhya-api's STORY-020/STORY-023/STORY-025/STORY-028 Decisions for why
-// these live on eventResultSchema and not a dedicated GET each).
+// added STORY-029, extras added STORY-042 — GET /events/:id returned none
+// of them until the screen that needed to read current state on first
+// render actually landed (see aaradhya-api's STORY-020/STORY-023/
+// STORY-025/STORY-028/STORY-042 Decisions for why these live on
+// eventResultSchema and not a dedicated GET each).
 export const eventResultSchema = z.object({
   id: z.string(),
   eventId: z.string(),
@@ -469,6 +497,7 @@ export const eventResultSchema = z.object({
   accommodation: accommodationResultSchema,
   payment: paymentResultSchema,
   documentsChecklist: documentsChecklistResultSchema,
+  extras: extrasResultSchema,
   sessions: z.array(sessionResultSchema),
   createdBy: z.string(),
   createdAt: z.string(),
@@ -625,6 +654,27 @@ export const contract = c.router({
       404: apiErrorSchema,
     },
     summary: "Toggle items on an Event's Documents Checklist (Event Manager only)",
+  },
+  updateEventExtras: {
+    method: 'PATCH',
+    path: '/events/:id/extras',
+    pathParams: eventIdParamsSchema,
+    body: updateEventExtrasBodySchema,
+    responses: {
+      200: extrasResultSchema,
+      404: apiErrorSchema,
+    },
+    summary: "Edit an Event's Quotation extras — Decoration/Photographer/Bhatji (Event Manager only)",
+  },
+  getQuotationSummary: {
+    method: 'GET',
+    path: '/events/:id/quotation-summary',
+    pathParams: eventIdParamsSchema,
+    responses: {
+      200: quotationSummaryResultSchema,
+      404: apiErrorSchema,
+    },
+    summary: "Get an Event's live Total Cost Summary rollup (any authenticated caller)",
   },
   createSession: {
     method: 'POST',

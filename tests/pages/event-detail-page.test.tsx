@@ -44,6 +44,19 @@ interface MockPayment {
   balance: number;
 }
 
+interface MockExtras {
+  decoration: number;
+  photographer: number;
+  bhatji: number;
+}
+
+const makeExtras = (overrides: Partial<MockExtras> = {}): MockExtras => ({
+  decoration: 0,
+  photographer: 0,
+  bhatji: 0,
+  ...overrides,
+});
+
 const makePayment = (overrides: Partial<MockPayment> = {}): MockPayment => ({
   totalEstimatedAmount: 0,
   advanceRequired: 0,
@@ -198,6 +211,7 @@ interface MockEvent {
   accommodation: MockAccommodation;
   payment: MockPayment;
   documentsChecklist: MockDocumentsChecklist;
+  extras: MockExtras;
   sessions: MockSession[];
   createdBy: string;
   createdAt: string;
@@ -264,6 +278,37 @@ interface MockChangeLogEntry {
   timestamp: string;
 }
 
+// A plain-JS reimplementation of STORY-039's math, same reasoning as
+// computeAccommodationResponse above — only Active sessions and Meal Items
+// count toward venue/food totals (STORY-041's own Cancelled-exclusion
+// decision), reusing each item's already-mocked totalCost rather than
+// redoing pax × cost_per_plate.
+const computeQuotationSummary = (event: MockEvent) => {
+  const activeSessions = event.sessions.filter((session) => session.sessionStatus === 'Active');
+  const venueTotal = roundToCurrency(activeSessions.reduce((sum, session) => sum + session.venueCost, 0));
+  const foodSubtotal = roundToCurrency(
+    activeSessions.reduce(
+      (sum, session) =>
+        sum +
+        session.items
+          .filter((item) => item.type === 'Meal')
+          .reduce((itemSum, item) => itemSum + (item.totalCost ?? 0), 0),
+      0,
+    ),
+  );
+  const foodTotalInclGst = roundToCurrency(foodSubtotal * (1 + GST_RATE / 100));
+  const accommodationTotal = event.accommodation.totalCharges;
+  const extrasTotal = roundToCurrency(event.extras.decoration + event.extras.photographer + event.extras.bhatji);
+  return {
+    venueTotal,
+    foodSubtotal,
+    foodTotalInclGst,
+    accommodationTotal,
+    extrasTotal,
+    grandTotal: roundToCurrency(venueTotal + foodTotalInclGst + accommodationTotal + extrasTotal),
+  };
+};
+
 const makeEvent = (overrides: Partial<MockEvent> = {}): MockEvent => ({
   id: 'event-1',
   eventId: 'ARD-EVT-2026-001',
@@ -277,6 +322,7 @@ const makeEvent = (overrides: Partial<MockEvent> = {}): MockEvent => ({
   accommodation: makeAccommodation(),
   payment: makePayment(),
   documentsChecklist: makeDocumentsChecklist(),
+  extras: makeExtras(),
   sessions: [],
   createdBy: 'manager-1',
   createdAt: '2026-01-01T00:00:00.000Z',
@@ -313,6 +359,7 @@ const mockEventDetailApi = ({
   const accommodationPatchRequests: Record<string, unknown>[] = [];
   const paymentPatchRequests: Record<string, unknown>[] = [];
   const documentsChecklistPatchRequests: Record<string, unknown>[] = [];
+  const extrasPatchRequests: Record<string, unknown>[] = [];
   const sessionPostRequests: Record<string, unknown>[] = [];
   const sessionPatchRequests: Record<string, unknown>[] = [];
   const itemPostRequests: Record<string, unknown>[] = [];
@@ -358,6 +405,15 @@ const mockEventDetailApi = ({
         documentsChecklistPatchRequests.push(body);
         currentEvent = { ...currentEvent, documentsChecklist: { ...currentEvent.documentsChecklist, ...body } };
         return jsonResponse(200, currentEvent.documentsChecklist);
+      }
+      if (method === 'PATCH' && currentEvent && url.endsWith(`/events/${currentEvent.id}/extras`)) {
+        const body: Partial<MockExtras> = JSON.parse(String(init?.body));
+        extrasPatchRequests.push(body);
+        currentEvent = { ...currentEvent, extras: { ...currentEvent.extras, ...body } };
+        return jsonResponse(200, currentEvent.extras);
+      }
+      if (method === 'GET' && currentEvent && url.endsWith(`/events/${currentEvent.id}/quotation-summary`)) {
+        return jsonResponse(200, computeQuotationSummary(currentEvent));
       }
       if (method === 'GET' && url.includes('/menu-items')) {
         const search = new URL(url).searchParams.get('search')?.trim().toLowerCase() ?? '';
@@ -591,6 +647,7 @@ const mockEventDetailApi = ({
     accommodationPatchRequests,
     paymentPatchRequests,
     documentsChecklistPatchRequests,
+    extrasPatchRequests,
     sessionPostRequests,
     sessionPatchRequests,
     itemPostRequests,
@@ -689,6 +746,125 @@ describe('EventDetailPage', () => {
     await waitFor(() => expect(patchRequests).toHaveLength(1));
     const contacts = patchRequests[0]?.clientContacts as { name: string }[];
     expect(contacts.map((contact) => contact.name)).toEqual(['Priya Sharma', 'Rohan Nair']);
+  });
+
+  it('renders the Total Cost Summary rollup as read-only text, sourced from the live quotation-summary endpoint', async () => {
+    seedSession();
+    mockEventDetailApi({
+      event: makeEvent({
+        accommodation: makeAccommodation({ totalCharges: 11800 }),
+        extras: makeExtras({ decoration: 1000, photographer: 1500, bhatji: 500 }),
+        sessions: [
+          {
+            id: 'session-1',
+            sessionType: 'Wedding',
+            venue: 'Lawn',
+            venueCost: 5000,
+            startDate: '2026-06-15',
+            endDate: '2026-06-15',
+            startTime: null,
+            endTime: null,
+            pax: 200,
+            sessionStatus: 'Active',
+            durationDays: 1,
+            isMultiDay: false,
+            setup: makeSessionSetup(),
+            items: [
+              {
+                id: 'item-1',
+                type: 'Meal',
+                mealName: 'Lunch',
+                pax: 10,
+                costPerPlate: 200,
+                menuItems: [],
+                eventName: null,
+                venue: null,
+                startTime: null,
+                endTime: null,
+                totalCost: 2000,
+              },
+            ],
+          },
+        ],
+      }),
+    });
+    renderPage();
+
+    // venueTotal 5000, foodSubtotal 2000, foodTotalInclGst 2000 × 1.18 =
+    // 2360, accommodationTotal 11800, extrasTotal 3000, grandTotal =
+    // 5000 + 2360 + 11800 + 3000 = 22160.
+    expect(await screen.findByText('Venue total: 5,000')).toBeInTheDocument();
+    expect(screen.getByText('Food subtotal: 2,000')).toBeInTheDocument();
+    expect(screen.getByText('Food total (incl. GST): 2,360')).toBeInTheDocument();
+    expect(screen.getByText('Accommodation total: 11,800')).toBeInTheDocument();
+    expect(screen.getByText('Extras total: 3,000')).toBeInTheDocument();
+    const grandTotal = screen.getByText('22,160');
+    expect(grandTotal).toBeInTheDocument();
+    // display variant (Fraunces) — the Grand Total is the single most
+    // visually prominent number on the panel (this story's own AC).
+    expect(grandTotal).toHaveClass('MuiTypography-display');
+  });
+
+  it('lets an Event Manager edit extras and persist via PATCH, refreshing the Grand Total from a fresh quotation-summary call', async () => {
+    seedSession();
+    const { extrasPatchRequests } = mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    expect(await screen.findByText('Venue total: 0')).toBeInTheDocument();
+
+    fireEvent.change(await screen.findByLabelText('Decoration'), { target: { value: '15000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save extras' }));
+
+    await waitFor(() => expect(extrasPatchRequests).toHaveLength(1));
+    expect(extrasPatchRequests[0]).toMatchObject({ decoration: 15000, photographer: 0, bhatji: 0 });
+    // Grand Total (all-zero Event otherwise) becomes exactly the new
+    // decoration amount, and it comes from a fresh GET (the mock
+    // recomputes the whole summary from the now-updated Event), not a
+    // client-side recalculation off the PATCH response alone.
+    expect(await screen.findByText('Grand Total')).toBeInTheDocument();
+    expect(await screen.findByText('15,000')).toBeInTheDocument();
+  });
+
+  it('shows Decoration/Photographer/Bhatji as read-only text, not inputs, for a non-EventManager session', async () => {
+    seedSession('Reception');
+    mockEventDetailApi({
+      event: makeEvent({ extras: makeExtras({ decoration: 1000, photographer: 1500, bhatji: 500 }) }),
+    });
+    renderPage();
+
+    expect(await screen.findByText('Decoration: 1,000')).toBeInTheDocument();
+    expect(screen.getByText('Photographer: 1,500')).toBeInTheDocument();
+    expect(screen.getByText('Bhatji: 500')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Decoration')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save extras' })).not.toBeInTheDocument();
+  });
+
+  it('shows an error message, not a stuck spinner, when the quotation-summary call fails', async () => {
+    seedSession();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/quotation-summary')) {
+          return jsonResponse(500, { error: { code: 'INTERNAL_ERROR', message: 'Something broke.' } });
+        }
+        return jsonResponse(200, makeEvent());
+      }),
+    );
+    renderPage();
+
+    expect(await screen.findByText('Something went wrong. Please try again.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Loading Total Cost Summary')).not.toBeInTheDocument();
+  });
+
+  it('renders a Grand Total large enough to need thousands-grouping correctly, not as a raw digit string', async () => {
+    seedSession();
+    mockEventDetailApi({
+      event: makeEvent({ extras: makeExtras({ decoration: 1234567 }) }),
+    });
+    renderPage();
+
+    expect(await screen.findByText('12,34,567')).toBeInTheDocument();
   });
 
   it('renders a real Change Log entry on the Activity tab after an edit made on this screen', async () => {

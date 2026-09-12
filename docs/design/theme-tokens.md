@@ -33,7 +33,7 @@ everything else), loaded via Google Fonts in `index.html`.
 
 | Token | Spec | Role |
 |---|---|---|
-| `type-display` | Fraunces 600 | Wordmark, Quotation header only |
+| `type-display` | Fraunces 600 | Wordmark, Quotation header, and the Grand Total on the Total Cost Summary panel (STORY-042) |
 | `type-title-l` | Inter 600, 22px | Screen titles |
 | `type-title-m` | Inter 600, 17px | Section titles |
 | `type-body-l` | Inter 400, 15px | Body copy |
