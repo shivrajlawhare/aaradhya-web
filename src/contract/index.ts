@@ -14,7 +14,7 @@ const c = initContract();
  * getEvent, updateEvent, updateEventAccommodation, updateEventPayment,
  * updateDocumentsChecklist, updateEventExtras, getQuotationSummary,
  * getQuotationPdf, createSession, updateSession, listMenuItems, createItem,
- * updateItem, deleteItem, getCalendar, listEventManagers).
+ * updateItem, deleteItem, getCalendar, listEventManagers, getDashboard).
  */
 export enum Role {
   EventManager = 'EventManager',
@@ -525,6 +525,38 @@ export const calendarSessionResultSchema = sessionResultSchema.extend({
   event: calendarEventSummarySchema,
 });
 
+// One row per qualifying Event (its soonest upcoming Session), per SRS
+// FR-ROLE-2's own named columns: "date, event, client, venue, pax,
+// status." clientContacts is `.optional()`, same "genuinely absent, not
+// null" convention aaradhya-api's own filteredEventResultSchema already
+// established (STORY-046) — this list reuses that same role-based
+// filtering server-side, so a role that can't see client names never gets
+// this key at all. date is a wire-format string, same reasoning every
+// other date field in this file already uses.
+export const dashboardUpcomingEventResultSchema = z.object({
+  id: z.string(),
+  eventId: z.string(),
+  eventFamilyType: z.string(),
+  status: z.nativeEnum(EventStatus),
+  date: z.string(),
+  venue: z.string(),
+  pax: z.number(),
+  clientContacts: z.array(clientContactSchema).optional(),
+});
+
+// Counts are identical across roles (STORY-047's own AC) — nothing about a
+// count number itself is sensitive, only the per-event field detail in
+// upcomingEvents is.
+export const dashboardResultSchema = z.object({
+  counts: z.object({
+    todaysEvents: z.number(),
+    upcoming: z.number(),
+    tentative: z.number(),
+    confirmed: z.number(),
+  }),
+  upcomingEvents: z.array(dashboardUpcomingEventResultSchema),
+});
+
 export const contract = c.router({
   login: {
     method: 'POST',
@@ -767,5 +799,14 @@ export const contract = c.router({
       200: z.array(calendarSessionResultSchema),
     },
     summary: 'Active Sessions overlapping any date within a given month (any authenticated caller)',
+  },
+  getDashboard: {
+    method: 'GET',
+    path: '/dashboard',
+    responses: {
+      200: dashboardResultSchema,
+    },
+    summary:
+      'Role-filtered dashboard aggregate: today/upcoming/tentative/confirmed counts + upcoming-events list (any authenticated caller)',
   },
 });

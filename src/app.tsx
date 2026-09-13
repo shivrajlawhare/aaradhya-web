@@ -2,8 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import RequireRole from './components/ui/require-role';
 import { Role } from './contract';
 import CalendarPage from './pages/calendar/calendar-page';
+import DashboardPage from './pages/dashboard/dashboard-page';
 import LoginPage from './pages/login/login-page';
-import DashboardPlaceholderPage from './pages/dashboard-placeholder/dashboard-placeholder-page';
 import EventCreationPage from './pages/event-creation/event-creation-page';
 import EventDetailPage from './pages/event-detail/event-detail-page';
 import EventListPage from './pages/event-list/event-list-page';
@@ -25,7 +25,11 @@ const App = () => {
     <Routes>
       <Route path="/" element={<Navigate to={LOGIN_PATH} replace />} />
       <Route path={LOGIN_PATH} element={<LoginPage />} />
-      <Route path={DASHBOARD_PATH} element={<DashboardPlaceholderPage />} />
+      {/* No RequireRole — GET /dashboard (STORY-047) has no role
+          restriction either; it varies its own response by role
+          server-side (STORY-046), so the same DashboardPage renders
+          correctly for all four roles (STORY-048/049/050/051). */}
+      <Route path={DASHBOARD_PATH} element={<DashboardPage />} />
       <Route
         path={USER_MANAGEMENT_PATH}
         element={

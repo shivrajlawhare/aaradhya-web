@@ -1,10 +1,9 @@
-import type { KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import type { z } from 'zod';
+import { createEventRowActivation } from '../../components/ui/event-row-activation';
 import StatusChip from '../../components/ui/status-chip';
 import { ClientContactRole, type eventResultSchema } from '../../contract';
-import { eventDetailPath } from '../../routes';
 import { emptyStateStyles, familyTypeCellStyles, rowStyles, tableCardStyles } from './events-table.styles';
 
 type PublicEvent = z.infer<typeof eventResultSchema>;
@@ -32,17 +31,6 @@ const getBrideGroomNames = (clientContacts: PublicEvent['clientContacts']): stri
 
 const EventsTable = ({ events }: EventsTableProps) => {
   const navigate = useNavigate();
-
-  const handleRowActivate = (event: PublicEvent) => {
-    navigate(eventDetailPath(event.id));
-  };
-
-  const handleRowKeyDown = (event: PublicEvent, keyboardEvent: KeyboardEvent<HTMLTableRowElement>) => {
-    if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') {
-      keyboardEvent.preventDefault();
-      handleRowActivate(event);
-    }
-  };
 
   if (events.length === 0) {
     return (
@@ -84,8 +72,7 @@ const EventsTable = ({ events }: EventsTableProps) => {
               tabIndex={0}
               role="link"
               aria-label={`Open Event ${event.eventId}`}
-              onClick={() => handleRowActivate(event)}
-              onKeyDown={(keyboardEvent) => handleRowKeyDown(event, keyboardEvent)}
+              {...createEventRowActivation(navigate, event.id)}
               sx={rowStyles}
             >
               <TableCell>
