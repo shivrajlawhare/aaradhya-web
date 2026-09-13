@@ -13,3 +13,5 @@ export const EVENT_CREATE_PATH = '/events/new';
 export const EVENT_DETAIL_PATH_PATTERN = '/events/:id';
 export const eventDetailPath = (id: string): string => `/events/${id}`;
 export const CALENDAR_PATH = '/calendar';
+export const QUOTATION_PREVIEW_PATH_PATTERN = '/events/:id/quotation-preview';
+export const quotationPreviewPath = (id: string): string => `/events/${id}/quotation-preview`;

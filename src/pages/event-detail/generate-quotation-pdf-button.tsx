@@ -8,6 +8,11 @@ type PublicEvent = z.infer<typeof eventResultSchema>;
 
 interface GenerateQuotationPdfButtonProps {
   event: PublicEvent;
+  // STORY-045's Quotation Preview screen reuses this exact component under
+  // a different label ("Share PDF") — its own AC: "triggers the same flow
+  // as STORY-044," not a separate implementation. Defaults to this story's
+  // own label so every other caller is unaffected.
+  label?: string;
 }
 
 // Rendered only from inside overview-tab.tsx's own canEdit branch (this
@@ -17,7 +22,7 @@ interface GenerateQuotationPdfButtonProps {
 // Overview tab's own visibility per role, the same flag this story's AC
 // names; nothing here needs to change for that, since this button's
 // visibility is entirely inherited from wherever the tab itself renders.
-const GenerateQuotationPdfButton = ({ event }: GenerateQuotationPdfButtonProps) => {
+const GenerateQuotationPdfButton = ({ event, label = 'Generate Quotation PDF' }: GenerateQuotationPdfButtonProps) => {
   const [error, setError] = useState<string | null>(null);
 
   // enabled: false — this is a GET, so there's no useMutation; the button
@@ -69,7 +74,7 @@ const GenerateQuotationPdfButton = ({ event }: GenerateQuotationPdfButtonProps) 
       )}
       <Button variant="contained" onClick={handleGenerate} disabled={pdfQuery.isFetching}>
         <Typography variant="labelS" component="span">
-          Generate Quotation PDF
+          {label}
         </Typography>
       </Button>
     </>

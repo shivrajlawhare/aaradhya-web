@@ -5,15 +5,18 @@ import {
   Button,
   FormControl,
   InputLabel,
+  Link,
   MenuItem,
   Select,
   Stack,
   Typography,
 } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import ClientContactRows, { type ClientContactFormValue } from '../../components/ui/client-contact-rows';
 import { ClientContactRole, EventStatus, type eventResultSchema } from '../../contract';
+import { quotationPreviewPath } from '../../routes';
 import GenerateQuotationPdfButton from './generate-quotation-pdf-button';
 import { contactsReadOnlyStyles, sectionStyles, statusFieldStyles } from './overview-tab.styles';
 import TotalCostSummaryPanel from './total-cost-summary-panel';
@@ -184,6 +187,16 @@ const OverviewTab = ({ event, canEdit, onEventChanged }: OverviewTabProps) => {
           per role; nothing here needs to change for that, since this
           button's visibility is entirely inherited from canEdit. */}
       {canEdit && <GenerateQuotationPdfButton event={event} />}
+      {/* STORY-045's entry point into the Quotation Preview screen — no
+          later story adds one, so this story has to. Placed next to the
+          PDF button since the Flow is "before generating the PDF... open
+          an in-app preview"; EventManager-gated for the same reason as the
+          PDF button above it. */}
+      {canEdit && (
+        <Link component={RouterLink} to={quotationPreviewPath(event.id)}>
+          Preview Quotation
+        </Link>
+      )}
     </Stack>
   );
 };

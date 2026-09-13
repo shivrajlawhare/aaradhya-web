@@ -893,6 +893,24 @@ describe('EventDetailPage', () => {
     expect(screen.queryByRole('button', { name: 'Generate Quotation PDF' })).not.toBeInTheDocument();
   });
 
+  it('shows a "Preview Quotation" link to the Quotation Preview screen only for an Event Manager session', async () => {
+    seedSession();
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    const link = await screen.findByRole('link', { name: 'Preview Quotation' });
+    expect(link).toHaveAttribute('href', '/events/event-1/quotation-preview');
+  });
+
+  it('hides the "Preview Quotation" link for a non-EventManager session', async () => {
+    seedSession('Reception');
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    await screen.findByText('ARD-EVT-2026-001');
+    expect(screen.queryByRole('link', { name: 'Preview Quotation' })).not.toBeInTheDocument();
+  });
+
   it('downloads the PDF via a click-triggered object URL, without a full page navigation', async () => {
     seedSession();
     mockEventDetailApi({ event: makeEvent() });
