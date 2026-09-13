@@ -13,8 +13,8 @@ const c = initContract();
  * createUser, listUsers, updateUser, listChangeLog, createEvent, listEvents,
  * getEvent, updateEvent, updateEventAccommodation, updateEventPayment,
  * updateDocumentsChecklist, updateEventExtras, getQuotationSummary,
- * createSession, updateSession, listMenuItems, createItem, updateItem,
- * deleteItem, getCalendar, listEventManagers).
+ * getQuotationPdf, createSession, updateSession, listMenuItems, createItem,
+ * updateItem, deleteItem, getCalendar, listEventManagers).
  */
 export enum Role {
   EventManager = 'EventManager',
@@ -675,6 +675,22 @@ export const contract = c.router({
       404: apiErrorSchema,
     },
     summary: "Get an Event's live Total Cost Summary rollup (any authenticated caller)",
+  },
+  // c.otherResponse — mirrors aaradhya-api's own binary route exactly,
+  // except body is c.type<Blob>() here, not <Buffer> — the browser fetch
+  // client this app uses has no Buffer; ts-rest's own default fetch client
+  // (src/api/client.ts's tsr) already branches on Content-Type and calls
+  // response.blob() for anything that isn't JSON/text, so no hand-written
+  // fetch is needed to consume this route.
+  getQuotationPdf: {
+    method: 'GET',
+    path: '/events/:id/quotation.pdf',
+    pathParams: eventIdParamsSchema,
+    responses: {
+      200: c.otherResponse({ contentType: 'application/pdf', body: c.type<Blob>() }),
+      404: apiErrorSchema,
+    },
+    summary: 'Generate the client-facing Quotation PDF from live Event data (Event Manager only)',
   },
   createSession: {
     method: 'POST',

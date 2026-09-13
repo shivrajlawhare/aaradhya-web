@@ -335,6 +335,17 @@ const jsonResponse = (status: number, body: unknown) =>
     new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }),
   );
 
+// A real (if fake) PDF magic-byte payload — the button's own code only
+// cares that this resolves as a Blob via response.blob(), not that it's a
+// valid PDF; the actual rendering is aaradhya-api's own STORY-043 concern.
+const pdfResponse = (status: number) =>
+  Promise.resolve(
+    new Response(status === 200 ? '%PDF-1.4 fake' : JSON.stringify({ error: { code: 'ERROR', message: 'Failed.' } }), {
+      status,
+      headers: { 'content-type': status === 200 ? 'application/pdf' : 'application/json' },
+    }),
+  );
+
 const seedSession = (role = 'EventManager') => {
   localStorage.setItem(
     SESSION_STORAGE_KEY,
@@ -360,6 +371,7 @@ const mockEventDetailApi = ({
   const paymentPatchRequests: Record<string, unknown>[] = [];
   const documentsChecklistPatchRequests: Record<string, unknown>[] = [];
   const extrasPatchRequests: Record<string, unknown>[] = [];
+  let pdfRequestCount = 0;
   const sessionPostRequests: Record<string, unknown>[] = [];
   const sessionPatchRequests: Record<string, unknown>[] = [];
   const itemPostRequests: Record<string, unknown>[] = [];
@@ -414,6 +426,10 @@ const mockEventDetailApi = ({
       }
       if (method === 'GET' && currentEvent && url.endsWith(`/events/${currentEvent.id}/quotation-summary`)) {
         return jsonResponse(200, computeQuotationSummary(currentEvent));
+      }
+      if (method === 'GET' && currentEvent && url.endsWith(`/events/${currentEvent.id}/quotation.pdf`)) {
+        pdfRequestCount += 1;
+        return pdfResponse(200);
       }
       if (method === 'GET' && url.includes('/menu-items')) {
         const search = new URL(url).searchParams.get('search')?.trim().toLowerCase() ?? '';
@@ -654,6 +670,7 @@ const mockEventDetailApi = ({
     itemPatchRequests,
     getCurrentEvent: () => currentEvent,
     getCurrentMenuItems: () => currentMenuItems,
+    getPdfRequestCount: () => pdfRequestCount,
   };
 };
 
@@ -865,6 +882,115 @@ describe('EventDetailPage', () => {
     renderPage();
 
     expect(await screen.findByText('12,34,567')).toBeInTheDocument();
+  });
+
+  it('shows "Generate Quotation PDF" only for an Event Manager session', async () => {
+    seedSession('Reception');
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    await screen.findByText('ARD-EVT-2026-001');
+    expect(screen.queryByRole('button', { name: 'Generate Quotation PDF' })).not.toBeInTheDocument();
+  });
+
+  it('downloads the PDF via a click-triggered object URL, without a full page navigation', async () => {
+    seedSession();
+    mockEventDetailApi({ event: makeEvent() });
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    renderPage();
+
+    const button = await screen.findByRole('button', { name: 'Generate Quotation PDF' });
+    fireEvent.click(button);
+
+    await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(1));
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    // Not toBeInstanceOf(Blob) — jsdom/vitest can construct Blob from a
+    // different realm than the global this test file sees, so instanceof
+    // isn't reliable here; the content-type is the meaningful check anyway.
+    expect(createObjectURL.mock.calls[0]?.[0]).toMatchObject({ type: 'application/pdf' });
+    // Re-enabled after completion (this story's own AC) — not left disabled.
+    expect(button).toBeEnabled();
+
+    createObjectURL.mockRestore();
+    revokeObjectURL.mockRestore();
+    anchorClick.mockRestore();
+  });
+
+  it('shows a loading state while the request is in flight, re-enabling on completion', async () => {
+    seedSession();
+    // A manually-resolved Promise, not mockEventDetailApi's normal
+    // already-resolved mock — that resolves fast enough that the whole
+    // click-to-completion cycle collapses into one render, with no
+    // observable gap in which the button is actually disabled.
+    let resolveFetch: (response: Response) => void = () => {};
+    const pendingPdfResponse = new Promise<Response>((resolve) => {
+      resolveFetch = resolve;
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/quotation.pdf')) {
+          return pendingPdfResponse;
+        }
+        return jsonResponse(200, makeEvent());
+      }),
+    );
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    renderPage();
+
+    const button = await screen.findByRole('button', { name: 'Generate Quotation PDF' });
+    fireEvent.click(button);
+
+    await waitFor(() => expect(button).toBeDisabled());
+
+    resolveFetch(await pdfResponse(200));
+
+    await waitFor(() => expect(button).toBeEnabled());
+
+    vi.restoreAllMocks();
+  });
+
+  it('does not fire a second request when double-tapped while a generation is already in flight', async () => {
+    seedSession();
+    const { getPdfRequestCount } = mockEventDetailApi({ event: makeEvent() });
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    renderPage();
+
+    const button = await screen.findByRole('button', { name: 'Generate Quotation PDF' });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    await waitFor(() => expect(button).toBeEnabled());
+    expect(getPdfRequestCount()).toBe(1);
+
+    vi.restoreAllMocks();
+  });
+
+  it('shows an inline error, not a silent failure, when generation fails', async () => {
+    seedSession();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/quotation.pdf')) {
+          return pdfResponse(500);
+        }
+        return jsonResponse(200, makeEvent());
+      }),
+    );
+    renderPage();
+
+    const button = await screen.findByRole('button', { name: 'Generate Quotation PDF' });
+    fireEvent.click(button);
+
+    expect(await screen.findByText('Something went wrong. Please try again.')).toBeInTheDocument();
+    expect(button).toBeEnabled();
   });
 
   it('renders a real Change Log entry on the Activity tab after an edit made on this screen', async () => {

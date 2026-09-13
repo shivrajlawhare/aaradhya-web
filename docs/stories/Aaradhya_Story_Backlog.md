@@ -696,6 +696,13 @@ Built early because every write in every later module needs it. Placed here, not
 **Tokens:** `accent` (button fill), `type-label-s` (button text), `radius-sm`, `space-16` (button padding).
 **Edge cases:** Double-tapping the button while a generation is already in flight (must not fire two requests).
 
+**Decisions (v1):**
+- `GET /events/:id/quotation.pdf` is a GET, not a mutation, so there's no `useMutation` hook to reach for — `tsr.getQuotationPdf.useQuery({ enabled: false })` triggered on click via `.refetch()`, the same "manually-triggered query" shape `total-cost-summary-panel.tsx`'s own `refetch()` call already established.
+- No hand-written `fetch()` needed — confirmed the installed `@ts-rest/core` fetch client already branches on `Content-Type` and calls `response.blob()` for anything that isn't JSON/text, so `tsr`'s own generated hook already returns a `Blob` for this route once its 200 response is declared `c.otherResponse({ contentType: 'application/pdf', body: c.type<Blob>() })` in this repo's contract mirror (the frontend's `Blob`, not aaradhya-api's own `c.type<Buffer>()` — browsers have no `Buffer`).
+- **Downloads via a hidden `<a download>` + `URL.createObjectURL`, not `window.open()`.** A window opened after the `await pdfQuery.refetch()` gap is no longer inside the click's own synchronous user-gesture window, so browsers can silently block it as an unrequested popup — a download link has no such restriction and still satisfies the AC's "opens or downloads... without a full page navigation."
+- Visibility is `canEdit`-gated at the call site in `overview-tab.tsx` (`{canEdit && <GenerateQuotationPdfButton event={event} />}`), not a prop on the button component itself — the button doesn't need to know about roles, matching this story's own AC wording ("visible only on the Event Manager's view").
+- All four named Tokens (`accent`, `radius-sm`, `space-16`, `type-label-s`) are satisfied without a dedicated `.styles.ts` file: MUI's `variant="contained"` default fill already reads `theme.palette.primary.main` (= `colorTokens.accent`), its default border radius already reads `theme.shape.borderRadius` (= `radiusTokens.radiusSm`), and its default horizontal padding is already `16px`; the button's text is wrapped in `<Typography variant="labelS" component="span">`, the same pattern `FilterChip` (STORY-037) already uses for applying a custom typography variant inside a non-`Typography` MUI component.
+
 ### STORY-045: Quotation Preview screen UI
 **Flow:** Before generating the PDF, an Event Manager can open an in-app preview mirroring the same data — a mobile screen, not the PDF itself — to sanity-check the numbers.
 **Acceptance Criteria:**

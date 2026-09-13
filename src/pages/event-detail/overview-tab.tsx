@@ -14,6 +14,7 @@ import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import ClientContactRows, { type ClientContactFormValue } from '../../components/ui/client-contact-rows';
 import { ClientContactRole, EventStatus, type eventResultSchema } from '../../contract';
+import GenerateQuotationPdfButton from './generate-quotation-pdf-button';
 import { contactsReadOnlyStyles, sectionStyles, statusFieldStyles } from './overview-tab.styles';
 import TotalCostSummaryPanel from './total-cost-summary-panel';
 
@@ -178,6 +179,11 @@ const OverviewTab = ({ event, canEdit, onEventChanged }: OverviewTabProps) => {
       )}
       {contactsSection}
       <TotalCostSummaryPanel event={event} canEdit={canEdit} onEventChanged={onEventChanged} />
+      {/* Visible only on the Event Manager's view (this story's own AC) —
+          STORY-052 will later re-check the Overview tab's own visibility
+          per role; nothing here needs to change for that, since this
+          button's visibility is entirely inherited from canEdit. */}
+      {canEdit && <GenerateQuotationPdfButton event={event} />}
     </Stack>
   );
 };
