@@ -25,6 +25,7 @@ interface MockUpcomingEvent {
   venue: string;
   pax: number;
   clientContacts?: { name: string; contactNumber: string; role: string }[];
+  meals?: { mealName: string | null; startTime: string | null; endTime: string | null }[];
 }
 
 const makeCounts = (overrides: Partial<MockDashboardCounts> = {}): MockDashboardCounts => ({
@@ -174,5 +175,95 @@ describe('DashboardPage', () => {
     fireEvent.click(await screen.findByRole('link', { name: 'Open Event ARD-EVT-2026-001' }));
 
     expect(await screen.findByText('event detail placeholder')).toBeInTheDocument();
+  });
+
+  describe('F&B Head dashboard (STORY-049)', () => {
+    it('renders a Meal / Timing column with mealName and start-end time for F&B Head', async () => {
+      seedSession('FnBHead');
+      mockDashboardApi(makeCounts({ upcoming: 1 }), [
+        {
+          id: 'event-1',
+          eventId: 'ARD-EVT-2026-001',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          date: '2026-06-15T00:00:00.000Z',
+          venue: 'Lawn',
+          pax: 200,
+          clientContacts: [{ name: 'Priya Nair', contactNumber: '9876543210', role: 'Bride' }],
+          meals: [{ mealName: 'Lunch', startTime: '12:00', endTime: '14:00' }],
+        },
+      ]);
+      renderPage();
+
+      expect(await screen.findByText('Meal / Timing')).toBeInTheDocument();
+      expect(screen.getByText('Lunch (12:00-14:00)')).toBeInTheDocument();
+    });
+
+    it('shows "—" in the Meal / Timing column when the soonest session has no Meal Items yet', async () => {
+      seedSession('FnBHead');
+      mockDashboardApi(makeCounts({ upcoming: 1 }), [
+        {
+          id: 'event-1',
+          eventId: 'ARD-EVT-2026-001',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          date: '2026-06-15T00:00:00.000Z',
+          venue: 'Lawn',
+          pax: 200,
+          clientContacts: [{ name: 'Priya Nair', contactNumber: '9876543210', role: 'Bride' }],
+          meals: [],
+        },
+      ]);
+      renderPage();
+
+      expect(await screen.findByText('Meal / Timing')).toBeInTheDocument();
+      expect(screen.getByText('—')).toBeInTheDocument();
+    });
+
+    it('does not render a Meal / Timing column for the Event Manager view (no `meals` key on the response)', async () => {
+      seedSession('EventManager');
+      mockDashboardApi(makeCounts({ upcoming: 1 }), [
+        {
+          id: 'event-1',
+          eventId: 'ARD-EVT-2026-001',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          date: '2026-06-15T00:00:00.000Z',
+          venue: 'Lawn',
+          pax: 200,
+          clientContacts: [{ name: 'Priya Nair', contactNumber: '9876543210', role: 'Bride' }],
+        },
+      ]);
+      renderPage();
+
+      expect(await screen.findByText('Lawn')).toBeInTheDocument();
+      expect(screen.queryByText('Meal / Timing')).not.toBeInTheDocument();
+    });
+
+    // DOM inspection, not just "the design doesn't show it" (this story's
+    // own AC wording) — asserts directly against rendered column headers
+    // and cell text, for an F&B-Head-fed dashboard specifically.
+    it('has no payment column and no non-food setup column, verified by DOM inspection', async () => {
+      seedSession('FnBHead');
+      mockDashboardApi(makeCounts({ upcoming: 1 }), [
+        {
+          id: 'event-1',
+          eventId: 'ARD-EVT-2026-001',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          date: '2026-06-15T00:00:00.000Z',
+          venue: 'Lawn',
+          pax: 200,
+          meals: [{ mealName: 'Lunch', startTime: '12:00', endTime: '14:00' }],
+        },
+      ]);
+      const { container } = renderPage();
+
+      expect(await screen.findByText('Lawn')).toBeInTheDocument();
+      const headerCells = Array.from(container.querySelectorAll('th')).map((cell) => cell.textContent);
+      expect(headerCells).toEqual(['Date', 'Event', 'Client', 'Venue', 'Pax', 'Status', 'Meal / Timing']);
+      expect(screen.queryByText(/payment/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/setup/i)).not.toBeInTheDocument();
+    });
   });
 });

@@ -533,6 +533,20 @@ export const calendarSessionResultSchema = sessionResultSchema.extend({
 // filtering server-side, so a role that can't see client names never gets
 // this key at all. date is a wire-format string, same reasoning every
 // other date field in this file already uses.
+// meals: STORY-049's own "menu/meal-timing information" — one entry per
+// Meal Item on this row's soonest upcoming Session, `.optional()` on the
+// same "genuinely absent, not null" convention as clientContacts. Present
+// only for F&B Head (aaradhya-api's own role gate); `[]`, not absent, when
+// F&B Head can see it but the session has no Meal Items yet. Scoped to
+// mealName + start/end time only, not the resolved menuItems dish names
+// (aaradhya-api's own STORY-049 Decisions record why that join is out of
+// scope for a dashboard summary row).
+export const dashboardUpcomingMealResultSchema = z.object({
+  mealName: z.string().nullable(),
+  startTime: z.string().nullable(),
+  endTime: z.string().nullable(),
+});
+
 export const dashboardUpcomingEventResultSchema = z.object({
   id: z.string(),
   eventId: z.string(),
@@ -542,6 +556,7 @@ export const dashboardUpcomingEventResultSchema = z.object({
   venue: z.string(),
   pax: z.number(),
   clientContacts: z.array(clientContactSchema).optional(),
+  meals: z.array(dashboardUpcomingMealResultSchema).optional(),
 });
 
 // Counts are identical across roles (STORY-047's own AC) — nothing about a

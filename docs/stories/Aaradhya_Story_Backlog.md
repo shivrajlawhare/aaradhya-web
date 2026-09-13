@@ -777,6 +777,13 @@ Built early because every write in every later module needs it. Placed here, not
 **Tokens:** Same as STORY-048.
 **Edge cases:** An event with a Cancelled session that would otherwise have been an F&B Head's only reason to see that event (confirm it's excluded per STORY-034/047's Active-only rule, consistently).
 
+**Decisions (v1):**
+- **No new component built** — STORY-048's `DashboardPage`/`UpcomingEventsTable` already are "STORY-048's layout component" this story reuses; the no-payment/no-setup-column bullets were already trivially true (those fields were never on the dashboard row for any role) since STORY-048 shipped, and only needed a DOM-inspection test to prove it explicitly rather than resting on "the design doesn't show it."
+- **"Menu/meal-timing information" was a genuine backend gap, not a frontend-only decision** — `dashboardUpcomingEventResultSchema` had no menu/meal field at all before this story. Required an aaradhya-api change first (commit `dd1e45b`, "STORY-049 backend dependency"): a new `meals` array (`{mealName, startTime, endTime}` per Meal Item on the row's soonest upcoming Session), gated server-side to F&B Head only. See that repo's own STORY-049 Decisions for why it's scoped to meal name + timing and not the resolved `menuItems` dish names (a separate MenuItem-collection join judged out of scope for a dashboard summary row).
+- **The extra "Meal / Timing" column is added to the shared `UpcomingEventsTable`, gated on the data itself (`events[0]?.meals !== undefined`), not a role check read out of `AuthContext`.** Keeps the table the same role-agnostic component STORY-048 established — it renders whatever columns the response shape it was actually given supports, rather than branching on `useAuth().user.role` inside a component STORY-050/051 also reuse unchanged.
+- **"—" for the Meal / Timing cell only when F&B Head can see the column but the row's `meals` array is genuinely empty** (no Meal Items yet) — same "permitted but empty" vs. "not permitted" distinction the Client column already draws for `clientContacts`, kept consistent rather than collapsing the two into one blank-looking state.
+- **Cancelled-session exclusion needed no new frontend logic** — the dashboard page has no filtering logic of its own; the exclusion is entirely `isUpcomingSession`'s existing `SessionStatus.Active` check on the backend (STORY-047), re-verified there with a dedicated F&B-Head-token test rather than duplicated here.
+
 ### STORY-050: Housekeeping Head Dashboard UI
 **Flow:** Same pattern as STORY-049, for the Housekeeping role.
 **Acceptance Criteria:**
