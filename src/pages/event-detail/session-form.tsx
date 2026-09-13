@@ -3,7 +3,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { Alert, Button, MenuItem, Stack, TextField, ToggleButton, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
-import { SEATING_ARRANGEMENT_OPTIONS, SeatingArrangement, type eventResultSchema } from '../../contract';
+import { SEATING_ARRANGEMENT_OPTIONS, SeatingArrangement, type filteredEventResultSchema } from '../../contract';
 import { toDateInputValue } from './date-input';
 import ItemsSection from './items-section';
 import {
@@ -16,8 +16,26 @@ import {
 } from './session-form-options';
 import { formStyles, rowStyles, setupCardStyles, toggleActiveStyles } from './session-form.styles';
 
-type PublicEvent = z.infer<typeof eventResultSchema>;
+type PublicEvent = z.infer<typeof filteredEventResultSchema>;
 type SessionResult = PublicEvent['sessions'][number];
+
+// This form is only ever reachable through SessionsTab's own canEdit
+// (Event Manager) gate, whose sessions always have venueCost/setup present
+// unfiltered — the fallback below (and toFormValues' own `session.setup ??
+// DEFAULT_SETUP`) exists purely to satisfy their now-`.optional()` type
+// (STORY-052's filteredSessionResultSchema), not a real state this form is
+// ever built from.
+const DEFAULT_SETUP: SessionFormValues['setup'] = {
+  seating: '',
+  tableCount: 0,
+  chairCount: 0,
+  stage: false,
+  buffet: false,
+  registrationDesk: false,
+  vipSeating: false,
+  brideGroomSeating: false,
+  notes: '',
+};
 
 interface SessionFormValues {
   sessionTypeOption: string;
@@ -65,44 +83,37 @@ const toFormValues = (session: SessionResult | undefined): SessionFormValues => 
       startTime: '',
       endTime: '',
       pax: 0,
-      setup: {
-        seating: '',
-        tableCount: 0,
-        chairCount: 0,
-        stage: false,
-        buffet: false,
-        registrationDesk: false,
-        vipSeating: false,
-        brideGroomSeating: false,
-        notes: '',
-      },
+      setup: DEFAULT_SETUP,
     };
   }
 
   const sessionTypeParts = toOptionParts(session.sessionType, SESSION_TYPE_PRESETS, CUSTOM_SESSION_TYPE_OPTION);
   const venueParts = toOptionParts(session.venue, VENUE_PRESETS, CUSTOM_VENUE_OPTION);
+  const setup = session.setup;
   return {
     sessionTypeOption: sessionTypeParts.option,
     sessionTypeCustom: sessionTypeParts.custom,
     venueOption: venueParts.option,
     venueCustom: venueParts.custom,
-    venueCost: session.venueCost,
+    venueCost: session.venueCost ?? 0,
     startDate: toDateInputValue(session.startDate),
     endDate: toDateInputValue(session.endDate),
     startTime: session.startTime ?? '',
     endTime: session.endTime ?? '',
     pax: session.pax,
-    setup: {
-      seating: session.setup.seating ?? '',
-      tableCount: session.setup.tableCount,
-      chairCount: session.setup.chairCount,
-      stage: session.setup.stage,
-      buffet: session.setup.buffet,
-      registrationDesk: session.setup.registrationDesk,
-      vipSeating: session.setup.vipSeating,
-      brideGroomSeating: session.setup.brideGroomSeating,
-      notes: session.setup.notes ?? '',
-    },
+    setup: setup
+      ? {
+          seating: setup.seating ?? '',
+          tableCount: setup.tableCount,
+          chairCount: setup.chairCount,
+          stage: setup.stage,
+          buffet: setup.buffet,
+          registrationDesk: setup.registrationDesk,
+          vipSeating: setup.vipSeating,
+          brideGroomSeating: setup.brideGroomSeating,
+          notes: setup.notes ?? '',
+        }
+      : DEFAULT_SETUP,
   };
 };
 

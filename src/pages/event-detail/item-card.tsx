@@ -3,14 +3,18 @@ import { Controller, useForm } from 'react-hook-form';
 import { Alert, Button, Stack, TextField, ToggleButton, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
-import { ItemType, type eventResultSchema } from '../../contract';
+import { ItemType, type filteredEventResultSchema } from '../../contract';
 import MenuItemSearch, { type MenuItemChip } from './menu-item-search';
 import { rowStyles, toggleActiveStyles } from './session-form.styles';
 import { cardStyles, totalCostStyles } from './item-card.styles';
 
-type PublicEvent = z.infer<typeof eventResultSchema>;
+type PublicEvent = z.infer<typeof filteredEventResultSchema>;
 type SessionResult = PublicEvent['sessions'][number];
-type ItemResult = SessionResult['items'][number];
+// `items` is `.optional()` on the role-filtered session shape (STORY-052)
+// — NonNullable since this card is only ever rendered from ItemsSection,
+// itself only reachable from SessionForm's edit mode (Event Manager,
+// whose own sessions always have `items` present unfiltered).
+type ItemResult = NonNullable<SessionResult['items']>[number];
 
 interface ItemFormValues {
   type: ItemType;

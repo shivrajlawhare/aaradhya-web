@@ -48,19 +48,46 @@ const EventDetailPage = () => {
   // under F&B Head/Housekeeping/Reception's own "Sees:" lists (§3.2-3.4).
   // Also its own named flag, not reused from canSeePayments — same
   // "coincide today, not one rule" reasoning.
-  // Rooms, unlike Activity/Payments/Documents, is NOT EventManager-only to view —
-  // GET /events/:id (which now includes accommodation, STORY-020) has no
-  // role restriction, and SRS §3.4 explicitly lists "rooms booked" as
-  // something Reception sees. canEdit still gates the actual editing
-  // controls, exactly like Overview already does for status/Client
-  // Contacts.
-  // Sessions is visible-to-all/edit-gated too, same reasoning as Rooms —
-  // every role's own "Sees:" list includes venue/pax/date(s), and
-  // Housekeeping's explicitly includes "seating/setup requirements"
-  // (Session's own setup sub-object).
+  //
+  // Rooms/Sessions/Setup/Menu (STORY-052) — every role's own SRS §3.x "Sees:"
+  // list, restated as this screen's tab-visibility matrix:
+  // EventManager: Overview, Rooms, Sessions (Setup+Menu), Payments,
+  //   Documents, Activity — unchanged (this story's own regression AC).
+  // F&B Head (§3.2): Overview (filtered) + Sessions (Menu, no Setup). No
+  //   Rooms — §3.2 never mentions accommodation/rooms.
+  // Housekeeping (§3.3): Overview (filtered) + Rooms + Sessions (Setup, no
+  //   Menu).
+  // Reception (§3.4): Overview (filtered) + Rooms. No Sessions at all —
+  //   this story's own explicit bullet ("Payments and Sessions & Menu are
+  //   absent"), even though §3.4 itself lists venue/pax/date(s) among what
+  //   Reception sees; the AC's own literal tab list wins over re-deriving
+  //   a looser rule from the field-visibility table.
+  // Written as explicit role-equality checks (not `!== Role.X`) so an
+  // unauthenticated `user` (undefined) safely defaults every flag to
+  // `false`, matching canSeeActivity/canSeePayments/canSeeDocuments'
+  // existing pattern, rather than an inverted check defaulting to `true`.
   const canSeeActivity = user?.role === Role.EventManager;
   const canSeePayments = user?.role === Role.EventManager;
   const canSeeDocuments = user?.role === Role.EventManager;
+  const canSeeRooms =
+    user?.role === Role.EventManager || user?.role === Role.Housekeeping || user?.role === Role.Reception;
+  const canSeeSessions =
+    user?.role === Role.EventManager || user?.role === Role.FnBHead || user?.role === Role.Housekeeping;
+  // Housekeeping/F&B-Head-only, not also Event Manager — this is the
+  // Sessions list's own read-only Setup/Menu *summary* (SessionsTab's own
+  // prop comment explains why), and Event Manager's view must stay
+  // unchanged by this story; they already reach full Setup/Item detail via
+  // "Edit".
+  const canSeeSetup = user?.role === Role.Housekeeping;
+  const canSeeMenu = user?.role === Role.FnBHead;
+  // Overview's own Client Contacts section (STORY-046: F&B Head/Reception
+  // see it, Housekeeping doesn't) — an explicit role flag, not just
+  // `event.clientContacts &&` alone, matching every other tab-level content
+  // gate on this page (Payments/Rooms already pair a role flag with a
+  // field-presence check). Passed down so OverviewTab doesn't have to
+  // re-derive it from `user` itself.
+  const canSeeClientContacts =
+    user?.role === Role.EventManager || user?.role === Role.FnBHead || user?.role === Role.Reception;
   const canEdit = user?.role === Role.EventManager;
 
   let content: ReactNode;
@@ -86,19 +113,50 @@ const EventDetailPage = () => {
     const event = eventQuery.data.body;
 
     let tabPanel: ReactNode;
+    // Every branch re-checks its own `canSeeX` flag (not just the Tabs
+    // strip below) — defense in depth against `activeTab` somehow holding a
+    // value its own Tab was never rendered for, same double-check
+    // Activity/Payments/Documents already established. `event.payment`/
+    // `event.accommodation` are additionally checked directly (not just
+    // implied by the role flag) since GET /events/:id's own filtered
+    // response schema (STORY-052) types them `.optional()` — narrowing
+    // TypeScript needs to see, not a redundant runtime gate: whenever
+    // `canSeePayments`/`canSeeRooms` is true, the field is always actually
+    // there (filterEventForRole's own EventManager/Housekeeping/Reception
+    // branches never omit it), so this never changes real behavior.
     if (activeTab === 'activity' && canSeeActivity) {
       tabPanel = <ActivityTab entityType="Event" entityId={event.id} />;
-    } else if (activeTab === 'payments' && canSeePayments) {
-      tabPanel = <PaymentsTab key={event.id} event={event} onEventChanged={() => eventQuery.refetch()} />;
+    } else if (activeTab === 'payments' && canSeePayments && event.payment) {
+      tabPanel = (
+        <PaymentsTab
+          key={event.id}
+          eventId={event.id}
+          payment={event.payment}
+          onEventChanged={() => eventQuery.refetch()}
+        />
+      );
     } else if (activeTab === 'documents' && canSeeDocuments) {
       tabPanel = <DocumentsTab key={event.id} event={event} onEventChanged={() => eventQuery.refetch()} />;
-    } else if (activeTab === 'rooms') {
+    } else if (activeTab === 'rooms' && canSeeRooms && event.accommodation) {
       tabPanel = (
-        <RoomsTab key={event.id} event={event} canEdit={canEdit} onEventChanged={() => eventQuery.refetch()} />
+        <RoomsTab
+          key={event.id}
+          eventId={event.id}
+          accommodation={event.accommodation}
+          canEdit={canEdit}
+          onEventChanged={() => eventQuery.refetch()}
+        />
       );
-    } else if (activeTab === 'sessions') {
+    } else if (activeTab === 'sessions' && canSeeSessions) {
       tabPanel = (
-        <SessionsTab key={event.id} event={event} canEdit={canEdit} onEventChanged={() => eventQuery.refetch()} />
+        <SessionsTab
+          key={event.id}
+          event={event}
+          canEdit={canEdit}
+          canSeeSetup={canSeeSetup}
+          canSeeMenu={canSeeMenu}
+          onEventChanged={() => eventQuery.refetch()}
+        />
       );
     } else {
       tabPanel = (
@@ -106,6 +164,7 @@ const EventDetailPage = () => {
           key={event.id}
           event={event}
           canEdit={canEdit}
+          canSeeClientContacts={canSeeClientContacts}
           onEventChanged={() => eventQuery.refetch()}
         />
       );
@@ -122,8 +181,8 @@ const EventDetailPage = () => {
         </Box>
         <Tabs value={activeTab} onChange={(_changeEvent, value: DetailTab) => setActiveTab(value)}>
           <Tab label="Overview" value="overview" />
-          <Tab label="Rooms" value="rooms" />
-          <Tab label="Sessions" value="sessions" />
+          {canSeeRooms && <Tab label="Rooms" value="rooms" />}
+          {canSeeSessions && <Tab label="Sessions" value="sessions" />}
           {canSeePayments && <Tab label="Payments" value="payments" />}
           {canSeeDocuments && <Tab label="Documents" value="documents" />}
           {canSeeActivity && <Tab label="Activity" value="activity" />}

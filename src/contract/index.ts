@@ -192,6 +192,24 @@ export const accommodationResultSchema = z.object({
   totalCharges: z.number(),
 });
 
+// Role-filtered variants, mirroring aaradhya-api's own filteredRoomLineResultSchema/
+// filteredAccommodationResultSchema (STORY-046/050) — tariff/totalInclGst/
+// totalCharges are `.optional()` (undefined, not just missing from the
+// type), since money is stripped from the accommodation block even for a
+// role permitted to see rooms-booked detail at all (Housekeeping/
+// Reception). Used by GET /events/:id's own filteredEventResultSchema
+// (STORY-052) and the dashboard's own row shape (STORY-050) — the same
+// relaxed shape either place a role-filtered accommodation object appears.
+export const filteredRoomLineResultSchema = roomLineSchema.extend({
+  tariff: z.number().optional(),
+  totalInclGst: z.number().optional(),
+});
+
+export const filteredAccommodationResultSchema = accommodationResultSchema.extend({
+  roomLines: z.array(filteredRoomLineResultSchema),
+  totalCharges: z.number().optional(),
+});
+
 // Every field optional (PATCH semantics). No cross-field validation between
 // advancePaidDate and advancePaid — a caller may set an expected/planned
 // advance-payment date before advance_paid actually reflects a real
@@ -458,6 +476,15 @@ export const itemResultSchema = z.object({
   totalCost: z.number().nullable(),
 });
 
+// Mirrors aaradhya-api's own filteredItemResultSchema (STORY-046) —
+// costPerPlate/totalCost are `.optional()` on top of their existing
+// `.nullable()`, since a role that can see an Item at all (F&B Head only)
+// still doesn't see its cost.
+export const filteredItemResultSchema = itemResultSchema.extend({
+  costPerPlate: z.number().nullable().optional(),
+  totalCost: z.number().nullable().optional(),
+});
+
 // durationDays/isMultiDay are derived (STORY-026) — never accepted as
 // input, always present on output. startTime/endTime/startDate/endDate are
 // wire-format strings, same reasoning as every other date field in this
@@ -480,6 +507,20 @@ export const sessionResultSchema = z.object({
   isMultiDay: z.boolean(),
   setup: sessionSetupResultSchema,
   items: z.array(itemResultSchema),
+});
+
+// Mirrors aaradhya-api's own filteredSessionResultSchema (STORY-046) —
+// venueCost (money) is `.optional()` for everyone but Event Manager;
+// setup is `.optional()`, present only for Housekeeping; items is
+// `.optional()`, present (Meal Items only) only for F&B Head. Used by
+// filteredEventResultSchema below, GET /events/:id's own response shape
+// (STORY-052) — every non-EventManager role now genuinely reaches this
+// screen, so the type has to reflect what the wire actually sends them,
+// not what an EventManager always gets.
+export const filteredSessionResultSchema = sessionResultSchema.extend({
+  venueCost: z.number().optional(),
+  setup: sessionSetupResultSchema.optional(),
+  items: z.array(filteredItemResultSchema).optional(),
 });
 
 // The public Event shape. createdAt/updatedAt are wire-format strings, same
@@ -505,6 +546,24 @@ export const eventResultSchema = z.object({
   createdBy: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
+});
+
+// Mirrors aaradhya-api's own filteredEventResultSchema (STORY-046) — this
+// is what GET /events/:id actually returns for every caller (STORY-052):
+// clientContacts/accommodation/payment/extras are `.optional()`, undefined
+// entirely for a role STORY-046's own filterEventForRole doesn't grant
+// them to (documentsChecklist stays required — every role sees it, per
+// that story's own decision). Until STORY-052, only an Event Manager ever
+// actually opened Event Detail, so nothing forced this repo's own mirror
+// to catch up with the backend's role-filtered shape sooner — `eventResultSchema`
+// itself is kept as-is (still used by createEvent/updateEvent, both
+// EventManager-only routes that always return the full, unfiltered shape).
+export const filteredEventResultSchema = eventResultSchema.extend({
+  clientContacts: z.array(clientContactSchema).optional(),
+  accommodation: filteredAccommodationResultSchema.optional(),
+  payment: paymentResultSchema.optional(),
+  extras: extrasResultSchema.optional(),
+  sessions: z.array(filteredSessionResultSchema),
 });
 
 export const getCalendarQuerySchema = z.object({
@@ -550,31 +609,14 @@ export const dashboardUpcomingMealResultSchema = z.object({
   endTime: z.string().nullable(),
 });
 
-// Dashboard-specific room line — tariff/totalInclGst are `.optional()`
-// (undefined, not just missing from the type) matching aaradhya-api's own
-// STORY-050 filteredAccommodationResultSchema: money is stripped from the
-// accommodation block even for a role permitted to see rooms-booked detail
-// at all (Housekeeping/Reception). roomLineResultSchema itself (used by the
-// Rooms tab, Event-Manager-only) can't be reused here since it requires
-// totalInclGst.
-const dashboardRoomLineResultSchema = roomLineSchema.extend({
-  tariff: z.number().optional(),
-  totalInclGst: z.number().optional(),
-});
-
-const dashboardAccommodationResultSchema = accommodationResultSchema.extend({
-  roomLines: z.array(dashboardRoomLineResultSchema),
-  totalCharges: z.number().optional(),
-});
-
 // setup/accommodation: STORY-050's own "setup/rooms detail visible"
 // (Housekeeping), SRS §3.3 — setup reuses sessionSetupResultSchema verbatim
 // for the row's soonest upcoming Session (Housekeeping only); accommodation
-// reuses the dashboard-specific filtered shape above (Housekeeping AND
-// Reception — also directly covers STORY-051's own "rooms, check-in/out
-// visible" bullet). Both `.optional()`, undefined for every role that
-// can't see them, including Event Manager — same "extra column vs. the
-// Event Manager view" framing as `meals`.
+// reuses filteredAccommodationResultSchema (Housekeeping AND Reception —
+// also directly covers STORY-051's own "rooms, check-in/out visible"
+// bullet). Both `.optional()`, undefined for every role that can't see
+// them, including Event Manager — same "extra column vs. the Event
+// Manager view" framing as `meals`.
 export const dashboardUpcomingEventResultSchema = z.object({
   id: z.string(),
   eventId: z.string(),
@@ -586,7 +628,7 @@ export const dashboardUpcomingEventResultSchema = z.object({
   clientContacts: z.array(clientContactSchema).optional(),
   meals: z.array(dashboardUpcomingMealResultSchema).optional(),
   setup: sessionSetupResultSchema.optional(),
-  accommodation: dashboardAccommodationResultSchema.optional(),
+  accommodation: filteredAccommodationResultSchema.optional(),
 });
 
 // Counts are identical across roles (STORY-047's own AC) — nothing about a
@@ -682,10 +724,10 @@ export const contract = c.router({
     path: '/events/:id',
     pathParams: eventIdParamsSchema,
     responses: {
-      200: eventResultSchema,
+      200: filteredEventResultSchema,
       404: apiErrorSchema,
     },
-    summary: 'Get one Event by id (any authenticated caller)',
+    summary: 'Get one Event by id, fields filtered per the caller role (any authenticated caller)',
   },
   updateEvent: {
     method: 'PATCH',

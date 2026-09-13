@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Alert, Button, CircularProgress, Paper, Stack, TextField, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
-import type { eventResultSchema } from '../../contract';
+import type { extrasResultSchema } from '../../contract';
 import { formatAmount } from './format-amount';
 import {
   extrasFieldsStyles,
@@ -13,8 +13,7 @@ import {
   panelStyles,
 } from './total-cost-summary-panel.styles';
 
-type PublicEvent = z.infer<typeof eventResultSchema>;
-type ExtrasResult = PublicEvent['extras'];
+type ExtrasResult = z.infer<typeof extrasResultSchema>;
 
 interface ExtrasFormValues {
   decoration: number;
@@ -29,7 +28,15 @@ const toFormValues = (extras: ExtrasResult): ExtrasFormValues => ({
 });
 
 interface TotalCostSummaryPanelProps {
-  event: PublicEvent;
+  eventId: string;
+  // Required, not `PublicEvent['extras']` (`.optional()` since STORY-052) —
+  // this panel is only ever mounted from a call site that has already
+  // narrowed `event.extras` to present (overview-tab.tsx's own
+  // `canEdit && event.extras &&` gate; quotation-preview-page.tsx's own
+  // equivalent), so its own prop type states the real precondition
+  // directly rather than re-deriving "optional, but never actually
+  // undefined here" from the full Event shape.
+  extras: ExtrasResult;
   // Only an Event Manager gets working inputs for Decoration/Photographer/
   // Bhatji — the extras PATCH is EventManager-only on the backend
   // (STORY-040), same reasoning every other canEdit-gated panel on this
@@ -39,15 +46,15 @@ interface TotalCostSummaryPanelProps {
   onEventChanged: () => void;
 }
 
-const TotalCostSummaryPanel = ({ event, canEdit, onEventChanged }: TotalCostSummaryPanelProps) => {
+const TotalCostSummaryPanel = ({ eventId, extras, canEdit, onEventChanged }: TotalCostSummaryPanelProps) => {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Owns its own live rollup query rather than deriving totals from
   // event.extras client-side — the Grand Total must be "sourced from a
   // fresh STORY-041 call" (this story's own AC), not recalculated here.
   const quotationSummaryQuery = tsr.getQuotationSummary.useQuery({
-    queryKey: ['quotation-summary', event.id],
-    queryData: { params: { id: event.id } },
+    queryKey: ['quotation-summary', eventId],
+    queryData: { params: { id: eventId } },
     // A failure for a fixed id won't become a success by retrying — same
     // reasoning event-detail-page.tsx's own getEvent query already
     // documents for its 404 case.
@@ -55,7 +62,7 @@ const TotalCostSummaryPanel = ({ event, canEdit, onEventChanged }: TotalCostSumm
   });
 
   const { register, handleSubmit, reset } = useForm<ExtrasFormValues>({
-    defaultValues: toFormValues(event.extras),
+    defaultValues: toFormValues(extras),
   });
 
   const updateExtrasMutation = tsr.updateEventExtras.useMutation({
@@ -83,7 +90,7 @@ const TotalCostSummaryPanel = ({ event, canEdit, onEventChanged }: TotalCostSumm
       return;
     }
     setSaveError(null);
-    updateExtrasMutation.mutate({ params: { id: event.id }, body: values });
+    updateExtrasMutation.mutate({ params: { id: eventId }, body: values });
   });
 
   const summary = quotationSummaryQuery.data?.body;
@@ -140,13 +147,13 @@ const TotalCostSummaryPanel = ({ event, canEdit, onEventChanged }: TotalCostSumm
           ) : (
             <Stack sx={lineItemsStyles}>
               <Typography variant="bodyM" sx={lineItemValueStyles}>
-                Decoration: {formatAmount(event.extras.decoration)}
+                Decoration: {formatAmount(extras.decoration)}
               </Typography>
               <Typography variant="bodyM" sx={lineItemValueStyles}>
-                Photographer: {formatAmount(event.extras.photographer)}
+                Photographer: {formatAmount(extras.photographer)}
               </Typography>
               <Typography variant="bodyM" sx={lineItemValueStyles}>
-                Bhatji: {formatAmount(event.extras.bhatji)}
+                Bhatji: {formatAmount(extras.bhatji)}
               </Typography>
             </Stack>
           )}

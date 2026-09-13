@@ -842,18 +842,23 @@ describe('EventDetailPage', () => {
     expect(await screen.findByText('15,000')).toBeInTheDocument();
   });
 
-  it('shows Decoration/Photographer/Bhatji as read-only text, not inputs, for a non-EventManager session', async () => {
+  // STORY-052's own re-check: extras/Grand Total is the same class of
+  // financial data STORY-046 already strips end-to-end for every
+  // non-EventManager role — this panel used to render a read-only version
+  // for anyone, but no non-EventManager session had ever actually reached
+  // this tab before this story to expose that gap. Now absent entirely,
+  // not just non-editable.
+  it('does not render the Total Cost Summary panel at all for a non-EventManager session', async () => {
     seedSession('Reception');
     mockEventDetailApi({
       event: makeEvent({ extras: makeExtras({ decoration: 1000, photographer: 1500, bhatji: 500 }) }),
     });
     renderPage();
 
-    expect(await screen.findByText('Decoration: 1,000')).toBeInTheDocument();
-    expect(screen.getByText('Photographer: 1,500')).toBeInTheDocument();
-    expect(screen.getByText('Bhatji: 500')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Decoration')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Save extras' })).not.toBeInTheDocument();
+    await screen.findByText('Client contacts');
+    expect(screen.queryByText('Total Cost Summary')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Decoration:/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Grand Total')).not.toBeInTheDocument();
   });
 
   it('shows an error message, not a stuck spinner, when the quotation-summary call fails', async () => {
@@ -1245,8 +1250,14 @@ describe('EventDetailPage', () => {
     expect(await screen.findByLabelText('Aadhar Card')).toBeChecked();
   });
 
-  it('renders the Sessions tab for a non-EventManager session too, unlike Payments/Documents', async () => {
-    seedSession('Reception');
+  // Housekeeping, not Reception — STORY-052's own explicit tab-visibility
+  // matrix excludes Reception from Sessions entirely ("Payments and
+  // Sessions & Menu are absent"), even though this test's own original
+  // intent ("a non-EventManager role still sees Sessions, unlike Payments/
+  // Documents") is still true for Housekeeping/F&B Head. Reception's own
+  // exclusion gets its own dedicated test below.
+  it('renders the Sessions tab for Housekeeping too, unlike Payments/Documents', async () => {
+    seedSession('Housekeeping');
     mockEventDetailApi({ event: makeEvent() });
     renderPage();
 
@@ -1254,8 +1265,17 @@ describe('EventDetailPage', () => {
     expect(screen.getByRole('tab', { name: 'Sessions' })).toBeInTheDocument();
   });
 
-  it('shows Sessions read-only, with no Add/Edit controls, for a non-EventManager session', async () => {
+  it('does not render the Sessions tab at all for Reception (STORY-052)', async () => {
     seedSession('Reception');
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    await screen.findByText('ARD-EVT-2026-001');
+    expect(screen.queryByRole('tab', { name: 'Sessions' })).not.toBeInTheDocument();
+  });
+
+  it('shows Sessions read-only, with no Add/Edit controls, and its own Setup summary, for Housekeeping', async () => {
+    seedSession('Housekeeping');
     mockEventDetailApi({
       event: makeEvent({
         sessions: [
@@ -1272,7 +1292,7 @@ describe('EventDetailPage', () => {
             sessionStatus: 'Active',
             durationDays: 1,
             isMultiDay: false,
-            setup: makeSessionSetup(),
+            setup: makeSessionSetup({ seating: 'Theatre' }),
             items: [],
           },
         ],
@@ -1283,6 +1303,8 @@ describe('EventDetailPage', () => {
     fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
 
     expect(await screen.findByText('Wedding — Lawn')).toBeInTheDocument();
+    expect(screen.getByText('Setup: Theatre')).toBeInTheDocument();
+    expect(screen.queryByText(/^Menu:/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add Session' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
   });
@@ -1573,5 +1595,128 @@ describe('EventDetailPage', () => {
 
     await waitFor(() => expect(getCurrentEvent()?.sessions[0]?.items).toHaveLength(0));
     await waitFor(() => expect(screen.queryByDisplayValue('Lunch')).not.toBeInTheDocument());
+  });
+
+  // The full per-role tab-visibility matrix (STORY-052) — Reception's own
+  // Rooms-visible/Sessions-absent cases are already covered above, next to
+  // the tabs they concern; this block covers F&B Head (untested by any
+  // earlier story) and Housekeeping's own tab strip, plus the Menu summary
+  // F&B Head sees on the Sessions tab.
+  describe('Role-based tab visibility (STORY-052)', () => {
+    const sessionWithSetupAndMenu = {
+      id: 'session-1',
+      sessionType: 'Wedding',
+      venue: 'Lawn',
+      venueCost: 50000,
+      startDate: '2026-06-15T00:00:00.000Z',
+      endDate: '2026-06-15T00:00:00.000Z',
+      startTime: null,
+      endTime: null,
+      pax: 200,
+      sessionStatus: 'Active',
+      durationDays: 1,
+      isMultiDay: false,
+      setup: makeSessionSetup({ seating: 'Theatre' }),
+      items: [
+        {
+          id: 'item-1',
+          type: 'Meal',
+          mealName: 'Lunch',
+          pax: 100,
+          costPerPlate: 500,
+          menuItems: [],
+          eventName: null,
+          venue: null,
+          startTime: '12:00',
+          endTime: '14:00',
+          totalCost: 59000,
+        },
+      ],
+    };
+
+    it('shows only Overview and Sessions for F&B Head — no Rooms, Payments, Documents, or Activity', async () => {
+      seedSession('FnBHead');
+      mockEventDetailApi({ event: makeEvent() });
+      renderPage();
+
+      await screen.findByText('ARD-EVT-2026-001');
+      expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Sessions' })).toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Rooms' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Payments' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Documents' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Activity' })).not.toBeInTheDocument();
+    });
+
+    it("shows F&B Head the session's Menu but not its Setup", async () => {
+      seedSession('FnBHead');
+      mockEventDetailApi({ event: makeEvent({ sessions: [sessionWithSetupAndMenu] }) });
+      renderPage();
+
+      fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+
+      expect(await screen.findByText('Menu: Lunch (12:00-14:00)')).toBeInTheDocument();
+      expect(screen.queryByText(/^Setup:/)).not.toBeInTheDocument();
+    });
+
+    it('shows Client Contacts on F&B Head\'s own Overview, but no Total Cost Summary panel', async () => {
+      seedSession('FnBHead');
+      mockEventDetailApi({ event: makeEvent() });
+      renderPage();
+
+      expect(await screen.findByText('Client contacts')).toBeInTheDocument();
+      expect(screen.getByText('Priya Nair — 9876543210 (Bride)')).toBeInTheDocument();
+      expect(screen.queryByText('Total Cost Summary')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Generate Quotation PDF' })).not.toBeInTheDocument();
+    });
+
+    it('shows only Overview, Rooms, and Sessions for Housekeeping — no Payments, Documents, or Activity', async () => {
+      seedSession('Housekeeping');
+      mockEventDetailApi({ event: makeEvent() });
+      renderPage();
+
+      await screen.findByText('ARD-EVT-2026-001');
+      expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Rooms' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Sessions' })).toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Payments' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Documents' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Activity' })).not.toBeInTheDocument();
+    });
+
+    it('does not render Client Contacts on Overview for Housekeeping (genuinely absent, STORY-046)', async () => {
+      seedSession('Housekeeping');
+      mockEventDetailApi({ event: makeEvent() });
+      renderPage();
+
+      await screen.findByText('ARD-EVT-2026-001');
+      expect(screen.queryByText('Client contacts')).not.toBeInTheDocument();
+    });
+
+    it('shows only Overview, Rooms, and Payments/Documents/Activity for Event Manager — unchanged (regression)', async () => {
+      seedSession();
+      mockEventDetailApi({ event: makeEvent() });
+      renderPage();
+
+      await screen.findByText('ARD-EVT-2026-001');
+      expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Rooms' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Sessions' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Payments' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Documents' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Activity' })).toBeInTheDocument();
+    });
+
+    it("does not add a Setup/Menu summary to the Event Manager's own Sessions list — unchanged (regression)", async () => {
+      seedSession();
+      mockEventDetailApi({ event: makeEvent({ sessions: [sessionWithSetupAndMenu] }) });
+      renderPage();
+
+      fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+
+      await screen.findByText('Wedding — Lawn');
+      expect(screen.queryByText(/^Setup:/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Menu:/)).not.toBeInTheDocument();
+    });
   });
 });

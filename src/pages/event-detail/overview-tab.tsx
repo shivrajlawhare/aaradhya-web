@@ -15,13 +15,13 @@ import { Link as RouterLink } from 'react-router-dom';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import ClientContactRows, { type ClientContactFormValue } from '../../components/ui/client-contact-rows';
-import { ClientContactRole, EventStatus, type eventResultSchema } from '../../contract';
+import { ClientContactRole, EventStatus, type filteredEventResultSchema } from '../../contract';
 import { quotationPreviewPath } from '../../routes';
 import GenerateQuotationPdfButton from './generate-quotation-pdf-button';
 import { contactsReadOnlyStyles, sectionStyles, statusFieldStyles } from './overview-tab.styles';
 import TotalCostSummaryPanel from './total-cost-summary-panel';
 
-type PublicEvent = z.infer<typeof eventResultSchema>;
+type PublicEvent = z.infer<typeof filteredEventResultSchema>;
 
 const STATUS_OPTIONS = Object.values(EventStatus);
 
@@ -32,6 +32,12 @@ interface OverviewTabProps {
   // would just get a 403; showing read-only content instead is more honest
   // than showing controls that can't work.
   canEdit: boolean;
+  // Client Contacts visibility (STORY-046/STORY-052) — F&B Head/Reception
+  // see it, Housekeeping doesn't. An explicit flag from the parent, not
+  // re-derived here from `event.clientContacts` alone, matching
+  // event-detail-page.tsx's own Payments/Rooms gates (a role flag paired
+  // with a field-presence check, not data-presence alone).
+  canSeeClientContacts: boolean;
   onEventChanged: () => void;
 }
 
@@ -39,12 +45,18 @@ interface OverviewTabProps {
 // story's own edge case requires Cancelled (and every other status) to stay
 // fully editable, so nothing here branches on event.status to disable
 // anything.
-const OverviewTab = ({ event, canEdit, onEventChanged }: OverviewTabProps) => {
+const OverviewTab = ({ event, canEdit, canSeeClientContacts, onEventChanged }: OverviewTabProps) => {
   const [statusError, setStatusError] = useState<string | null>(null);
   const [contactsError, setContactsError] = useState<string | null>(null);
 
+  // `?? []` — this form is only ever submitted from the `canEdit` branch
+  // below (Event Manager, whose clientContacts is always present,
+  // unfiltered); a role for whom the field is genuinely absent (STORY-046)
+  // never reaches the editable UI at all, so an empty starting array here
+  // is purely to satisfy the now-`.optional()` type (STORY-052), not a
+  // real state this form is ever used from.
   const { control, handleSubmit, reset } = useForm<{ clientContacts: ClientContactFormValue[] }>({
-    defaultValues: { clientContacts: event.clientContacts },
+    defaultValues: { clientContacts: event.clientContacts ?? [] },
   });
   const { fields, append, remove, update } = useFieldArray({ control, name: 'clientContacts' });
 
@@ -114,7 +126,14 @@ const OverviewTab = ({ event, canEdit, onEventChanged }: OverviewTabProps) => {
     updateContactsMutation.mutate({ params: { id: event.id }, body: { clientContacts } });
   });
 
-  let contactsSection: ReactNode;
+  // Three-way, not two: editable (Event Manager), read-only (a role
+  // STORY-046 grants clientContacts to — F&B Head, Reception), or nothing
+  // at all (Housekeeping, for whom this key is genuinely absent from the
+  // response — SRS §3.3 never lists client names among what it sees). The
+  // `else if` branch is the only one that reads `event.clientContacts`
+  // directly, so it's the only place that needs it narrowed away from
+  // `undefined`.
+  let contactsSection: ReactNode = null;
   if (canEdit) {
     contactsSection = (
       <>
@@ -138,7 +157,7 @@ const OverviewTab = ({ event, canEdit, onEventChanged }: OverviewTabProps) => {
         </Button>
       </>
     );
-  } else {
+  } else if (canSeeClientContacts && event.clientContacts) {
     contactsSection = (
       <Stack sx={contactsReadOnlyStyles}>
         <Typography variant="titleM" component="h2">
@@ -181,11 +200,27 @@ const OverviewTab = ({ event, canEdit, onEventChanged }: OverviewTabProps) => {
         </Alert>
       )}
       {contactsSection}
-      <TotalCostSummaryPanel event={event} canEdit={canEdit} onEventChanged={onEventChanged} />
+      {/* STORY-052's own re-check: this panel shows Grand Total/extras — the
+          same class of financial data STORY-046 already strips end-to-end
+          for every non-EventManager role (`extras` is undefined for them).
+          Previously always rendered regardless of role because no
+          non-EventManager session had ever actually reached this tab yet;
+          gating on `canEdit` (matching Payments/Documents) plus `event.extras`
+          (satisfies the type — always true together in practice, since
+          filterEventForRole's EventManager branch never omits it) closes
+          that gap rather than crashing the first time it's exercised. */}
+      {canEdit && event.extras && (
+        <TotalCostSummaryPanel
+          eventId={event.id}
+          extras={event.extras}
+          canEdit={canEdit}
+          onEventChanged={onEventChanged}
+        />
+      )}
       {/* Visible only on the Event Manager's view (this story's own AC) —
-          STORY-052 will later re-check the Overview tab's own visibility
-          per role; nothing here needs to change for that, since this
-          button's visibility is entirely inherited from canEdit. */}
+          STORY-052 re-checked the Overview tab's own visibility per role
+          here; nothing needed to change for this button specifically,
+          since its visibility is entirely inherited from canEdit. */}
       {canEdit && <GenerateQuotationPdfButton event={event} />}
       {/* STORY-045's entry point into the Quotation Preview screen — no
           later story adds one, so this story has to. Placed next to the

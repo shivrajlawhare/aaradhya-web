@@ -3,7 +3,7 @@ import { useFieldArray, useForm } from 'react-hook-form';
 import { Alert, Button, Stack, TextField, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
-import { roomLineSchema, type eventResultSchema } from '../../contract';
+import { roomLineSchema, type filteredAccommodationResultSchema } from '../../contract';
 import { toDateInputValue } from './date-input';
 import RoomLineRows from './room-line-rows';
 import {
@@ -14,8 +14,16 @@ import {
   sectionStyles,
 } from './rooms-tab.styles';
 
-type PublicEvent = z.infer<typeof eventResultSchema>;
-type AccommodationResult = PublicEvent['accommodation'];
+// The role-filtered shape (STORY-052) — this tab is now reached by
+// Housekeeping/Reception too, not just Event Manager, and those two roles
+// see accommodation with its money fields (tariff/totalInclGst/
+// totalCharges) already stripped (STORY-046). Every read of one of those
+// three fields below falls back to '—' rather than the previous direct
+// interpolation, which would have rendered the literal text "undefined"
+// once a role other than Event Manager could actually reach the read-only
+// branch (nothing caught this earlier since only Event Manager, who always
+// has all three, ever opened this tab before this story).
+type AccommodationResult = z.infer<typeof filteredAccommodationResultSchema>;
 export type RoomLineFormValue = z.infer<typeof roomLineSchema>;
 
 export interface AccommodationFormValues {
@@ -24,11 +32,27 @@ export interface AccommodationFormValues {
   roomLines: RoomLineFormValue[];
 }
 
+// tariff defaults to 0 — this form is only ever populated from the
+// `canEdit` (Event Manager) branch below, whose own accommodation always
+// has every room line's tariff present unfiltered; the fallback exists
+// purely to satisfy `AccommodationResult`'s now-`.optional()` tariff
+// (STORY-052), not a real state this path is ever built from.
 const toFormRoomLines = (roomLines: AccommodationResult['roomLines']): RoomLineFormValue[] =>
-  roomLines.map(({ roomType, occupancy, tariff, noOfRooms }) => ({ roomType, occupancy, tariff, noOfRooms }));
+  roomLines.map(({ roomType, occupancy, tariff, noOfRooms }) => ({
+    roomType,
+    occupancy,
+    tariff: tariff ?? 0,
+    noOfRooms,
+  }));
 
 interface RoomsTabProps {
-  event: PublicEvent;
+  eventId: string;
+  // Required, not the Event's own `.optional()` field (STORY-052) — this
+  // tab is only ever mounted from event-detail-page.tsx's own
+  // `canSeeRooms && event.accommodation &&` gate, which has already
+  // narrowed it to present; same reasoning TotalCostSummaryPanel's own
+  // `extras` prop documents.
+  accommodation: AccommodationResult;
   // Only an Event Manager gets working controls here — the Accommodation
   // PATCH is EventManager-only on the backend (STORY-019), same reasoning
   // OverviewTab already applies to status/Client Contacts.
@@ -36,7 +60,7 @@ interface RoomsTabProps {
   onEventChanged: () => void;
 }
 
-const RoomsTab = ({ event, canEdit, onEventChanged }: RoomsTabProps) => {
+const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabProps) => {
   const [saveError, setSaveError] = useState<string | null>(null);
   // The last-saved server response drives every read-only computed display
   // (per-line total_incl_gst, the footer totals) — "totals shown are exactly
@@ -44,13 +68,13 @@ const RoomsTab = ({ event, canEdit, onEventChanged }: RoomsTabProps) => {
   // (this story's own AC). Updated directly from the mutation's own
   // response, not only once the parent's refetch (onEventChanged) resolves,
   // so totals refresh immediately on save.
-  const [savedAccommodation, setSavedAccommodation] = useState<AccommodationResult>(event.accommodation);
+  const [savedAccommodation, setSavedAccommodation] = useState<AccommodationResult>(accommodation);
 
   const { control, handleSubmit, register, reset } = useForm<AccommodationFormValues>({
     defaultValues: {
-      checkIn: toDateInputValue(event.accommodation.checkIn),
-      checkOut: toDateInputValue(event.accommodation.checkOut),
-      roomLines: toFormRoomLines(event.accommodation.roomLines),
+      checkIn: toDateInputValue(accommodation.checkIn),
+      checkOut: toDateInputValue(accommodation.checkOut),
+      roomLines: toFormRoomLines(accommodation.roomLines),
     },
   });
   const { fields, append, remove } = useFieldArray({ control, name: 'roomLines' });
@@ -86,7 +110,7 @@ const RoomsTab = ({ event, canEdit, onEventChanged }: RoomsTabProps) => {
     }
     setSaveError(null);
     updateAccommodationMutation.mutate({
-      params: { id: event.id },
+      params: { id: eventId },
       // An empty date field sends undefined (no change), not a request to
       // clear the date — STORY-019's PATCH has no clearing capability.
       body: {
@@ -117,7 +141,16 @@ const RoomsTab = ({ event, canEdit, onEventChanged }: RoomsTabProps) => {
         </Stack>
         <RoomLineRows
           fields={fields}
-          savedRoomLines={savedAccommodation.roomLines}
+          // Only reached in the canEdit (Event Manager) branch, whose own
+          // accommodation always has every line's tariff/totalInclGst
+          // present unfiltered — the `?? 0` fallbacks exist purely to
+          // satisfy RoomLineRows' own stricter, edit-form-shaped type,
+          // same reasoning toFormRoomLines' own tariff fallback documents.
+          savedRoomLines={savedAccommodation.roomLines.map((line) => ({
+            ...line,
+            tariff: line.tariff ?? 0,
+            totalInclGst: line.totalInclGst ?? 0,
+          }))}
           register={register}
           onAddRow={handleAddRow}
           onRemoveRow={remove}
@@ -141,7 +174,9 @@ const RoomsTab = ({ event, canEdit, onEventChanged }: RoomsTabProps) => {
         </Typography>
         {savedAccommodation.roomLines.map((line, index) => (
           <Typography key={index} variant="bodyM">
-            {line.roomType}: {line.occupancy} occupancy × {line.noOfRooms} rooms — {line.totalInclGst}
+            {/* totalInclGst is money — stripped for Housekeeping/Reception
+                (STORY-046), so "—" here, not the literal text "undefined". */}
+            {line.roomType}: {line.occupancy} occupancy × {line.noOfRooms} rooms — {line.totalInclGst ?? '—'}
           </Typography>
         ))}
       </Stack>
@@ -159,7 +194,7 @@ const RoomsTab = ({ event, canEdit, onEventChanged }: RoomsTabProps) => {
           Total occupancy: {savedAccommodation.totalOccupancy}
         </Typography>
         <Typography variant="bodyM" sx={footerValueStyles}>
-          Total charges: {savedAccommodation.totalCharges}
+          Total charges: {savedAccommodation.totalCharges ?? '—'}
         </Typography>
       </Stack>
     </Stack>

@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Alert, Button, Paper, Stack, TextField, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
-import type { eventResultSchema } from '../../contract';
+import type { paymentResultSchema } from '../../contract';
 import { toDateInputValue } from './date-input';
 import {
   balanceCardStyles,
@@ -13,8 +13,7 @@ import {
   sectionStyles,
 } from './payments-tab.styles';
 
-type PublicEvent = z.infer<typeof eventResultSchema>;
-type PaymentResult = PublicEvent['payment'];
+type PaymentResult = z.infer<typeof paymentResultSchema>;
 
 interface PaymentFormValues {
   totalEstimatedAmount: number;
@@ -33,23 +32,29 @@ const toFormValues = (payment: PaymentResult): PaymentFormValues => ({
 });
 
 interface PaymentsTabProps {
-  event: PublicEvent;
+  eventId: string;
+  // Required, not the Event's own `.optional()` field (STORY-052) — this
+  // tab is only ever mounted from event-detail-page.tsx's own
+  // `canSeePayments && event.payment &&` gate, which has already narrowed
+  // it to present; same reasoning TotalCostSummaryPanel's own `extras`
+  // prop documents.
+  payment: PaymentResult;
   onEventChanged: () => void;
 }
 
 // No canEdit prop, unlike Overview/Rooms — this whole tab is only ever
 // rendered for an Event Manager (EventDetailPage doesn't even mount it for
 // anyone else), so there's no read-only fallback branch to build here.
-const PaymentsTab = ({ event, onEventChanged }: PaymentsTabProps) => {
+const PaymentsTab = ({ eventId, payment, onEventChanged }: PaymentsTabProps) => {
   const [saveError, setSaveError] = useState<string | null>(null);
   // Drives the read-only balance display — updated directly from the
   // mutation's own response so it refreshes the instant a save succeeds,
   // not only once the parent's own refetch (onEventChanged) resolves. Same
   // approach RoomsTab (STORY-020) already uses for its own totals.
-  const [savedPayment, setSavedPayment] = useState<PaymentResult>(event.payment);
+  const [savedPayment, setSavedPayment] = useState<PaymentResult>(payment);
 
   const { register, handleSubmit, reset } = useForm<PaymentFormValues>({
-    defaultValues: toFormValues(event.payment),
+    defaultValues: toFormValues(payment),
   });
 
   const updatePaymentMutation = tsr.updateEventPayment.useMutation({
@@ -76,7 +81,7 @@ const PaymentsTab = ({ event, onEventChanged }: PaymentsTabProps) => {
     }
     setSaveError(null);
     updatePaymentMutation.mutate({
-      params: { id: event.id },
+      params: { id: eventId },
       // An empty date/payment-mode field sends undefined (no change), not
       // a request to clear it — STORY-022's PATCH has no clearing
       // capability, same convention as the Rooms tab's dates.

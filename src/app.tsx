@@ -50,18 +50,28 @@ const App = () => {
         }
       />
       {/* No RequireRole — GET /events/:id (STORY-013) has no role
-          restriction either; EventDetailPage itself gates editing and the
-          Activity sub-tab to Event Manager internally. */}
+          restriction either; every role legitimately opens this screen,
+          just seeing a different subset of tabs. EventDetailPage itself
+          gates editing, the Activity sub-tab, and (STORY-052) the Rooms/
+          Sessions tabs and each one's own Setup/Menu detail per role. */}
       <Route path={EVENT_DETAIL_PATH_PATTERN} element={<EventDetailPage />} />
-      {/* No RequireRole — every field this screen shows (Client Details,
-          Sessions, Accommodation, the Total Cost Summary rollup) is already
-          visible to any authenticated caller via the Overview/Rooms/
-          Sessions tabs and GET /events/:id/quotation-summary itself; this
-          screen is a different arrangement of the same already-visible
-          data, not a new leak. Only the Share PDF action inside it is
-          gated to Event Manager, since generating the PDF calls the
-          Event-Manager-only STORY-043 endpoint. */}
-      <Route path={QUOTATION_PREVIEW_PATH_PATTERN} element={<QuotationPreviewPage />} />
+      {/* RequireRole([EventManager]) as of STORY-052 — this screen shows the
+          exact same full financial breakdown (Grand Total, extras,
+          accommodation/session costs) that story scoped to Event Manager
+          only everywhere else on Event Detail. The previous "no RequireRole"
+          reasoning ("every field this screen shows is already visible to
+          any authenticated caller via the Overview/Rooms/Sessions tabs")
+          stopped being true the moment those tabs became role-filtered —
+          leaving this route open would have been a direct bypass of the
+          very gating STORY-052 exists to add. */}
+      <Route
+        path={QUOTATION_PREVIEW_PATH_PATTERN}
+        element={
+          <RequireRole roles={[Role.EventManager]}>
+            <QuotationPreviewPage />
+          </RequireRole>
+        }
+      />
       {/* No RequireRole — GET /calendar (STORY-034) has no role restriction
           either, same as GET /events. */}
       <Route path={CALENDAR_PATH} element={<CalendarPage />} />

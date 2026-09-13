@@ -285,15 +285,6 @@ describe('QuotationPreviewPage', () => {
     expect(screen.queryByText('Wedding — Lawn')).not.toBeInTheDocument();
   });
 
-  it('shows "Share PDF" only for an Event Manager session', async () => {
-    seedSession('Reception');
-    mockApi({ event: makeEvent() });
-    renderPage();
-
-    await screen.findByText('Client Details');
-    expect(screen.queryByRole('button', { name: 'Share PDF' })).not.toBeInTheDocument();
-  });
-
   it("matches the PDF's grand total exactly for the same Event (cross-check against STORY-043)", async () => {
     seedSession();
     const event = makeEvent({

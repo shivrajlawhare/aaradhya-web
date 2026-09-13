@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { createEventRowActivation } from '../../components/ui/event-row-activation';
+import { formatSetup } from '../../components/ui/format-setup';
 import StatusChip from '../../components/ui/status-chip';
 import type { dashboardUpcomingEventResultSchema } from '../../contract';
 import { toDateInputValue } from '../event-detail/date-input';
@@ -38,42 +39,6 @@ const formatMeals = (meals: NonNullable<UpcomingEvent['meals']>): string => {
       return `${meal.mealName ?? 'Meal'}${timing}`;
     })
     .join(', ');
-};
-
-// "Theatre, 10T/100C, Stage, Buffet" — active flags only, joined with the
-// seating arrangement and table/chair counts. "—" when Housekeeping can see
-// the column but this row's soonest session has no setup configured at all
-// (every field still at its schema default — no seating, zero counts, every
-// flag false) — a `formatSetup`-only edge case (unlike meals/rooms, "no
-// setup entered" has no explicit empty marker of its own on the wire).
-const formatSetup = (setup: UpcomingEvent['setup']): string => {
-  if (!setup) {
-    return '—';
-  }
-  const parts: string[] = [];
-  if (setup.seating) {
-    parts.push(setup.seating);
-  }
-  if (setup.tableCount > 0 || setup.chairCount > 0) {
-    parts.push(`${setup.tableCount}T/${setup.chairCount}C`);
-  }
-  if (setup.stage) {
-    parts.push('Stage');
-  }
-  if (setup.buffet) {
-    parts.push('Buffet');
-  }
-  if (setup.registrationDesk) {
-    parts.push('Registration desk');
-  }
-  if (setup.vipSeating) {
-    parts.push('VIP seating');
-  }
-  if (setup.brideGroomSeating) {
-    parts.push('Bride/Groom seating');
-  }
-
-  return parts.length > 0 ? parts.join(', ') : '—';
 };
 
 // "Double x3, Single x2 | Check-in 2026-06-14 - Check-out 2026-06-16" —

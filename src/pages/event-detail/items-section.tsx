@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Button, Divider, Stack, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
-import type { eventResultSchema } from '../../contract';
+import type { filteredEventResultSchema } from '../../contract';
 import ItemCard from './item-card';
 import { sectionStyles } from './items-section.styles';
 
-type PublicEvent = z.infer<typeof eventResultSchema>;
+type PublicEvent = z.infer<typeof filteredEventResultSchema>;
 type SessionResult = PublicEvent['sessions'][number];
 
 interface ItemsSectionProps {
@@ -34,13 +34,18 @@ const ItemsSection = ({ eventId, session, onItemsChanged }: ItemsSectionProps) =
     name: menuItem.name,
   }));
   const menuItemsById = new Map(menuItemOptions.map((option) => [option.id, option.name]));
+  // This section is only ever rendered from SessionForm's edit mode (Event
+  // Manager, whose sessions always have `items` present unfiltered) — the
+  // `?? []` fallback exists purely to satisfy `items`' now-`.optional()`
+  // type (STORY-052's filteredSessionResultSchema).
+  const items = session.items ?? [];
 
   return (
     <Stack sx={sectionStyles}>
       <Typography variant="titleM" component="h3">
         Items
       </Typography>
-      {session.items.map((item, index) => (
+      {items.map((item, index) => (
         <Stack key={item.id}>
           {index > 0 && <Divider />}
           <ItemCard
@@ -60,11 +65,11 @@ const ItemsSection = ({ eventId, session, onItemsChanged }: ItemsSectionProps) =
       ))}
       {isAddingNew && (
         <Stack>
-          {session.items.length > 0 && <Divider />}
+          {items.length > 0 && <Divider />}
           <ItemCard
             eventId={eventId}
             sessionId={session.id}
-            index={session.items.length + 1}
+            index={items.length + 1}
             menuItemOptions={menuItemOptions}
             menuItemsById={menuItemsById}
             onChanged={() => {

@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Alert, Button, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
-import type { eventResultSchema } from '../../contract';
+import type { filteredEventResultSchema } from '../../contract';
 
-type PublicEvent = z.infer<typeof eventResultSchema>;
+type PublicEvent = z.infer<typeof filteredEventResultSchema>;
 
 interface GenerateQuotationPdfButtonProps {
   event: PublicEvent;

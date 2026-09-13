@@ -2,10 +2,10 @@ import { useState, type ChangeEvent } from 'react';
 import { Alert, List, ListItem, Stack, Switch, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
-import { DOCUMENT_CHECKLIST_ITEM_KEYS, type eventResultSchema } from '../../contract';
+import { DOCUMENT_CHECKLIST_ITEM_KEYS, type filteredEventResultSchema } from '../../contract';
 import { listStyles, rowStyles, sectionStyles } from './documents-tab.styles';
 
-type PublicEvent = z.infer<typeof eventResultSchema>;
+type PublicEvent = z.infer<typeof filteredEventResultSchema>;
 type DocumentsChecklist = PublicEvent['documentsChecklist'];
 type DocumentChecklistItemKey = (typeof DOCUMENT_CHECKLIST_ITEM_KEYS)[number];
 
