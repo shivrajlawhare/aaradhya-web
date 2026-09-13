@@ -793,6 +793,13 @@ Built early because every write in every later module needs it. Placed here, not
 **Tokens:** Same as STORY-048.
 **Edge cases:** Same boundary/Cancelled-session case as STORY-049, re-verified for this role.
 
+**Decisions (v1):**
+- **No new component, again** — same reasoning as STORY-049: `UpcomingEventsTable` gains two more optional columns (Setup, Rooms), gated on the response data itself (`events[0]?.setup`/`events[0]?.accommodation`), not a role check. STORY-051 will reuse the exact same `accommodation` column unchanged.
+- **Required a matching aaradhya-api backend change first** (commit `1210c19`, "STORY-050 backend dependency") — `setup`/`accommodation` didn't exist on the dashboard row before this story. See that repo's own STORY-050 Decisions for the field shapes and role gating.
+- **Setup column format**: seating arrangement + table/chair counts (`"10T/100C"`) + any active boolean flags (Stage/Buffet/Registration desk/VIP seating/Bride-Groom seating), comma-joined — a compact one-line summary of `sessionSetupResultSchema`'s full object, matching how `formatMeals`/`formatClientNames` already condense their own richer objects into one cell. "—" when every field is still at its schema default (no setup entered for that session yet).
+- **Rooms column format**: `"Double x3, Single x2"` — room type and count per line, omitting occupancy/dates to keep the cell compact; the full `accommodation` object (including `checkIn`/`checkOut`) is already on the row for when STORY-051 needs to render those too. "—" when `roomLines` is empty (permitted but no rooms booked yet, not "not permitted" — same distinction the Client/Meal columns already draw).
+- **Money stripped from the dashboard's own accommodation shape** (`dashboardAccommodationResultSchema`, a new dashboard-local schema in `contract/index.ts`) — mirrors aaradhya-api's own `filteredAccommodationResultSchema` rather than reusing this repo's existing `accommodationResultSchema` (Rooms-tab, Event-Manager-only), which requires `tariff`/`totalInclGst` and would mis-type what the wire actually sends to Housekeeping/Reception.
+
 ### STORY-051: Reception Desk Dashboard UI
 **Flow:** Same pattern again, for Reception.
 **Acceptance Criteria:**

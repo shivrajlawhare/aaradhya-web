@@ -349,7 +349,10 @@ export const updateSessionBodySchema = z.object({
   setup: sessionSetupSchema.optional(),
 });
 
-const sessionSetupResultSchema = z.object({
+// Exported (not local) — STORY-050's dashboard schema, further down this
+// file, reuses it verbatim for Housekeeping's own "setup" column, same
+// reasoning aaradhya-api's own STORY-050 export of this schema gives.
+export const sessionSetupResultSchema = z.object({
   seating: z.nativeEnum(SeatingArrangement).nullable(),
   tableCount: z.number(),
   chairCount: z.number(),
@@ -547,6 +550,31 @@ export const dashboardUpcomingMealResultSchema = z.object({
   endTime: z.string().nullable(),
 });
 
+// Dashboard-specific room line — tariff/totalInclGst are `.optional()`
+// (undefined, not just missing from the type) matching aaradhya-api's own
+// STORY-050 filteredAccommodationResultSchema: money is stripped from the
+// accommodation block even for a role permitted to see rooms-booked detail
+// at all (Housekeeping/Reception). roomLineResultSchema itself (used by the
+// Rooms tab, Event-Manager-only) can't be reused here since it requires
+// totalInclGst.
+const dashboardRoomLineResultSchema = roomLineSchema.extend({
+  tariff: z.number().optional(),
+  totalInclGst: z.number().optional(),
+});
+
+const dashboardAccommodationResultSchema = accommodationResultSchema.extend({
+  roomLines: z.array(dashboardRoomLineResultSchema),
+  totalCharges: z.number().optional(),
+});
+
+// setup/accommodation: STORY-050's own "setup/rooms detail visible"
+// (Housekeeping), SRS §3.3 — setup reuses sessionSetupResultSchema verbatim
+// for the row's soonest upcoming Session (Housekeeping only); accommodation
+// reuses the dashboard-specific filtered shape above (Housekeeping AND
+// Reception — also directly covers STORY-051's own "rooms, check-in/out
+// visible" bullet). Both `.optional()`, undefined for every role that
+// can't see them, including Event Manager — same "extra column vs. the
+// Event Manager view" framing as `meals`.
 export const dashboardUpcomingEventResultSchema = z.object({
   id: z.string(),
   eventId: z.string(),
@@ -557,6 +585,8 @@ export const dashboardUpcomingEventResultSchema = z.object({
   pax: z.number(),
   clientContacts: z.array(clientContactSchema).optional(),
   meals: z.array(dashboardUpcomingMealResultSchema).optional(),
+  setup: sessionSetupResultSchema.optional(),
+  accommodation: dashboardAccommodationResultSchema.optional(),
 });
 
 // Counts are identical across roles (STORY-047's own AC) — nothing about a

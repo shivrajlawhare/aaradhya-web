@@ -40,17 +40,65 @@ const formatMeals = (meals: NonNullable<UpcomingEvent['meals']>): string => {
     .join(', ');
 };
 
+// "Theatre, 10T/100C, Stage, Buffet" — active flags only, joined with the
+// seating arrangement and table/chair counts. "—" when Housekeeping can see
+// the column but this row's soonest session has no setup configured at all
+// (every field still at its schema default — no seating, zero counts, every
+// flag false) — a `formatSetup`-only edge case (unlike meals/rooms, "no
+// setup entered" has no explicit empty marker of its own on the wire).
+const formatSetup = (setup: UpcomingEvent['setup']): string => {
+  if (!setup) {
+    return '—';
+  }
+  const parts: string[] = [];
+  if (setup.seating) {
+    parts.push(setup.seating);
+  }
+  if (setup.tableCount > 0 || setup.chairCount > 0) {
+    parts.push(`${setup.tableCount}T/${setup.chairCount}C`);
+  }
+  if (setup.stage) {
+    parts.push('Stage');
+  }
+  if (setup.buffet) {
+    parts.push('Buffet');
+  }
+  if (setup.registrationDesk) {
+    parts.push('Registration desk');
+  }
+  if (setup.vipSeating) {
+    parts.push('VIP seating');
+  }
+  if (setup.brideGroomSeating) {
+    parts.push('Bride/Groom seating');
+  }
+
+  return parts.length > 0 ? parts.join(', ') : '—';
+};
+
+// "Double x3, Single x2" — "—" when Housekeeping/Reception can see the
+// column but no rooms have been booked yet (an empty roomLines array,
+// still present, same "permitted but empty" convention as meals/setup).
+const formatRooms = (accommodation: UpcomingEvent['accommodation']): string => {
+  if (!accommodation || accommodation.roomLines.length === 0) {
+    return '—';
+  }
+  return accommodation.roomLines.map((line) => `${line.roomType} x${line.noOfRooms}`).join(', ');
+};
+
 const UpcomingEventsTable = ({ events }: UpcomingEventsTableProps) => {
   const navigate = useNavigate();
-  // STORY-049's own new column — present only when the API actually sent
-  // `meals` (F&B Head's own dashboard request; aaradhya-api gates this
-  // server-side). Derived from the data itself, not a role check read out
-  // of AuthContext here, so this table stays the same role-agnostic
-  // component STORY-048 established: it renders whatever columns the
-  // response shape it was actually given supports. `meals` is either
-  // present on every row or none (a single response is for one caller's
-  // one role), so checking the first row is enough.
+  // STORY-049/050's own new columns — present only when the API actually
+  // sent the corresponding key (aaradhya-api gates each server-side per
+  // role). Derived from the data itself, not a role check read out of
+  // AuthContext here, so this table stays the same role-agnostic component
+  // STORY-048 established: it renders whatever columns the response shape
+  // it was actually given supports. Each key is either present on every row
+  // or none (a single response is for one caller's one role), so checking
+  // the first row is enough.
   const showMealsColumn = events[0]?.meals !== undefined;
+  const showSetupColumn = events[0]?.setup !== undefined;
+  const showRoomsColumn = events[0]?.accommodation !== undefined;
 
   // Tiles still render with 0 above; this table's own empty state, per
   // this story's own edge case — not a blank table.
@@ -92,6 +140,16 @@ const UpcomingEventsTable = ({ events }: UpcomingEventsTableProps) => {
                 <Typography variant="labelS">Meal / Timing</Typography>
               </TableCell>
             )}
+            {showSetupColumn && (
+              <TableCell>
+                <Typography variant="labelS">Setup</Typography>
+              </TableCell>
+            )}
+            {showRoomsColumn && (
+              <TableCell>
+                <Typography variant="labelS">Rooms</Typography>
+              </TableCell>
+            )}
           </TableRow>
         </TableHead>
         <TableBody>
@@ -127,6 +185,16 @@ const UpcomingEventsTable = ({ events }: UpcomingEventsTableProps) => {
               {showMealsColumn && (
                 <TableCell>
                   <Typography variant="bodyM">{formatMeals(event.meals ?? [])}</Typography>
+                </TableCell>
+              )}
+              {showSetupColumn && (
+                <TableCell>
+                  <Typography variant="bodyM">{formatSetup(event.setup)}</Typography>
+                </TableCell>
+              )}
+              {showRoomsColumn && (
+                <TableCell>
+                  <Typography variant="bodyM">{formatRooms(event.accommodation)}</Typography>
                 </TableCell>
               )}
             </TableRow>

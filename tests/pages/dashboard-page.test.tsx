@@ -26,7 +26,52 @@ interface MockUpcomingEvent {
   pax: number;
   clientContacts?: { name: string; contactNumber: string; role: string }[];
   meals?: { mealName: string | null; startTime: string | null; endTime: string | null }[];
+  setup?: {
+    seating: string | null;
+    tableCount: number;
+    chairCount: number;
+    stage: boolean;
+    buffet: boolean;
+    registrationDesk: boolean;
+    vipSeating: boolean;
+    brideGroomSeating: boolean;
+    notes: string | null;
+  };
+  accommodation?: {
+    checkIn: string | null;
+    checkOut: string | null;
+    totalDays: number | null;
+    roomLines: { roomType: string; occupancy: number; noOfRooms: number }[];
+    totalOccupancy: number;
+    totalCharges?: number;
+  };
 }
+
+const makeSetup = (overrides: Partial<NonNullable<MockUpcomingEvent['setup']>> = {}): NonNullable<
+  MockUpcomingEvent['setup']
+> => ({
+  seating: null,
+  tableCount: 0,
+  chairCount: 0,
+  stage: false,
+  buffet: false,
+  registrationDesk: false,
+  vipSeating: false,
+  brideGroomSeating: false,
+  notes: null,
+  ...overrides,
+});
+
+const makeAccommodation = (
+  overrides: Partial<NonNullable<MockUpcomingEvent['accommodation']>> = {},
+): NonNullable<MockUpcomingEvent['accommodation']> => ({
+  checkIn: null,
+  checkOut: null,
+  totalDays: null,
+  roomLines: [],
+  totalOccupancy: 0,
+  ...overrides,
+});
 
 const makeCounts = (overrides: Partial<MockDashboardCounts> = {}): MockDashboardCounts => ({
   todaysEvents: 0,
@@ -264,6 +309,104 @@ describe('DashboardPage', () => {
       expect(headerCells).toEqual(['Date', 'Event', 'Client', 'Venue', 'Pax', 'Status', 'Meal / Timing']);
       expect(screen.queryByText(/payment/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/setup/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Housekeeping dashboard (STORY-050)', () => {
+    it('renders Setup and Rooms columns with the row\'s setup/accommodation detail for Housekeeping', async () => {
+      seedSession('Housekeeping');
+      mockDashboardApi(makeCounts({ upcoming: 1 }), [
+        {
+          id: 'event-1',
+          eventId: 'ARD-EVT-2026-001',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          date: '2026-06-15T00:00:00.000Z',
+          venue: 'Lawn',
+          pax: 200,
+          setup: makeSetup({ seating: 'Theatre', tableCount: 10, chairCount: 100, stage: true }),
+          accommodation: makeAccommodation({
+            roomLines: [{ roomType: 'Double', occupancy: 2, noOfRooms: 3 }],
+            totalOccupancy: 6,
+          }),
+        },
+      ]);
+      renderPage();
+
+      expect(await screen.findByText('Setup')).toBeInTheDocument();
+      expect(screen.getByText('Rooms')).toBeInTheDocument();
+      expect(screen.getByText('Theatre, 10T/100C, Stage')).toBeInTheDocument();
+      expect(screen.getByText('Double x3')).toBeInTheDocument();
+    });
+
+    it('shows "—" for Setup/Rooms when Housekeeping can see the columns but this row has none entered yet', async () => {
+      seedSession('Housekeeping');
+      mockDashboardApi(makeCounts({ upcoming: 1 }), [
+        {
+          id: 'event-1',
+          eventId: 'ARD-EVT-2026-001',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          date: '2026-06-15T00:00:00.000Z',
+          venue: 'Lawn',
+          pax: 200,
+          setup: makeSetup(),
+          accommodation: makeAccommodation(),
+        },
+      ]);
+      renderPage();
+
+      expect(await screen.findByText('Setup')).toBeInTheDocument();
+      // Client (absent for Housekeeping), Setup, Rooms — three "—" cells.
+      expect(screen.getAllByText('—')).toHaveLength(3);
+    });
+
+    it('does not render Setup/Rooms columns for the Event Manager view (no `setup`/`accommodation` keys on the response)', async () => {
+      seedSession('EventManager');
+      mockDashboardApi(makeCounts({ upcoming: 1 }), [
+        {
+          id: 'event-1',
+          eventId: 'ARD-EVT-2026-001',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          date: '2026-06-15T00:00:00.000Z',
+          venue: 'Lawn',
+          pax: 200,
+          clientContacts: [{ name: 'Priya Nair', contactNumber: '9876543210', role: 'Bride' }],
+        },
+      ]);
+      renderPage();
+
+      expect(await screen.findByText('Lawn')).toBeInTheDocument();
+      expect(screen.queryByText('Setup')).not.toBeInTheDocument();
+      expect(screen.queryByText('Rooms')).not.toBeInTheDocument();
+    });
+
+    // DOM inspection, not just "the design doesn't show it" (same AC
+    // wording as STORY-049's) — a Housekeeping-fed dashboard has no payment
+    // or menu column, and does get its own setup/rooms columns.
+    it('has no payment column and no menu column, verified by DOM inspection', async () => {
+      seedSession('Housekeeping');
+      mockDashboardApi(makeCounts({ upcoming: 1 }), [
+        {
+          id: 'event-1',
+          eventId: 'ARD-EVT-2026-001',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          date: '2026-06-15T00:00:00.000Z',
+          venue: 'Lawn',
+          pax: 200,
+          setup: makeSetup({ seating: 'Theatre' }),
+          accommodation: makeAccommodation({ roomLines: [{ roomType: 'Double', occupancy: 2, noOfRooms: 1 }] }),
+        },
+      ]);
+      const { container } = renderPage();
+
+      expect(await screen.findByText('Lawn')).toBeInTheDocument();
+      const headerCells = Array.from(container.querySelectorAll('th')).map((cell) => cell.textContent);
+      expect(headerCells).toEqual(['Date', 'Event', 'Client', 'Venue', 'Pax', 'Status', 'Setup', 'Rooms']);
+      expect(screen.queryByText(/payment/i)).not.toBeInTheDocument();
+      expect(screen.queryByText('Meal / Timing')).not.toBeInTheDocument();
     });
   });
 });
