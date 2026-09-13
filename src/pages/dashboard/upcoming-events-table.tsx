@@ -76,14 +76,29 @@ const formatSetup = (setup: UpcomingEvent['setup']): string => {
   return parts.length > 0 ? parts.join(', ') : '—';
 };
 
-// "Double x3, Single x2" — "—" when Housekeeping/Reception can see the
-// column but no rooms have been booked yet (an empty roomLines array,
-// still present, same "permitted but empty" convention as meals/setup).
+// "Double x3, Single x2 | Check-in 2026-06-14 - Check-out 2026-06-16" —
+// STORY-051's own "rooms, check-in/out visible" folded into the one Rooms
+// column rather than a second column gated on the exact same `accommodation
+// !== undefined` check `showRoomsColumn` already is. Either half is omitted
+// (not "—") when that half's own data isn't there yet — no rooms booked, or
+// no check-in/out entered — with the whole cell falling back to "—" only
+// when neither half has anything, same "permitted but empty" convention as
+// meals/setup.
 const formatRooms = (accommodation: UpcomingEvent['accommodation']): string => {
-  if (!accommodation || accommodation.roomLines.length === 0) {
+  if (!accommodation) {
     return '—';
   }
-  return accommodation.roomLines.map((line) => `${line.roomType} x${line.noOfRooms}`).join(', ');
+  const roomsPart =
+    accommodation.roomLines.length > 0
+      ? accommodation.roomLines.map((line) => `${line.roomType} x${line.noOfRooms}`).join(', ')
+      : null;
+  const datesPart =
+    accommodation.checkIn && accommodation.checkOut
+      ? `Check-in ${toDateInputValue(accommodation.checkIn)} - Check-out ${toDateInputValue(accommodation.checkOut)}`
+      : null;
+  const parts = [roomsPart, datesPart].filter((part): part is string => part !== null);
+
+  return parts.length > 0 ? parts.join(' | ') : '—';
 };
 
 const UpcomingEventsTable = ({ events }: UpcomingEventsTableProps) => {

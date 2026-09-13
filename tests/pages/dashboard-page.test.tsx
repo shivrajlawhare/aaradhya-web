@@ -409,4 +409,84 @@ describe('DashboardPage', () => {
       expect(screen.queryByText('Meal / Timing')).not.toBeInTheDocument();
     });
   });
+
+  describe('Reception dashboard (STORY-051)', () => {
+    it('shows Bride/Groom names in the Client column, and rooms + check-in/out in the Rooms column', async () => {
+      seedSession('Reception');
+      mockDashboardApi(makeCounts({ upcoming: 1 }), [
+        {
+          id: 'event-1',
+          eventId: 'ARD-EVT-2026-001',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          date: '2026-06-15T00:00:00.000Z',
+          venue: 'Lawn',
+          pax: 200,
+          clientContacts: [
+            { name: 'Priya Nair', contactNumber: '9876543210', role: 'Bride' },
+            { name: 'Rohan Shah', contactNumber: '9876500000', role: 'Groom' },
+          ],
+          accommodation: makeAccommodation({
+            checkIn: '2026-06-14T00:00:00.000Z',
+            checkOut: '2026-06-16T00:00:00.000Z',
+            roomLines: [{ roomType: 'Double', occupancy: 2, noOfRooms: 1 }],
+          }),
+        },
+      ]);
+      renderPage();
+
+      expect(await screen.findByText('Priya Nair, Rohan Shah')).toBeInTheDocument();
+      expect(screen.getByText('Rooms')).toBeInTheDocument();
+      expect(screen.getByText('Double x1 | Check-in 2026-06-14 - Check-out 2026-06-16')).toBeInTheDocument();
+    });
+
+    it('shows "—" in the Rooms column when Reception can see it but no rooms or dates are entered yet', async () => {
+      seedSession('Reception');
+      mockDashboardApi(makeCounts({ upcoming: 1 }), [
+        {
+          id: 'event-1',
+          eventId: 'ARD-EVT-2026-001',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          date: '2026-06-15T00:00:00.000Z',
+          venue: 'Lawn',
+          pax: 200,
+          clientContacts: [{ name: 'Priya Nair', contactNumber: '9876543210', role: 'Bride' }],
+          accommodation: makeAccommodation(),
+        },
+      ]);
+      renderPage();
+
+      expect(await screen.findByText('Rooms')).toBeInTheDocument();
+      expect(screen.getByText('—')).toBeInTheDocument();
+    });
+
+    // DOM inspection, not just "the design doesn't show it" — same AC
+    // wording as STORY-049/050's own edge cases: no payment column, no menu
+    // column, and no Setup column (that one's Housekeeping-only).
+    it('has no payment column, no menu column, and no Setup column, verified by DOM inspection', async () => {
+      seedSession('Reception');
+      mockDashboardApi(makeCounts({ upcoming: 1 }), [
+        {
+          id: 'event-1',
+          eventId: 'ARD-EVT-2026-001',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          date: '2026-06-15T00:00:00.000Z',
+          venue: 'Lawn',
+          pax: 200,
+          clientContacts: [{ name: 'Priya Nair', contactNumber: '9876543210', role: 'Bride' }],
+          accommodation: makeAccommodation({ roomLines: [{ roomType: 'Double', occupancy: 2, noOfRooms: 1 }] }),
+        },
+      ]);
+      const { container } = renderPage();
+
+      expect(await screen.findByText('Lawn')).toBeInTheDocument();
+      const headerCells = Array.from(container.querySelectorAll('th')).map((cell) => cell.textContent);
+      expect(headerCells).toEqual(['Date', 'Event', 'Client', 'Venue', 'Pax', 'Status', 'Rooms']);
+      expect(screen.queryByText(/payment/i)).not.toBeInTheDocument();
+      expect(screen.queryByText('Meal / Timing')).not.toBeInTheDocument();
+      expect(screen.queryByText('Setup')).not.toBeInTheDocument();
+    });
+  });
 });

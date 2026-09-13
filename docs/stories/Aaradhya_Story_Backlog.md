@@ -809,6 +809,12 @@ Built early because every write in every later module needs it. Placed here, not
 **Tokens:** Same as STORY-048.
 **Edge cases:** Same as STORY-049/050.
 
+**Decisions (v1):**
+- **No new component, no backend change** — `UpcomingEventsTable`'s existing Rooms column (STORY-050) already appears for Reception, since `accommodation` was already gated to Housekeeping *and* Reception on the backend; Bride/Groom names already come through the existing Client column (`formatClientNames` already maps any `clientContacts` row, and Reception was already one of the two roles granted `clientContacts` since STORY-046). This story's only real work was the check-in/out display, plus DOM-inspection verification.
+- **Check-in/out folded into the existing Rooms column** (`formatRooms` extended: `"Double x1 | Check-in 2026-06-14 - Check-out 2026-06-16"`) rather than a new column — a second column would have needed the exact same `accommodation !== undefined` gate `showRoomsColumn` already is, which would just be introducing an identical, redundant flag. Either half of the cell (rooms vs. dates) is omitted independently when its own data isn't entered yet; the whole cell falls back to "—" only when neither half has anything.
+- Dates are formatted with `toDateInputValue` (existing helper, already used for this same row's `date` field) — aaradhya-api's own STORY-051 Decisions note `checkIn`/`checkOut` serialize as full ISO datetime strings, not plain `YYYY-MM-DD`, so truncation was necessary, not cosmetic.
+- No new frontend logic for the Cancelled-session edge case — same reasoning as STORY-049/050 (the dashboard page has no filtering of its own); re-verified on the backend with a dedicated Reception-token test.
+
 ### STORY-052: Event Detail tab-visibility gating by role
 **Flow:** A non-Event-Manager role opens an Event Detail screen and sees only their relevant tab(s), pre-filtered; the Event Manager still sees all seven tabs built across this backlog (Overview, Client, Sessions & Menu, Setup, Rooms, Payments, Documents).
 **Acceptance Criteria:**
