@@ -1,6 +1,7 @@
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { tsr } from '../../api/client';
 import CountTiles from './count-tiles';
+import DashboardNav from './dashboard-nav';
 import { pageStyles } from './dashboard-page.styles';
 import UpcomingEventsTable from './upcoming-events-table';
 
@@ -22,6 +23,7 @@ const DashboardPage = () => {
         <Typography variant="titleL" component="h1">
           Dashboard
         </Typography>
+        <DashboardNav />
         <CircularProgress aria-label="Loading dashboard" />
       </Box>
     );
@@ -37,6 +39,7 @@ const DashboardPage = () => {
       <Typography variant="titleL" component="h1">
         Dashboard
       </Typography>
+      <DashboardNav />
       <CountTiles counts={counts} />
       <UpcomingEventsTable events={upcomingEvents} />
     </Box>
