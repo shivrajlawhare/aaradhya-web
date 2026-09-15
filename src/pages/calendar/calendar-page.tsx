@@ -60,9 +60,6 @@ const CalendarPage = () => {
 
   return (
     <Box sx={pageStyles}>
-      <Typography variant="titleL" component="h1">
-        Calendar
-      </Typography>
       <Box sx={monthNavStyles}>
         <IconButton aria-label="Previous month" onClick={() => updateMonthShift(shiftMonth(monthShift, -1))}>
           <ChevronLeftIcon />

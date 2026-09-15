@@ -1,4 +1,4 @@
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
 import { tsr } from '../../api/client';
 import EventsTable from './events-table';
 import { pageStyles } from './event-list-page.styles';
@@ -11,9 +11,6 @@ const EventListPage = () => {
   if (eventsQuery.isPending) {
     return (
       <Box sx={pageStyles}>
-        <Typography variant="titleL" component="h1">
-          Events
-        </Typography>
         <CircularProgress aria-label="Loading events" />
       </Box>
     );
@@ -21,9 +18,6 @@ const EventListPage = () => {
 
   return (
     <Box sx={pageStyles}>
-      <Typography variant="titleL" component="h1">
-        Events
-      </Typography>
       <EventsTable events={eventsQuery.data?.body ?? []} />
     </Box>
   );

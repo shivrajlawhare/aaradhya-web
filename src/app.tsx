@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import AppShell from './components/app-shell/app-shell';
 import RequireRole from './components/ui/require-role';
 import { Role } from './contract';
 import CalendarPage from './pages/calendar/calendar-page';
@@ -29,24 +30,46 @@ const App = () => {
           restriction either; it varies its own response by role
           server-side (STORY-046), so the same DashboardPage renders
           correctly for all four roles (STORY-048/049/050/051). */}
-      <Route path={DASHBOARD_PATH} element={<DashboardPage />} />
+      <Route
+        path={DASHBOARD_PATH}
+        element={
+          <AppShell title="Dashboard">
+            <DashboardPage />
+          </AppShell>
+        }
+      />
       <Route
         path={USER_MANAGEMENT_PATH}
         element={
-          <RequireRole roles={[Role.EventManager]}>
-            <UserManagementPage />
-          </RequireRole>
+          <AppShell title="User Management">
+            <RequireRole roles={[Role.EventManager]}>
+              <UserManagementPage />
+            </RequireRole>
+          </AppShell>
         }
       />
       {/* No RequireRole — GET /events (STORY-013) has no role restriction;
           every authenticated caller sees the same unfiltered list. */}
-      <Route path={EVENT_LIST_PATH} element={<EventListPage />} />
+      <Route
+        path={EVENT_LIST_PATH}
+        element={
+          <AppShell title="Events">
+            <EventListPage />
+          </AppShell>
+        }
+      />
       <Route
         path={EVENT_CREATE_PATH}
         element={
-          <RequireRole roles={[Role.EventManager]}>
-            <EventCreationPage />
-          </RequireRole>
+          // No title — EventCreationForm still renders its own "New Event"
+          // h1 (STORY-053's own AC never lists this screen for the
+          // dedup treatment the way it does Dashboard/Events/Calendar/User
+          // Management), so AppShell doesn't render a second one.
+          <AppShell>
+            <RequireRole roles={[Role.EventManager]}>
+              <EventCreationPage />
+            </RequireRole>
+          </AppShell>
         }
       />
       {/* No RequireRole — GET /events/:id (STORY-013) has no role
@@ -54,7 +77,17 @@ const App = () => {
           just seeing a different subset of tabs. EventDetailPage itself
           gates editing, the Activity sub-tab, and (STORY-052) the Rooms/
           Sessions tabs and each one's own Setup/Menu detail per role. */}
-      <Route path={EVENT_DETAIL_PATH_PATTERN} element={<EventDetailPage />} />
+      <Route
+        path={EVENT_DETAIL_PATH_PATTERN}
+        element={
+          // No title — the h1 here is the Event's own eventId (dynamic,
+          // not one of STORY-053's four static-title screens), so AppShell
+          // leaves it entirely to EventDetailPage, unchanged.
+          <AppShell>
+            <EventDetailPage />
+          </AppShell>
+        }
+      />
       {/* RequireRole([EventManager]) as of STORY-052 — this screen shows the
           exact same full financial breakdown (Grand Total, extras,
           accommodation/session costs) that story scoped to Event Manager
@@ -63,7 +96,10 @@ const App = () => {
           any authenticated caller via the Overview/Rooms/Sessions tabs")
           stopped being true the moment those tabs became role-filtered —
           leaving this route open would have been a direct bypass of the
-          very gating STORY-052 exists to add. */}
+          very gating STORY-052 exists to add. Not wrapped in AppShell —
+          STORY-053's own AC never lists this screen among the ones the
+          shell wraps, and it exists to mirror the reference quotation PDFs
+          (STORY-069+) rather than sit alongside app chrome. */}
       <Route
         path={QUOTATION_PREVIEW_PATH_PATTERN}
         element={
@@ -74,7 +110,14 @@ const App = () => {
       />
       {/* No RequireRole — GET /calendar (STORY-034) has no role restriction
           either, same as GET /events. */}
-      <Route path={CALENDAR_PATH} element={<CalendarPage />} />
+      <Route
+        path={CALENDAR_PATH}
+        element={
+          <AppShell title="Calendar">
+            <CalendarPage />
+          </AppShell>
+        }
+      />
       <Route path="*" element={<Navigate to={LOGIN_PATH} replace />} />
     </Routes>
   );

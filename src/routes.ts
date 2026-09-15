@@ -15,3 +15,7 @@ export const eventDetailPath = (id: string): string => `/events/${id}`;
 export const CALENDAR_PATH = '/calendar';
 export const QUOTATION_PREVIEW_PATH_PATTERN = '/events/:id/quotation-preview';
 export const quotationPreviewPath = (id: string): string => `/events/${id}/quotation-preview`;
+// STORY-062 hasn't landed yet — this is the URL the Settings nav row
+// (STORY-053) already links to, matching the exact path that story's own
+// AC commits to for the real route.
+export const SETTINGS_PATH = '/settings';

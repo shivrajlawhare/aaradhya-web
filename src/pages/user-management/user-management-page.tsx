@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Box, CircularProgress, Stack, Typography } from '@mui/material';
+import { Box, CircularProgress, Stack } from '@mui/material';
 import { tsr } from '../../api/client';
 import NewUserForm from './new-user-form';
 import UsersTable from './users-table';
@@ -23,9 +23,6 @@ const UserManagementPage = () => {
 
   return (
     <Box sx={pageStyles}>
-      <Typography variant="titleL" component="h1">
-        User Management
-      </Typography>
       <Stack direction={{ xs: 'column', md: 'row' }} sx={contentStyles}>
         <NewUserForm onCreated={refetchUsers} />
         {tableSlot}

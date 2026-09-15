@@ -503,51 +503,7 @@ describe('DashboardPage', () => {
     });
   });
 
-  describe('DashboardNav', () => {
-    it('shows Events, Calendar, and Logout for every role, but New Event/User Management only for Event Manager', async () => {
-      seedSession('Reception');
-      mockDashboardApi(makeCounts(), []);
-      renderPage();
-
-      // Rendered via MUI's Button component={RouterLink}, so testing-library
-      // gives them role "link" (a real <a href> under the hood), not
-      // "button" — only Logout (a plain onClick Button) is a real <button>.
-      await screen.findByText('Dashboard');
-      expect(screen.getByRole('link', { name: 'Events' })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Calendar' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Logout' })).toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'New Event' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'User Management' })).not.toBeInTheDocument();
-    });
-
-    it('shows New Event and User Management for an Event Manager', async () => {
-      seedSession('EventManager');
-      mockDashboardApi(makeCounts(), []);
-      renderPage();
-
-      expect(await screen.findByRole('link', { name: 'New Event' })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'User Management' })).toBeInTheDocument();
-    });
-
-    it('navigates to the Events list when "Events" is clicked', async () => {
-      seedSession();
-      mockDashboardApi(makeCounts(), []);
-      renderPage();
-
-      fireEvent.click(await screen.findByRole('link', { name: 'Events' }));
-
-      expect(await screen.findByText('event list placeholder')).toBeInTheDocument();
-    });
-
-    it('logs out and navigates to Login when "Logout" is clicked', async () => {
-      seedSession();
-      mockDashboardApi(makeCounts(), []);
-      renderPage();
-
-      fireEvent.click(await screen.findByRole('button', { name: 'Logout' }));
-
-      expect(await screen.findByText('login placeholder')).toBeInTheDocument();
-      expect(localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
-    });
-  });
+  // Navigation (Events/Calendar/New Event/User Management/Logout) moved out
+  // of DashboardPage and into AppShell (STORY-053) — DashboardPage no
+  // longer renders any of it itself. See tests/components/app-shell.test.tsx.
 });
