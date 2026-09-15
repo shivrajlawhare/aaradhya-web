@@ -21,6 +21,9 @@ everything else), loaded via Google Fonts in `index.html`.
 | `text-soft` | `#6F675C` | Secondary text |
 | `text-faint` | `#A79C8C` | Captions, placeholders |
 | `line` | `#E6DAC4` | Hairline borders/dividers |
+| `drawerBg` | `#333136` (charcoal) | Side drawer navigation background (dark, distinct from the light app surface) |
+| `drawerText` | `#F5EEE1` (ivory) | Primary text/wordmark on the drawer's dark background |
+| `drawerTextMuted` | `#B4ACA0` | Unselected nav item label/icon color on the drawer's dark background |
 | `accent` | `#E4630C` (ember) | Single primary-action color |
 | `accent-deep` | `#B84607` | Accent pressed/dark state |
 | `accent-tint` | `#FBE3D0` | Accent chip/badge fill |
