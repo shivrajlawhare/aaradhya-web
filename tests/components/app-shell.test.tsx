@@ -110,6 +110,14 @@ describe('AppShell', () => {
       expect(within(rail).queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument();
     });
 
+    it("centers the screen's title over the content column (STORY-054)", () => {
+      mockMatchMedia(true);
+      seedSession('EventManager');
+      renderShell(DASHBOARD_PATH);
+
+      expect(screen.getByRole('heading', { name: 'Dashboard', level: 1 })).toHaveStyle({ textAlign: 'center' });
+    });
+
     it('shows every row, including New Event/User Management/Settings, for an Event Manager', () => {
       mockMatchMedia(true);
       seedSession('EventManager');
@@ -170,7 +178,11 @@ describe('AppShell', () => {
       renderShell(DASHBOARD_PATH);
 
       expect(screen.getByRole('button', { name: 'Open navigation' })).toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+      const title = screen.getByRole('heading', { name: 'Dashboard' });
+      expect(title).toBeInTheDocument();
+      // STORY-054's own AC: centered in the top bar, not left-aligned next
+      // to the hamburger.
+      expect(title).toHaveStyle({ textAlign: 'center' });
       expect(screen.queryByRole('navigation', { name: 'Primary' })).not.toBeInTheDocument();
     });
 

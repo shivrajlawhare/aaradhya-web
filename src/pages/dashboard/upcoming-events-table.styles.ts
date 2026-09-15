@@ -1,10 +1,17 @@
 import type { SxProps, Theme } from '@mui/material';
 import { radiusTokens, spaceTokens } from '../../theme/tokens';
 
+// `overflow: 'hidden'` (its previous value) clipped whatever columns didn't
+// fit the viewport instead of just rounding the card's corners — STORY-054's
+// own reported bug. `overflowX: 'auto'` keeps every column reachable by
+// horizontal scroll on mobile while still clipping content to the rounded
+// corners exactly like `hidden` did; on desktop, where the table already
+// fits, no scrollbar appears and nothing about the current layout changes.
 export const tableCardStyles: SxProps<Theme> = {
   width: '100%',
   borderRadius: `${radiusTokens.radiusMd}px`, // radius-md (cards)
-  overflow: 'hidden',
+  overflowX: 'auto',
+  overflowY: 'hidden',
 };
 
 export const rowStyles: SxProps<Theme> = {

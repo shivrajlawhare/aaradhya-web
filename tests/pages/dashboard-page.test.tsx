@@ -506,4 +506,60 @@ describe('DashboardPage', () => {
   // Navigation (Events/Calendar/New Event/User Management/Logout) moved out
   // of DashboardPage and into AppShell (STORY-053) — DashboardPage no
   // longer renders any of it itself. See tests/components/app-shell.test.tsx.
+
+  describe('layout fixes (STORY-054)', () => {
+    it("stacks each count tile's label above its value via a column flex container, not source order alone", async () => {
+      seedSession();
+      mockDashboardApi(makeCounts({ todaysEvents: 2 }), []);
+      renderPage();
+
+      const label = await screen.findByText("Today's Events");
+      const tile = label.closest('.MuiPaper-root');
+      expect(tile).not.toBeNull();
+      // jsdom has no real layout engine, so comparing bounding boxes isn't
+      // meaningful here — what actually keeps the label above the value at
+      // every viewport is this flex-column container. Without it, labelS/
+      // titleL (custom Typography variants absent from MUI's own
+      // variantMapping) fall back to an inline <span>, so the label and
+      // value would sit beside each other despite their DOM order — the
+      // bug this story reported.
+      expect(tile).toHaveStyle({ display: 'flex', flexDirection: 'column' });
+    });
+
+    it('keeps the upcoming-events table horizontally scrollable instead of clipping columns that don\'t fit', async () => {
+      seedSession();
+      mockDashboardApi(makeCounts({ upcoming: 1 }), [
+        {
+          id: 'event-1',
+          eventId: 'ARD-EVT-2026-001',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          date: '2026-06-15T00:00:00.000Z',
+          venue: 'Lawn',
+          pax: 200,
+          clientContacts: [{ name: 'Priya Nair', contactNumber: '9876543210', role: 'Bride' }],
+        },
+      ]);
+      renderPage();
+
+      const table = await screen.findByRole('table');
+      const scrollContainer = table.closest('.MuiPaper-root');
+      // Not 'hidden' (its previous value) — that clipped whatever columns
+      // didn't fit the viewport instead of just rounding the card's
+      // corners, hiding columns entirely on narrow screens.
+      expect(scrollContainer).toHaveStyle({ overflowX: 'auto' });
+    });
+
+    it('renders the empty-state card with the same auto-scroll (not clipping) card style as the populated table', async () => {
+      seedSession();
+      mockDashboardApi(makeCounts(), []);
+      renderPage();
+
+      const emptyState = await screen.findByText('No upcoming Events');
+      const card = emptyState.closest('.MuiPaper-root');
+      // Same shared card style as the populated table — 'auto' is a no-op
+      // with nothing to scroll (unlike 'hidden', which would clip it).
+      expect(card).toHaveStyle({ overflowX: 'auto' });
+    });
+  });
 });

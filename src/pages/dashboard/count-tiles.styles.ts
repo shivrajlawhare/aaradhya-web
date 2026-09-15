@@ -7,7 +7,16 @@ export const rowStyles: SxProps<Theme> = {
 };
 
 // accent-tint (count tile emphasis), per this story's own Tokens line.
+// Explicit column flex — labelS/titleL are custom Typography variants with
+// no entry in MUI's own variantMapping, so unlike h1..h6/body1/body2 they
+// fall back to an inline <span> rather than a block element (STORY-054's
+// own reported bug: label and value rendering beside each other instead of
+// stacked). A flex column forces both into a column regardless of that
+// inline default.
 export const tileStyles: SxProps<Theme> = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: `${spaceTokens.space4}px`,
   bgcolor: colorTokens.accentTint,
   p: `${spaceTokens.space16}px`,
   minWidth: 140,
