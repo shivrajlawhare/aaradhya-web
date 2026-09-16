@@ -14,8 +14,9 @@ interface EventsTableProps {
 
 // "Priya & Rohan", or just the one present name, or "—" if neither Bride
 // nor Groom made it into client_contacts (e.g. a Corporate event with only
-// POC rows).
-const getBrideGroomNames = (clientContacts: PublicEvent['clientContacts']): string => {
+// POC rows). Exported — EventsCardList (STORY-055) reuses this unchanged
+// rather than re-deriving the same names its own way.
+export const getBrideGroomNames = (clientContacts: PublicEvent['clientContacts']): string => {
   const bride = clientContacts.find((contact) => contact.role === ClientContactRole.Bride);
   const groom = clientContacts.find((contact) => contact.role === ClientContactRole.Groom);
   // flatMap over [contact ? [contact.name] : []] narrows to string[] without
