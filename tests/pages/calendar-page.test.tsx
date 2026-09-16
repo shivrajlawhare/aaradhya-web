@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { tsr } from '../../src/api/client';
 import CalendarPage from '../../src/pages/calendar/calendar-page';
 import { CALENDAR_PATH, EVENT_DETAIL_PATH_PATTERN } from '../../src/routes';
-import { colorTokens } from '../../src/theme/tokens';
 import { theme } from '../../src/theme/theme';
 
 interface MockCalendarSession {
@@ -127,6 +126,21 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// A calendar event's own title can collide with a filter chip showing the
+// same text (e.g. the Event Type chip reads "Wedding" once that's the
+// active filter) — this narrows a same-text match down to the one actually
+// inside a StandaloneMonthView event card ([data-palette], the library's
+// own attribute for its resource-color slot), same disambiguation
+// "Open Event Wedding" used to give the old hand-built EventChip for free.
+const findCalendarEventTitle = async (text: string): Promise<HTMLElement> => {
+  const candidates = await screen.findAllByText(text);
+  const match = candidates.find((candidate) => candidate.closest('[data-palette]'));
+  if (!match) {
+    throw new Error(`expected a calendar event titled "${text}"`);
+  }
+  return match;
+};
+
 // Every fixture session in this file lands in September 2026 — clicks
 // "Next month" however many times that takes from whichever month the
 // suite actually starts on ("today"), so the tests stay correct regardless
@@ -152,18 +166,20 @@ describe('CalendarPage', () => {
     expect(await screen.findByText(label)).toBeInTheDocument();
   });
 
-  it("shows a fixture 3-day session's chip on all three of its dates, across a week-row break", async () => {
-    // Sept 12-14 2026: the 12th/13th fall in the grid's second row, the
-    // 14th in the third — the same week-row-break case this story's own
-    // AC names explicitly.
+  it("renders a fixture 3-day session as a single bar, split into two segments across a week-row break — not three repeated entries", async () => {
+    // Sept 12-14 2026: the 12th falls in the grid's second row, the
+    // 13th-14th in the third — the same week-row-break case this story's
+    // own AC names explicitly. StandaloneMonthView renders one bar segment
+    // per week row it spans (two here), each carrying the title once — not
+    // the old hand-built grid's one repeated chip per covered date (three).
     mockCalendarApi([
       makeSession({ startDate: '2026-09-12T00:00:00.000Z', endDate: '2026-09-14T00:00:00.000Z' }),
     ]);
     renderPage();
 
     await navigateToSeptember2026();
-    const chips = await screen.findAllByText('Wedding');
-    expect(chips).toHaveLength(3);
+    const segments = await screen.findAllByText('Wedding');
+    expect(segments).toHaveLength(2);
   });
 
   it('renders two Sessions of the same Event active on the same day as one chip, not two', async () => {
@@ -213,12 +229,18 @@ describe('CalendarPage', () => {
     expect(await screen.findByText('Corporate Offsite')).toBeInTheDocument();
   });
 
+  // StandaloneMonthView's own native resource-coloring (STORY-058's own
+  // AC) only accepts its fixed named palette (amber, red, grey, purple,
+  // ...), not this app's own status-*/-tint hex tokens directly — each
+  // status resource (calendar-scheduler-events.ts's STATUS_RESOURCES) maps
+  // to the closest, most distinct named color instead. `data-palette` is
+  // the library's own attribute for which one actually applied.
   it.each([
-    ['Tentative', colorTokens.statusTentativeTint],
-    ['Confirmed', colorTokens.statusConfirmedTint],
-    ['Completed', colorTokens.statusCompletedTint],
-    ['Cancelled', colorTokens.statusCancelledTint],
-  ])("renders a chip in the parent Event's %s status color", async (status, tint) => {
+    ['Tentative', 'amber'],
+    ['Confirmed', 'red'],
+    ['Completed', 'grey'],
+    ['Cancelled', 'purple'],
+  ])("renders an Event in the parent Event's %s status color", async (status, expectedPalette) => {
     mockCalendarApi([
       makeSession({
         startDate: '2026-09-12T00:00:00.000Z',
@@ -230,12 +252,12 @@ describe('CalendarPage', () => {
 
     await navigateToSeptember2026();
 
-    const chipLabel = await screen.findByText('Wedding');
-    const chip = chipLabel.closest('.MuiChip-root');
-    if (!chip) {
-      throw new Error('expected a MuiChip-root ancestor');
+    const title = await screen.findByText('Wedding');
+    const eventCard = title.closest('[data-palette]');
+    if (!eventCard) {
+      throw new Error('expected a [data-palette] ancestor');
     }
-    await waitFor(() => expect(chip).toHaveStyle({ backgroundColor: tint }));
+    expect(eventCard).toHaveAttribute('data-palette', expectedPalette);
   });
 
   it("navigates to the Event's detail screen when its chip is tapped", async () => {
@@ -502,11 +524,8 @@ describe('CalendarPage', () => {
     fireEvent.click(await screen.findByText('Event Type'));
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Wedding' }));
 
-    // "Open Event Wedding" (EventChip's own aria-label) unambiguously
-    // targets the calendar chip, distinct from the Event Type filter
-    // chip's own label (which also now reads "Wedding" once selected).
-    expect(await screen.findByRole('button', { name: 'Open Event Wedding' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Open Event Corporate Offsite' })).not.toBeInTheDocument();
+    expect(await findCalendarEventTitle('Wedding')).toBeInTheDocument();
+    expect(screen.queryByText('Corporate Offsite')).not.toBeInTheDocument();
   });
 
   it('combining two filters that together match nothing shows a message, not a stuck spinner', async () => {
@@ -551,7 +570,7 @@ describe('CalendarPage', () => {
     const confirmedChip = await screen.findByText('Confirmed');
     expect(confirmedChip.closest('.MuiChip-root')).toHaveAttribute('aria-pressed', 'true');
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Open Event Wedding' }));
+    fireEvent.click(await findCalendarEventTitle('Wedding'));
     await screen.findByText('event detail placeholder');
 
     fireEvent.click(screen.getByRole('button', { name: 'Go back' }));

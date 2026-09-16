@@ -13,3 +13,11 @@ export const monthNavStyles: SxProps<Theme> = {
   alignItems: 'center',
   gap: `${spaceTokens.space8}px`,
 };
+
+// Full width, no max-width — the regression this story exists to fix
+// ("too much margin" around the grid on desktop).
+export const gridStyles: SxProps<Theme> = {
+  width: '100%',
+  flex: 1,
+  minHeight: 600,
+};

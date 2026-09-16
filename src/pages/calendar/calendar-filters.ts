@@ -4,8 +4,7 @@ import { EventStatus, type calendarSessionResultSchema } from '../../contract';
 type CalendarSession = z.infer<typeof calendarSessionResultSchema>;
 // Only the fields this module actually reads — narrower than the full
 // CalendarSession (still satisfied by one), so a test fixture doesn't
-// need to fill in every unrelated Session field (setup, items, pax, ...),
-// the same Pick pattern calendar-events.ts already established.
+// need to fill in every unrelated Session field (setup, items, pax, ...).
 type FilterableSession = Pick<CalendarSession, 'venue' | 'event'>;
 
 // 'All' clears the status filter entirely (this story's own AC) — not a
