@@ -55,10 +55,10 @@ const OverviewTab = ({ event, canEdit, canSeeClientContacts, onEventChanged }: O
   // never reaches the editable UI at all, so an empty starting array here
   // is purely to satisfy the now-`.optional()` type (STORY-052), not a
   // real state this form is ever used from.
-  const { control, handleSubmit, reset } = useForm<{ clientContacts: ClientContactFormValue[] }>({
+  const { control, handleSubmit, reset, watch, setValue } = useForm<{ clientContacts: ClientContactFormValue[] }>({
     defaultValues: { clientContacts: event.clientContacts ?? [] },
   });
-  const { fields, append, remove, update } = useFieldArray({ control, name: 'clientContacts' });
+  const { fields, append, remove } = useFieldArray({ control, name: 'clientContacts' });
 
   const updateStatusMutation = tsr.updateEvent.useMutation({
     onSuccess: () => {
@@ -93,22 +93,40 @@ const OverviewTab = ({ event, canEdit, canSeeClientContacts, onEventChanged }: O
     updateStatusMutation.mutate({ params: { id: event.id }, body: { status } });
   };
 
+  // Not useFieldArray's own `update(index, ...)` — STORY-057's own root-cause
+  // fix: `update()` unregisters and re-registers the row, handing back a
+  // brand-new `field.id` on every call. ClientContactRows keys each row by
+  // that id, so every keystroke was changing the row's own React key and
+  // remounting its TextField — which is what actually lost focus, not
+  // anything about the TextField itself. `setValue` on the nested path
+  // changes the value React Hook Form holds without touching `field.id` at
+  // all.
   const handleContactRowChange = (index: number, patch: Partial<ClientContactFormValue>) => {
-    const row = fields[index];
-    if (!row) {
-      return;
+    for (const [key, value] of Object.entries(patch) as [keyof ClientContactFormValue, string][]) {
+      setValue(`clientContacts.${index}.${key}`, value);
     }
-    update(index, { ...row, ...patch });
   };
 
   const handleAddContactRow = () => {
     append({ name: '', contactNumber: '', role: ClientContactRole.Custom });
   };
 
+  const watchedClientContacts = watch('clientContacts');
+  // `field.id` (stable, untouched by setValue above) paired with the live
+  // watched value (reactive on every keystroke) — `fields` alone would show
+  // stale text, since useFieldArray's own `fields` array doesn't pick up
+  // setValue on a nested path the way `watch` does.
+  const contactRows = fields.map((field, index) => ({
+    ...(watchedClientContacts[index] ?? field),
+    id: field.id,
+  }));
+
   // Same "at least one named row" gate STORY-015's create form uses — a row
   // left blank isn't sent (matching STORY-014's own reject-empty rule), so
-  // saving with every row blank has nothing valid to submit.
-  const canSaveContacts = fields.some((field) => field.name.trim().length > 0);
+  // saving with every row blank has nothing valid to submit. Reads the
+  // watched value, not `fields` — `fields` doesn't reflect the `setValue`
+  // calls above, so it would never re-enable as the operator types.
+  const canSaveContacts = watchedClientContacts.some((contact) => contact.name.trim().length > 0);
 
   const handleSaveContacts = handleSubmit((values) => {
     if (updateContactsMutation.isPending || !canSaveContacts) {
@@ -138,7 +156,7 @@ const OverviewTab = ({ event, canEdit, canSeeClientContacts, onEventChanged }: O
     contactsSection = (
       <>
         <ClientContactRows
-          rows={fields}
+          rows={contactRows}
           onRowChange={handleContactRowChange}
           onAddRow={handleAddContactRow}
           onRemoveRow={remove}

@@ -1,6 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CssBaseline, ThemeProvider } from '@mui/material';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import App from './app';
@@ -25,11 +27,16 @@ createRoot(rootElement).render(
       <tsr.ReactQueryProvider>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <AuthProvider>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
-          </AuthProvider>
+          {/* Every DatePicker/StaticTimePicker in the app (STORY-057) reads
+              from this one adapter — dayjs, the lightest of the date libs
+              @mui/x-date-pickers supports. */}
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <AuthProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </AuthProvider>
+          </LocalizationProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
     </QueryClientProvider>

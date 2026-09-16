@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from 'react';
-import { useFieldArray, useForm } from 'react-hook-form';
-import { Alert, Button, Stack, TextField, Typography } from '@mui/material';
+import { Controller, useFieldArray, useForm } from 'react-hook-form';
+import { Alert, Button, Stack, Typography } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import { roomLineSchema, type filteredAccommodationResultSchema } from '../../contract';
-import { toDateInputValue } from './date-input';
+import { fromPickerDate, toDateInputValue, toPickerDate } from './date-input';
 import RoomLineRows from './room-line-rows';
 import {
   dateFieldsStyles,
@@ -126,17 +127,29 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
     content = (
       <>
         <Stack direction="row" sx={dateFieldsStyles}>
-          <TextField
-            {...register('checkIn')}
-            label="Check-in"
-            type="date"
-            slotProps={{ inputLabel: { shrink: true } }}
+          <Controller
+            name="checkIn"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                label="Check-in"
+                value={toPickerDate(field.value)}
+                onChange={(date) => field.onChange(fromPickerDate(date))}
+                slotProps={{ textField: { onBlur: field.onBlur } }}
+              />
+            )}
           />
-          <TextField
-            {...register('checkOut')}
-            label="Check-out"
-            type="date"
-            slotProps={{ inputLabel: { shrink: true } }}
+          <Controller
+            name="checkOut"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                label="Check-out"
+                value={toPickerDate(field.value)}
+                onChange={(date) => field.onChange(fromPickerDate(date))}
+                slotProps={{ textField: { onBlur: field.onBlur } }}
+              />
+            )}
           />
         </Stack>
         <RoomLineRows

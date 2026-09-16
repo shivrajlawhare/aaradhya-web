@@ -262,6 +262,32 @@ describe('EventCreationPage', () => {
     expect(contacts[0]?.name).toBe('Priya Nair');
   });
 
+  // STORY-057's own root-cause regression: useFieldArray's `update()` handed
+  // back a new `field.id` on every call, which ClientContactRows used as its
+  // row's React key — so every keystroke remounted the row's TextField and
+  // dropped focus. A single fireEvent.change with the whole final string
+  // wouldn't catch this (the remount only shows up across multiple change
+  // events on the same node) — types character-by-character instead, and
+  // fails the moment a remount silently detaches the field from the
+  // document, the same way real per-keystroke typing would.
+  it('keeps focus on a Client Contact Name field across every keystroke, not just the final value', async () => {
+    mockEventsApi({});
+    renderPage();
+    await waitFor(() => expect(screen.getAllByLabelText('Name')).toHaveLength(3));
+
+    const nameField = screen.getAllByLabelText('Name')[0] as HTMLInputElement;
+    nameField.focus();
+    expect(document.activeElement).toBe(nameField);
+
+    let typed = '';
+    for (const char of 'Priya Nair') {
+      typed += char;
+      fireEvent.change(nameField, { target: { value: typed } });
+      expect(document.activeElement).toBe(nameField);
+    }
+    expect(nameField).toHaveValue('Priya Nair');
+  });
+
   it('keeps row identity and order correct under rapid add/remove', async () => {
     const { createRequests } = mockEventsApi({});
     renderPage();

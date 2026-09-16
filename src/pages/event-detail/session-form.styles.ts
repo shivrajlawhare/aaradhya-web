@@ -27,3 +27,9 @@ export const setupCardStyles: SxProps<Theme> = {
 export const toggleActiveStyles: SxProps<Theme> = {
   bgcolor: colorTokens.accentTint,
 };
+
+// Wraps one StaticTimePicker (STORY-057) — unlike TextField, it has no
+// floating label of its own, so this pairs it with a plain heading above.
+export const timeFieldStyles: SxProps<Theme> = {
+  gap: `${spaceTokens.space4}px`, // space-4
+};

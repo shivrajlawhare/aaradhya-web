@@ -167,8 +167,10 @@ export const roomLineSchema = z.object({
 
 // Every field optional (PATCH semantics) — a caller sends only what
 // changed. checkIn/checkOut are plain strings here, not coerced dates: the
-// Rooms tab never constructs a JS Date at all (native <input type="date">
-// values are already 'YYYY-MM-DD' strings), so there's nothing to coerce.
+// Rooms tab's own form state is already a 'YYYY-MM-DD' string (STORY-057's
+// DatePicker converts to/from one at its own value/onChange boundary, same
+// format the native <input type="date"> it replaced always produced), so
+// there's nothing to coerce.
 export const updateAccommodationBodySchema = z.object({
   checkIn: z.string().optional(),
   checkOut: z.string().optional(),

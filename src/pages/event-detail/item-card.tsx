@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, Button, Stack, TextField, ToggleButton, Typography } from '@mui/material';
+import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import { ItemType, type filteredEventResultSchema } from '../../contract';
+import { fromPickerTime, toPickerTime } from './date-input';
 import MenuItemSearch, { type MenuItemChip } from './menu-item-search';
-import { rowStyles, toggleActiveStyles } from './session-form.styles';
+import { rowStyles, timeFieldStyles, toggleActiveStyles } from './session-form.styles';
 import { cardStyles, totalCostStyles } from './item-card.styles';
 
 type PublicEvent = z.infer<typeof filteredEventResultSchema>;
@@ -239,19 +241,37 @@ const ItemCard = ({
           <TextField {...register('venue')} label={`Venue for item ${index}`} fullWidth />
         </>
       )}
+      {/* StaticTimePicker (STORY-057) — the always-visible clock face, not
+          TimePicker's popover-only one, with an explicit AM/PM control. */}
       <Stack direction="row" sx={rowStyles}>
-        <TextField
-          {...register('startTime')}
-          label={`Start time for item ${index}`}
-          type="time"
-          slotProps={{ inputLabel: { shrink: true } }}
-        />
-        <TextField
-          {...register('endTime')}
-          label={`End time for item ${index}`}
-          type="time"
-          slotProps={{ inputLabel: { shrink: true } }}
-        />
+        <Stack sx={timeFieldStyles}>
+          <Typography variant="titleM" component="h3">{`Start time for item ${index}`}</Typography>
+          <Controller
+            name="startTime"
+            control={control}
+            render={({ field }) => (
+              <StaticTimePicker
+                ampm
+                value={toPickerTime(field.value)}
+                onChange={(time) => field.onChange(fromPickerTime(time))}
+              />
+            )}
+          />
+        </Stack>
+        <Stack sx={timeFieldStyles}>
+          <Typography variant="titleM" component="h3">{`End time for item ${index}`}</Typography>
+          <Controller
+            name="endTime"
+            control={control}
+            render={({ field }) => (
+              <StaticTimePicker
+                ampm
+                value={toPickerTime(field.value)}
+                onChange={(time) => field.onChange(fromPickerTime(time))}
+              />
+            )}
+          />
+        </Stack>
       </Stack>
       {type === ItemType.Meal && (
         <Typography variant="bodyM" sx={totalCostStyles}>

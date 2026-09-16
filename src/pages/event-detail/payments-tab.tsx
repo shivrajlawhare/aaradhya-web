@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { Alert, Button, Paper, Stack, TextField, Typography } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import type { paymentResultSchema } from '../../contract';
-import { toDateInputValue } from './date-input';
+import { fromPickerDate, toDateInputValue, toPickerDate } from './date-input';
 import {
   balanceCardStyles,
   balanceEmphasisStyles,
@@ -53,7 +54,7 @@ const PaymentsTab = ({ eventId, payment, onEventChanged }: PaymentsTabProps) => 
   // approach RoomsTab (STORY-020) already uses for its own totals.
   const [savedPayment, setSavedPayment] = useState<PaymentResult>(payment);
 
-  const { register, handleSubmit, reset } = useForm<PaymentFormValues>({
+  const { control, register, handleSubmit, reset } = useForm<PaymentFormValues>({
     defaultValues: toFormValues(payment),
   });
 
@@ -118,11 +119,21 @@ const PaymentsTab = ({ eventId, payment, onEventChanged }: PaymentsTabProps) => 
           type="number"
           slotProps={{ htmlInput: { min: 0 } }}
         />
-        <TextField
-          {...register('advancePaidDate')}
-          label="Advance paid date"
-          type="date"
-          slotProps={{ inputLabel: { shrink: true } }}
+        <Controller
+          name="advancePaidDate"
+          control={control}
+          render={({ field }) => (
+            <DatePicker
+              label="Advance paid date"
+              value={toPickerDate(field.value)}
+              onChange={(date) => field.onChange(fromPickerDate(date))}
+              // A cleared picker shows its own placeholder text, never an
+              // invalid/NaN date (this story's own edge case) — fromPickerDate
+              // already resolves a cleared/invalid selection to '', so the
+              // underlying form value is never anything else.
+              slotProps={{ textField: { onBlur: field.onBlur } }}
+            />
+          )}
         />
         <TextField {...register('paymentMode')} label="Payment mode" />
       </Stack>

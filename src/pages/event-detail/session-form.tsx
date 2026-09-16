@@ -1,10 +1,12 @@
 import { useState, type ChangeEvent } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, Button, MenuItem, Stack, TextField, ToggleButton, Typography } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import { SEATING_ARRANGEMENT_OPTIONS, SeatingArrangement, type filteredEventResultSchema } from '../../contract';
-import { toDateInputValue } from './date-input';
+import { fromPickerDate, fromPickerTime, toDateInputValue, toPickerDate, toPickerTime } from './date-input';
 import ItemsSection from './items-section';
 import {
   CUSTOM_SESSION_TYPE_OPTION,
@@ -14,7 +16,7 @@ import {
   VENUE_COST_LOOKUP,
   VENUE_PRESETS,
 } from './session-form-options';
-import { formStyles, rowStyles, setupCardStyles, toggleActiveStyles } from './session-form.styles';
+import { formStyles, rowStyles, setupCardStyles, timeFieldStyles, toggleActiveStyles } from './session-form.styles';
 
 type PublicEvent = z.infer<typeof filteredEventResultSchema>;
 type SessionResult = PublicEvent['sessions'][number];
@@ -279,35 +281,70 @@ const SessionForm = ({ eventId, session, onSaved, onCancel, onItemsChanged }: Se
           name="startDate"
           control={control}
           render={({ field }) => (
-            <TextField {...field} label="Start date" type="date" slotProps={{ inputLabel: { shrink: true } }} />
+            <DatePicker
+              label="Start date"
+              value={toPickerDate(field.value)}
+              onChange={(date) => field.onChange(fromPickerDate(date))}
+              slotProps={{ textField: { onBlur: field.onBlur } }}
+            />
           )}
         />
         <Controller
           name="endDate"
           control={control}
           render={({ field, fieldState }) => (
-            <TextField
-              {...field}
+            <DatePicker
               label="End date"
-              type="date"
-              slotProps={{ inputLabel: { shrink: true } }}
-              error={Boolean(fieldState.error)}
-              helperText={fieldState.error?.message}
+              value={toPickerDate(field.value)}
+              onChange={(date) => field.onChange(fromPickerDate(date))}
+              slotProps={{
+                textField: {
+                  onBlur: field.onBlur,
+                  error: Boolean(fieldState.error),
+                  helperText: fieldState.error?.message,
+                },
+              }}
             />
           )}
         />
-        <TextField
-          {...register('startTime')}
-          label="Start time"
-          type="time"
-          slotProps={{ inputLabel: { shrink: true } }}
-        />
-        <TextField
-          {...register('endTime')}
-          label="End time"
-          type="time"
-          slotProps={{ inputLabel: { shrink: true } }}
-        />
+      </Stack>
+      {/* StaticTimePicker (STORY-057) — the always-visible clock face SRS
+          §6.9 calls for, not TimePicker's popover-only one, with an explicit
+          AM/PM control (`ampm`). No floating label of its own, unlike
+          TextField, so each gets a plain heading instead. */}
+      <Stack direction="row" sx={rowStyles}>
+        <Stack sx={timeFieldStyles}>
+          <Typography variant="titleM" component="h3" id="session-start-time-label">
+            Start time
+          </Typography>
+          <Controller
+            name="startTime"
+            control={control}
+            render={({ field }) => (
+              <StaticTimePicker
+                ampm
+                value={toPickerTime(field.value)}
+                onChange={(time) => field.onChange(fromPickerTime(time))}
+              />
+            )}
+          />
+        </Stack>
+        <Stack sx={timeFieldStyles}>
+          <Typography variant="titleM" component="h3" id="session-end-time-label">
+            End time
+          </Typography>
+          <Controller
+            name="endTime"
+            control={control}
+            render={({ field }) => (
+              <StaticTimePicker
+                ampm
+                value={toPickerTime(field.value)}
+                onChange={(time) => field.onChange(fromPickerTime(time))}
+              />
+            )}
+          />
+        </Stack>
       </Stack>
       <TextField
         {...register('pax', { valueAsNumber: true })}

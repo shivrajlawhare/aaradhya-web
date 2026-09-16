@@ -44,7 +44,7 @@ const EventCreationForm = () => {
     (account) => account.role === Role.EventManager && account.active,
   );
 
-  const { control, register, handleSubmit, watch } = useForm<EventCreationFormValues>({
+  const { control, register, handleSubmit, watch, setValue } = useForm<EventCreationFormValues>({
     defaultValues: {
       eventFamilyTypeOption: FAMILY_TYPE_PRESETS[0],
       eventFamilyTypeCustom: '',
@@ -57,13 +57,19 @@ const EventCreationForm = () => {
     },
   });
 
-  const { fields, append, remove, update } = useFieldArray({ control, name: 'clientContacts' });
+  const { fields, append, remove } = useFieldArray({ control, name: 'clientContacts' });
+  // Not useFieldArray's own `update(index, ...)` — STORY-057's own root-cause
+  // fix: `update()` unregisters and re-registers the row, handing back a
+  // brand-new `field.id` on every call. ClientContactRows keys each row by
+  // that id, so every keystroke was changing the row's own React key and
+  // remounting its TextField — which is what actually lost focus, not
+  // anything about the TextField itself. `setValue` on the nested path
+  // changes the value React Hook Form holds without touching `field.id` at
+  // all.
   const handleContactRowChange = (index: number, patch: Partial<ClientContactFormValue>) => {
-    const row = fields[index];
-    if (!row) {
-      return;
+    for (const [key, value] of Object.entries(patch) as [keyof ClientContactFormValue, string][]) {
+      setValue(`clientContacts.${index}.${key}`, value);
     }
-    update(index, { ...row, ...patch });
   };
   const handleAddContactRow = () => {
     // A row added beyond the three defaults (Bride/Groom/POC) has no
@@ -73,6 +79,11 @@ const EventCreationForm = () => {
   };
 
   const clientContacts = watch('clientContacts');
+  // `field.id` (stable, untouched by setValue above) paired with the live
+  // watched value (reactive on every keystroke) — `fields` alone would show
+  // stale text, since useFieldArray's own `fields` array doesn't pick up
+  // setValue on a nested path the way `watch` does.
+  const contactRows = fields.map((field, index) => ({ ...(clientContacts[index] ?? field), id: field.id }));
   const eventFamilyTypeOption = watch('eventFamilyTypeOption');
   // Only this gate disables submit — the story's AC names it explicitly.
   // eventFamilyType/eventManager being empty isn't blocked here; an empty
@@ -164,7 +175,7 @@ const EventCreationForm = () => {
           )}
         />
         <ClientContactRows
-          rows={fields}
+          rows={contactRows}
           onRowChange={handleContactRowChange}
           onAddRow={handleAddContactRow}
           onRemoveRow={remove}

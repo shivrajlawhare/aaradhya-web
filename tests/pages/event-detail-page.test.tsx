@@ -1,6 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { tsr } from '../../src/api/client';
@@ -681,17 +684,39 @@ const renderPage = (id = 'event-1') => {
     <QueryClientProvider client={queryClient}>
       <tsr.ReactQueryProvider>
         <ThemeProvider theme={theme}>
-          <AuthProvider>
-            <MemoryRouter initialEntries={[eventDetailPath(id)]}>
-              <Routes>
-                <Route path={EVENT_DETAIL_PATH_PATTERN} element={<EventDetailPage />} />
-              </Routes>
-            </MemoryRouter>
-          </AuthProvider>
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <AuthProvider>
+              <MemoryRouter initialEntries={[eventDetailPath(id)]}>
+                <Routes>
+                  <Route path={EVENT_DETAIL_PATH_PATTERN} element={<EventDetailPage />} />
+                </Routes>
+              </MemoryRouter>
+            </AuthProvider>
+          </LocalizationProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
     </QueryClientProvider>,
   );
+};
+
+// MUI X's DatePicker (STORY-057) has no single <input> to fireEvent.change
+// the way the native <input type="date"> it replaced did — its field is a
+// group of separate Month/Day/Year sections (role="spinbutton"), filled by
+// typing digits into the first section and letting each section
+// auto-advance, the same interaction a real user's keyboard typing drives.
+const fillDatePicker = async (
+  user: ReturnType<typeof userEvent.setup>,
+  labelText: string,
+  mmddyyyy: string,
+) => {
+  const group = screen.getByRole('group', { name: labelText });
+  const sections = within(group).getAllByRole('spinbutton');
+  const firstSection = sections[0];
+  if (!firstSection) {
+    throw new Error(`expected ${labelText} to have at least one date section`);
+  }
+  await user.click(firstSection);
+  await user.keyboard(mmddyyyy);
 };
 
 afterEach(() => {
@@ -763,6 +788,32 @@ describe('EventDetailPage', () => {
     await waitFor(() => expect(patchRequests).toHaveLength(1));
     const contacts = patchRequests[0]?.clientContacts as { name: string }[];
     expect(contacts.map((contact) => contact.name)).toEqual(['Priya Sharma', 'Rohan Nair']);
+  });
+
+  // STORY-057's own root-cause regression: useFieldArray's `update()` handed
+  // back a new `field.id` on every call, which ClientContactRows used as its
+  // row's React key — so every keystroke remounted the row's TextField and
+  // dropped focus. A single fireEvent.change with the whole final string
+  // wouldn't catch this (the remount only shows up across multiple change
+  // events on the same node) — types character-by-character instead, and
+  // fails the moment a remount silently detaches `nameField` from the
+  // document, the same way real per-keystroke typing would.
+  it('keeps focus on the Client Contact Name field across every keystroke, not just the final value', async () => {
+    seedSession();
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    const nameField = (await screen.findByDisplayValue('Priya Nair')) as HTMLInputElement;
+    nameField.focus();
+    expect(document.activeElement).toBe(nameField);
+
+    let typed = '';
+    for (const char of 'Priya Sharma') {
+      typed += char;
+      fireEvent.change(nameField, { target: { value: typed } });
+      expect(document.activeElement).toBe(nameField);
+    }
+    expect(nameField).toHaveValue('Priya Sharma');
   });
 
   it('renders the Total Cost Summary rollup as read-only text, sourced from the live quotation-summary endpoint', async () => {
@@ -1317,8 +1368,8 @@ describe('EventDetailPage', () => {
     fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
 
-    expect(await screen.findByLabelText('Start date')).toBeInTheDocument();
-    expect(screen.getByLabelText('End date')).toBeInTheDocument();
+    expect(await screen.findByRole('group', { name: 'Start date' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'End date' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Seating' })).toBeInTheDocument();
     expect(screen.getByLabelText('Tables')).toBeInTheDocument();
     expect(screen.getByLabelText('Chairs')).toBeInTheDocument();
@@ -1328,6 +1379,48 @@ describe('EventDetailPage', () => {
     expect(screen.getByRole('button', { name: 'VIP seating' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Bride/Groom seating' })).toBeInTheDocument();
     expect(screen.getByLabelText('Notes')).toBeInTheDocument();
+  });
+
+  // STORY-057's own edge case: a cleared/never-set date field shows a
+  // placeholder, not an invalid/NaN date — a new Session's Start/End date
+  // pickers start with no value at all, so nothing here should ever read
+  // "Invalid Date".
+  it('shows a placeholder, not an invalid date, for a new Session\'s never-set date fields', async () => {
+    seedSession();
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
+
+    const startDateGroup = await screen.findByRole('group', { name: 'Start date' });
+    expect(startDateGroup).toHaveTextContent('MM');
+    expect(startDateGroup).toHaveTextContent('DD');
+    expect(startDateGroup).toHaveTextContent('YYYY');
+    expect(screen.queryByText(/invalid date/i)).not.toBeInTheDocument();
+  });
+
+  // STORY-057's own edge case: each StaticTimePicker's AM/PM control must
+  // be reachable via keyboard, not mouse-only — real <button> elements (not
+  // e.g. a mouse-only custom div) satisfy that natively. Both Start and End
+  // time render their own AM/PM pair at once (this form has no tabbing
+  // between them), so this checks every one on the page, not just one.
+  it('renders real, focusable AM/PM buttons for every StaticTimePicker on the Session form', async () => {
+    seedSession();
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
+
+    const amButtons = await screen.findAllByRole('button', { name: 'AM' });
+    const pmButtons = screen.getAllByRole('button', { name: 'PM' });
+    expect(amButtons).toHaveLength(2); // Start time + End time
+    expect(pmButtons).toHaveLength(2);
+    for (const button of [...amButtons, ...pmButtons]) {
+      expect(button.tagName).toBe('BUTTON');
+      expect(button).not.toHaveAttribute('disabled');
+    }
   });
 
   it('auto-fills venue_cost from the lookup table on venue selection, remaining editable afterward', async () => {
@@ -1350,6 +1443,7 @@ describe('EventDetailPage', () => {
   });
 
   it('adds a Session via POST and shows it in the list afterward', async () => {
+    const user = userEvent.setup();
     seedSession();
     mockEventDetailApi({ event: makeEvent() });
     renderPage();
@@ -1357,14 +1451,16 @@ describe('EventDetailPage', () => {
     fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
 
-    fireEvent.change(await screen.findByLabelText('Start date'), { target: { value: '2026-06-15' } });
-    fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-06-15' } });
+    await screen.findByRole('group', { name: 'Start date' });
+    await fillDatePicker(user, 'Start date', '06152026');
+    await fillDatePicker(user, 'End date', '06152026');
     fireEvent.click(screen.getByRole('button', { name: 'Add session' }));
 
     expect(await screen.findByText('Engagement — Poolside')).toBeInTheDocument();
   });
 
   it('persists a boolean toggled off after being turned on, not omitted', async () => {
+    const user = userEvent.setup();
     seedSession();
     const { sessionPostRequests } = mockEventDetailApi({ event: makeEvent() });
     renderPage();
@@ -1372,8 +1468,9 @@ describe('EventDetailPage', () => {
     fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
 
-    fireEvent.change(await screen.findByLabelText('Start date'), { target: { value: '2026-06-15' } });
-    fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-06-15' } });
+    await screen.findByRole('group', { name: 'Start date' });
+    await fillDatePicker(user, 'Start date', '06152026');
+    await fillDatePicker(user, 'End date', '06152026');
 
     const stageToggle = screen.getByRole('button', { name: 'Stage' });
     fireEvent.click(stageToggle); // on
@@ -1386,6 +1483,7 @@ describe('EventDetailPage', () => {
   });
 
   it('blocks submit client-side when end date is before start date, without calling the server', async () => {
+    const user = userEvent.setup();
     seedSession();
     const { sessionPostRequests } = mockEventDetailApi({ event: makeEvent() });
     renderPage();
@@ -1393,8 +1491,9 @@ describe('EventDetailPage', () => {
     fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
 
-    fireEvent.change(await screen.findByLabelText('Start date'), { target: { value: '2026-06-15' } });
-    fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-06-14' } });
+    await screen.findByRole('group', { name: 'Start date' });
+    await fillDatePicker(user, 'Start date', '06152026');
+    await fillDatePicker(user, 'End date', '06142026');
     fireEvent.click(screen.getByRole('button', { name: 'Add session' }));
 
     expect(await screen.findByText('End date must be on or after start date.')).toBeInTheDocument();
