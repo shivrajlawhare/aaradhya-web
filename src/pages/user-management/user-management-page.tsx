@@ -1,34 +1,66 @@
-import type { ReactNode } from 'react';
-import { Box, CircularProgress, Stack } from '@mui/material';
+import { useState, type ReactNode } from 'react';
+import AddIcon from '@mui/icons-material/Add';
+import { Box, Button, CircularProgress, Stack, useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { tsr } from '../../api/client';
 import NewUserForm from './new-user-form';
+import UsersCardList from './users-card-list';
 import UsersTable from './users-table';
-import { contentStyles, pageStyles } from './user-management-page.styles';
+import { contentStyles, mobileSectionStyles, pageStyles } from './user-management-page.styles';
 
 const USERS_QUERY_KEY = ['users'];
 
 const UserManagementPage = () => {
   const usersQuery = tsr.listUsers.useQuery({ queryKey: USERS_QUERY_KEY });
+  const theme = useTheme();
+  // 900px — MUI's own `md` breakpoint, matching AppShell's (STORY-053) and
+  // the Events List's own (STORY-055).
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  // Mobile only — the "+ Add User" button (this story's own AC) toggles the
+  // same NewUserForm desktop already shows inline; unlike New Event
+  // (STORY-055), there's no separate route to send it to.
+  const [mobileFormOpen, setMobileFormOpen] = useState(false);
 
   const refetchUsers = () => {
     usersQuery.refetch();
   };
 
-  let tableSlot: ReactNode;
+  const handleMobileUserCreated = () => {
+    refetchUsers();
+    setMobileFormOpen(false);
+  };
+
   if (usersQuery.isPending) {
-    tableSlot = <CircularProgress aria-label="Loading users" />;
-  } else {
-    tableSlot = <UsersTable users={usersQuery.data?.body ?? []} onChanged={refetchUsers} />;
+    return (
+      <Box sx={pageStyles}>
+        <CircularProgress aria-label="Loading users" />
+      </Box>
+    );
   }
 
-  return (
-    <Box sx={pageStyles}>
-      <Stack direction={{ xs: 'column', md: 'row' }} sx={contentStyles}>
+  const users = usersQuery.data?.body ?? [];
+
+  let listSlot: ReactNode;
+  if (isDesktop) {
+    listSlot = (
+      <Stack direction="row" sx={contentStyles}>
         <NewUserForm onCreated={refetchUsers} />
-        {tableSlot}
+        <UsersTable users={users} onChanged={refetchUsers} />
       </Stack>
-    </Box>
-  );
+    );
+  } else {
+    listSlot = (
+      <Box sx={mobileSectionStyles}>
+        <Button variant="contained" startIcon={<AddIcon />} fullWidth onClick={() => setMobileFormOpen((open) => !open)}>
+          Add User
+        </Button>
+        {mobileFormOpen && <NewUserForm onCreated={handleMobileUserCreated} />}
+        <UsersCardList users={users} />
+      </Box>
+    );
+  }
+
+  return <Box sx={pageStyles}>{listSlot}</Box>;
 };
 
 export default UserManagementPage;
