@@ -1,4 +1,9 @@
 import { createTheme } from '@mui/material/styles';
+// Side-effecting only — registers MuiEventCalendar (StandaloneMonthView's
+// own component family) as a valid `components` key/class-key set, so the
+// override below type-checks. No named import: this module exists purely
+// to run its own `declare module '@mui/material/styles'` augmentation.
+import '@mui/x-scheduler/theme-augmentation';
 import { colorTokens, fontFamilyTokens, radiusTokens } from './tokens';
 
 // The story backlog's Tokens line names these six type-* variants directly on
@@ -65,6 +70,55 @@ export const theme = createTheme({
       fontSize: 11,
       textTransform: 'uppercase',
       letterSpacing: '0.06em',
+    },
+  },
+  components: {
+    MuiEventCalendar: {
+      styleOverrides: {
+        // StandaloneMonthView's own weekday header always renders the
+        // date-fns 'ccc' format ("Mon", "Tue", ...) — there's no prop to
+        // shorten it to a single letter, so CalendarPage (STORY-059) hides
+        // this one below `md` and renders its own single-letter row
+        // instead, rather than fighting the library's fixed format string.
+        monthViewHeader: ({ theme }) => ({
+          [theme.breakpoints.down('md')]: {
+            display: 'none',
+          },
+        }),
+        // This story's own AC: at mobile width, an event's time is
+        // dropped entirely rather than left to compete with its title for
+        // the same truncated line — the title alone gets the full width
+        // and truncates on its own only if it still doesn't fit.
+        dayGridEventTime: ({ theme }) => ({
+          [theme.breakpoints.down('md')]: {
+            display: 'none',
+          },
+        }),
+        dayGridEventTitle: ({ theme }) => ({
+          minWidth: 0,
+          [theme.breakpoints.down('md')]: {
+            display: 'block',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          },
+        }),
+        // Both are flex items upstream of the title; their own default
+        // `min-width: auto` refuses to shrink below the title's
+        // *unwrapped* content width (since dayGridEventTitle is
+        // `white-space: nowrap`), so a long title was overflowing its
+        // cell in visible, unclipped text instead of ever reaching its
+        // own `overflow: hidden`/ellipsis above — a real layout bug this
+        // story's mobile-width testing surfaced, not mobile-specific
+        // itself (a long enough title could do the same on desktop), so
+        // fixed unconditionally rather than only below `md`.
+        dayGridEventCardWrapper: {
+          minWidth: 0,
+        },
+        dayGridEventCardContent: {
+          minWidth: 0,
+        },
+      },
     },
   },
 });

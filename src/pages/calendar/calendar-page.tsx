@@ -16,13 +16,25 @@ import {
 } from './calendar-filters';
 import { mapSessionsToSchedulerEvents, STATUS_RESOURCES } from './calendar-scheduler-events';
 import { buildCalendarSearchParams, parseCalendarSearchParams } from './calendar-url-state';
-import { gridStyles, monthNavStyles, pageStyles } from './calendar-page.styles';
+import {
+  gridStyles,
+  mobileWeekdayHeaderCellStyles,
+  mobileWeekdayHeaderStyles,
+  monthNavStyles,
+  pageStyles,
+} from './calendar-page.styles';
 import FilterChipRow from './filter-chip-row';
 
 const currentMonthShift = (): MonthShift => {
   const now = new Date();
   return { month: now.getMonth() + 1, year: now.getFullYear() };
 };
+
+// Single-letter weekday labels for the mobile-only header row (STORY-059)
+// — "Sun"/"Mon"/... are what StandaloneMonthView's own header always
+// renders; keyed by index (Sunday-first) since S/T repeat and can't key
+// themselves.
+const MOBILE_WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 const CalendarPage = () => {
   const navigate = useNavigate();
@@ -97,6 +109,15 @@ const CalendarPage = () => {
           {isCalendarFiltered(filters) && filteredSessions.length === 0 && (
             <Typography variant="bodyM">No Events match the selected filters.</Typography>
           )}
+          <Box sx={mobileWeekdayHeaderStyles}>
+            {MOBILE_WEEKDAY_LABELS.map((label, index) => (
+              // index as key — two repeated "S"/"T" labels have no other
+              // stable identity, and this list never reorders.
+              <Typography key={index} variant="labelS" sx={mobileWeekdayHeaderCellStyles}>
+                {label}
+              </Typography>
+            ))}
+          </Box>
           {/* `key` forces a fresh mount (and a fresh defaultVisibleDate) on
               every month navigation — defaultVisibleDate only seeds the
               view's *initial* visible month, so without this the chevrons

@@ -304,6 +304,25 @@ describe('CalendarPage', () => {
     }
   });
 
+  // STORY-059's own mobile-only single-letter header — always in the DOM
+  // (CSS, not a JS breakpoint, decides which of the two headers is
+  // visible; see theme.ts's MuiEventCalendar.monthViewHeader override and
+  // calendar-page.styles.ts's own mobileWeekdayHeaderStyles), so its
+  // content is checked directly here; the actual show/hide-by-viewport
+  // behavior was verified live in a real browser, not jsdom, since jsdom
+  // has no real layout engine to evaluate the CSS breakpoint against.
+  it('also renders a single-letter S/M/T/W/T/F/S row for mobile widths', async () => {
+    mockCalendarApi([]);
+    renderPage();
+
+    await screen.findByText('Sun');
+    expect(screen.getAllByText('S')).toHaveLength(2); // Sun, Sat
+    expect(screen.getAllByText('M')).toHaveLength(1); // Mon
+    expect(screen.getAllByText('T')).toHaveLength(2); // Tue, Thu
+    expect(screen.getAllByText('W')).toHaveLength(1); // Wed
+    expect(screen.getAllByText('F')).toHaveLength(1); // Fri
+  });
+
   it('renders the All/Tentative/Confirmed status chips, with "All" active by default', async () => {
     mockCalendarApi([]);
     renderPage();
