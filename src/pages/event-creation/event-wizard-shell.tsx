@@ -6,21 +6,29 @@ import { EventWizardProvider, useEventWizard } from '../../stores/event-wizard-c
 import { contentStyles, headerRowStyles, shellStyles } from './event-wizard-shell.styles';
 import WizardFooter from './wizard-footer';
 import WizardStepper from './wizard-stepper';
+import { isWizardStepReady } from './wizard-step-readiness';
 import type { WizardStepId } from './wizard-steps';
 
 interface EventWizardShellProps {
   step: WizardStepId;
   children: ReactNode;
-  nextDisabled?: boolean;
+  // Only Step 5 (STORY-068) needs this — see wizard-footer.tsx's own
+  // comment.
   onNext?: () => void;
 }
 
 // Split from EventWizardShell below so useEventWizard() (Cancel's own
-// clearWizard call) has a EventWizardProvider ancestor to read — the outer
-// component's job is only to mount that Provider.
-const ShellContent = ({ step, children, nextDisabled, onNext }: EventWizardShellProps) => {
+// clearWizard call, and Next's own readiness check) has a
+// EventWizardProvider ancestor to read — the outer component's job is only
+// to mount that Provider.
+const ShellContent = ({ step, children, onNext }: EventWizardShellProps) => {
   const navigate = useNavigate();
-  const { clearWizard } = useEventWizard();
+  const { data, clearWizard } = useEventWizard();
+  // Computed from whatever the current step already wrote into the wizard
+  // store (wizard-step-readiness.ts) — not a prop threaded down from
+  // app.tsx, so a future step story only ever touches its own step
+  // component plus its own entry in that registry.
+  const nextDisabled = !isWizardStepReady(step, data[step]);
 
   // The AC's "explicit cancel" clearing trigger — a confirm() gate since
   // this discards real, already-entered data, same "confirm before a
@@ -56,9 +64,9 @@ const ShellContent = ({ step, children, nextDisabled, onNext }: EventWizardShell
 // event-creation-form.tsx currently does." Mounts a fresh EventWizardProvider
 // per step route (see event-wizard-context.tsx's own comment for why that's
 // fine) rather than assuming one already exists higher up the tree.
-const EventWizardShell = ({ step, children, nextDisabled, onNext }: EventWizardShellProps) => (
+const EventWizardShell = ({ step, children, onNext }: EventWizardShellProps) => (
   <EventWizardProvider>
-    <ShellContent step={step} nextDisabled={nextDisabled} onNext={onNext}>
+    <ShellContent step={step} onNext={onNext}>
       {children}
     </ShellContent>
   </EventWizardProvider>
