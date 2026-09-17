@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import type { WizardStepId } from '../pages/event-creation/wizard-steps';
 
 // Arbitrary, step-owned JSON — each step's own future story (STORY-064
@@ -57,22 +57,29 @@ interface EventWizardProviderProps {
 export const EventWizardProvider = ({ children }: EventWizardProviderProps) => {
   const [data, setData] = useState<WizardData>(readStoredWizard);
 
+  // Stable across renders (empty deps, a functional setData updater that
+  // never closes over `data`) — STORY-064 is the first real step to call
+  // this from inside a useEffect keyed on its own local state; if this
+  // identity changed every time `data` changed (as it would from a plain
+  // `() => ({ ... setStepData: ... }), [data]` memo), including it in that
+  // effect's own dependency array would re-fire the effect every time it
+  // just ran, forever.
+  const setStepData = useCallback((step: WizardStepId, stepData: WizardStepData) => {
+    setData((current) => {
+      const next = { ...current, [step]: stepData };
+      sessionStorage.setItem(WIZARD_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const clearWizard = useCallback(() => {
+    sessionStorage.removeItem(WIZARD_STORAGE_KEY);
+    setData({});
+  }, []);
+
   const value = useMemo<WizardContextValue>(
-    () => ({
-      data,
-      setStepData: (step, stepData) => {
-        setData((current) => {
-          const next = { ...current, [step]: stepData };
-          sessionStorage.setItem(WIZARD_STORAGE_KEY, JSON.stringify(next));
-          return next;
-        });
-      },
-      clearWizard: () => {
-        sessionStorage.removeItem(WIZARD_STORAGE_KEY);
-        setData({});
-      },
-    }),
-    [data],
+    () => ({ data, setStepData, clearWizard }),
+    [data, setStepData, clearWizard],
   );
 
   return <WizardContext.Provider value={value}>{children}</WizardContext.Provider>;

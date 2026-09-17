@@ -5,6 +5,7 @@ import { Role } from './contract';
 import CalendarPage from './pages/calendar/calendar-page';
 import DashboardPage from './pages/dashboard/dashboard-page';
 import LoginPage from './pages/login/login-page';
+import ClientDetailsStep from './pages/event-creation/client-details-step';
 import EventWizardShell from './pages/event-creation/event-wizard-shell';
 import WizardStepPlaceholder from './pages/event-creation/wizard-step-placeholder';
 import { WIZARD_STEPS } from './pages/event-creation/wizard-steps';
@@ -65,15 +66,28 @@ const App = () => {
       {/* STORY-063 — a 5-step wizard replaces the old single-page form.
           A bare /events/new visit redirects to the first step; each real
           step path (e.g. /events/new/client-details) is its own route so
-          deep-linking works, per this story's own AC. Every one of the 5
-          currently renders WizardStepPlaceholder — each step's real content
-          lands in its own dedicated story (STORY-064 through 068), which
-          will replace only its own <Route>'s element here, unchanged
-          elsewhere. No title on EventWizardShell's routes — it renders its
-          own "New Event" h1 already, same "AppShell doesn't render a
-          second one" precedent EVENT_CREATE_PATH's route used before. */}
+          deep-linking works, per this story's own AC. Each step's real
+          content lands in its own dedicated story (STORY-064 through 068)
+          and replaces only its own <Route>'s element below — Client
+          Details (STORY-064) is the first; the remaining four still render
+          WizardStepPlaceholder via the generic map. No title on
+          EventWizardShell's routes — it renders its own "New Event" h1
+          already, same "AppShell doesn't render a second one" precedent
+          EVENT_CREATE_PATH's route used before. */}
       <Route path={EVENT_CREATE_PATH} element={<Navigate to={WIZARD_STEPS[0]?.path ?? EVENT_CREATE_PATH} replace />} />
-      {WIZARD_STEPS.map((step) => (
+      <Route
+        path={WIZARD_STEPS[0]!.path}
+        element={
+          <AppShell>
+            <RequireRole roles={[Role.EventManager]}>
+              <EventWizardShell step="client-details">
+                <ClientDetailsStep />
+              </EventWizardShell>
+            </RequireRole>
+          </AppShell>
+        }
+      />
+      {WIZARD_STEPS.slice(1).map((step) => (
         <Route
           key={step.id}
           path={step.path}
