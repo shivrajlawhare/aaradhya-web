@@ -31,12 +31,10 @@ export interface NavItem {
 }
 
 // The one place the drawer rail (desktop) and full-screen nav (mobile) both
-// read their row set from, so the two can never drift. New Event and User
-// Management stay Event-Manager-only, matching EVENT_CREATE_PATH/
-// USER_MANAGEMENT_PATH's own RequireRole gates in app.tsx. Settings has no
-// role gate of its own yet — STORY-062 creates that route and sets its real
-// gate; Event-Manager-only here is the same "until then" convention this
-// story's own AC calls for.
+// read their row set from, so the two can never drift. New Event, User
+// Management, and Settings all stay Event-Manager-only, matching
+// EVENT_CREATE_PATH/USER_MANAGEMENT_PATH/SETTINGS_PATH's own RequireRole
+// gates in app.tsx.
 export const NAV_ITEMS: NavItem[] = [
   {
     id: 'dashboard',

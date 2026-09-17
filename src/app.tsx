@@ -9,6 +9,7 @@ import EventCreationPage from './pages/event-creation/event-creation-page';
 import EventDetailPage from './pages/event-detail/event-detail-page';
 import EventListPage from './pages/event-list/event-list-page';
 import QuotationPreviewPage from './pages/quotation-preview/quotation-preview-page';
+import SettingsPage from './pages/settings/settings-page';
 import UserManagementPage from './pages/user-management/user-management-page';
 import {
   CALENDAR_PATH,
@@ -18,6 +19,7 @@ import {
   EVENT_LIST_PATH,
   LOGIN_PATH,
   QUOTATION_PREVIEW_PATH_PATTERN,
+  SETTINGS_PATH,
   USER_MANAGEMENT_PATH,
 } from './routes';
 
@@ -115,6 +117,20 @@ const App = () => {
         element={
           <AppShell title="Calendar">
             <CalendarPage />
+          </AppShell>
+        }
+      />
+      {/* Event Manager only (STORY-062's own AC), matching New Event/User
+          Management's own RequireRole convention — the nav row itself
+          (nav-items.ts) already only renders for that role, this is the
+          route-level enforcement for a direct URL visit. */}
+      <Route
+        path={SETTINGS_PATH}
+        element={
+          <AppShell title="Settings">
+            <RequireRole roles={[Role.EventManager]}>
+              <SettingsPage />
+            </RequireRole>
           </AppShell>
         }
       />

@@ -13,8 +13,11 @@ const c = initContract();
  * createUser, listUsers, updateUser, listChangeLog, createEvent, listEvents,
  * getEvent, updateEvent, updateEventAccommodation, updateEventPayment,
  * updateDocumentsChecklist, updateEventExtras, getQuotationSummary,
- * getQuotationPdf, createSession, updateSession, listMenuItems, createItem,
- * updateItem, deleteItem, getCalendar, listEventManagers, getDashboard).
+ * getQuotationPdf, createSession, updateSession, listMenuItems,
+ * createMenuItem, createItem, updateItem, deleteItem, getCalendar,
+ * listEventManagers, getDashboard, listVenues, createVenue, updateVenue,
+ * listEventTypes, createEventType, updateEventType, listRoomTypes,
+ * createRoomType, updateRoomType).
  */
 export enum Role {
   EventManager = 'EventManager',
@@ -413,6 +416,89 @@ export const menuItemResultSchema = z.object({
   defaultCostPerPlate: z.number(),
   createdAt: z.string(),
   updatedAt: z.string(),
+});
+
+// defaultCostPerPlate optional, falling back to the backend schema's own
+// default (0) — mirrors aaradhya-api's own createMenuItemBodySchema.
+// Item entry never calls this route itself (menu-item-search.tsx's own
+// find-or-create chip resolves server-side, via createItem/updateItem's
+// menuItemRefSchema); this is Settings' (STORY-062) own "+ Add" on the
+// Menu Item section, a second entry point onto the same master list.
+export const createMenuItemBodySchema = z.object({
+  name: z.string().trim().min(1),
+  defaultCostPerPlate: z.number().min(0).optional(),
+});
+
+// STORY-061's three master lists — Venue/EventType/RoomType. No `active`
+// on Menu Item (above) since aaradhya-api's own MenuItem model has never
+// had one; Settings (STORY-062) treats that section as add/browse-only.
+export const venueResultSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  defaultVenueCost: z.number(),
+  active: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const createVenueBodySchema = z.object({
+  name: z.string().trim().min(1),
+  defaultVenueCost: z.number().min(0),
+});
+
+export const updateVenueBodySchema = z.object({
+  name: z.string().trim().min(1).optional(),
+  defaultVenueCost: z.number().min(0).optional(),
+  active: z.boolean().optional(),
+});
+
+export const venueIdParamsSchema = z.object({
+  id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid venue id.'),
+});
+
+export const eventTypeResultSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  active: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const createEventTypeBodySchema = z.object({
+  name: z.string().trim().min(1),
+});
+
+export const updateEventTypeBodySchema = z.object({
+  name: z.string().trim().min(1).optional(),
+  active: z.boolean().optional(),
+});
+
+export const eventTypeIdParamsSchema = z.object({
+  id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid event type id.'),
+});
+
+export const roomTypeResultSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  defaultTariff: z.number(),
+  active: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const createRoomTypeBodySchema = z.object({
+  name: z.string().trim().min(1),
+  defaultTariff: z.number().min(0),
+});
+
+export const updateRoomTypeBodySchema = z.object({
+  name: z.string().trim().min(1).optional(),
+  defaultTariff: z.number().min(0).optional(),
+  active: z.boolean().optional(),
+});
+
+export const roomTypeIdParamsSchema = z.object({
+  id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid room type id.'),
 });
 
 // Each entry either references an existing Menu Item by id (a search
@@ -846,6 +932,16 @@ export const contract = c.router({
     },
     summary: 'Search the shared Menu Item master list (any authenticated caller)',
   },
+  createMenuItem: {
+    method: 'POST',
+    path: '/menu-items',
+    body: createMenuItemBodySchema,
+    responses: {
+      201: menuItemResultSchema,
+      409: apiErrorSchema,
+    },
+    summary: 'Add a Menu Item to the shared master list (any authenticated caller)',
+  },
   createItem: {
     method: 'POST',
     path: '/events/:id/sessions/:sid/items',
@@ -897,5 +993,100 @@ export const contract = c.router({
     },
     summary:
       'Role-filtered dashboard aggregate: today/upcoming/tentative/confirmed counts + upcoming-events list (any authenticated caller)',
+  },
+  // STORY-061's three master lists, consumed by Settings (STORY-062). Every
+  // GET is any-authenticated-caller; every write is Event Manager only —
+  // Settings itself is RequireRole-gated to Event Manager, so this app
+  // never actually calls a write route as anyone else, but the contract
+  // still mirrors the backend's real gate rather than assuming its own caller.
+  listVenues: {
+    method: 'GET',
+    path: '/venues',
+    responses: {
+      200: z.array(venueResultSchema),
+    },
+    summary: 'List every Venue, active and inactive (any authenticated caller)',
+  },
+  createVenue: {
+    method: 'POST',
+    path: '/venues',
+    body: createVenueBodySchema,
+    responses: {
+      201: venueResultSchema,
+      409: apiErrorSchema,
+    },
+    summary: 'Add a Venue to the master list (Event Manager only)',
+  },
+  updateVenue: {
+    method: 'PATCH',
+    path: '/venues/:id',
+    pathParams: venueIdParamsSchema,
+    body: updateVenueBodySchema,
+    responses: {
+      200: venueResultSchema,
+      404: apiErrorSchema,
+      409: apiErrorSchema,
+    },
+    summary: 'Edit name/default cost and/or toggle active on a Venue (Event Manager only)',
+  },
+  listEventTypes: {
+    method: 'GET',
+    path: '/event-types',
+    responses: {
+      200: z.array(eventTypeResultSchema),
+    },
+    summary: 'List every Event Type, active and inactive (any authenticated caller)',
+  },
+  createEventType: {
+    method: 'POST',
+    path: '/event-types',
+    body: createEventTypeBodySchema,
+    responses: {
+      201: eventTypeResultSchema,
+      409: apiErrorSchema,
+    },
+    summary: 'Add an Event Type to the master list (Event Manager only)',
+  },
+  updateEventType: {
+    method: 'PATCH',
+    path: '/event-types/:id',
+    pathParams: eventTypeIdParamsSchema,
+    body: updateEventTypeBodySchema,
+    responses: {
+      200: eventTypeResultSchema,
+      404: apiErrorSchema,
+      409: apiErrorSchema,
+    },
+    summary: 'Edit name and/or toggle active on an Event Type (Event Manager only)',
+  },
+  listRoomTypes: {
+    method: 'GET',
+    path: '/room-types',
+    responses: {
+      200: z.array(roomTypeResultSchema),
+    },
+    summary: 'List every Room Type, active and inactive (any authenticated caller)',
+  },
+  createRoomType: {
+    method: 'POST',
+    path: '/room-types',
+    body: createRoomTypeBodySchema,
+    responses: {
+      201: roomTypeResultSchema,
+      409: apiErrorSchema,
+    },
+    summary: 'Add a Room Type to the master list (Event Manager only)',
+  },
+  updateRoomType: {
+    method: 'PATCH',
+    path: '/room-types/:id',
+    pathParams: roomTypeIdParamsSchema,
+    body: updateRoomTypeBodySchema,
+    responses: {
+      200: roomTypeResultSchema,
+      404: apiErrorSchema,
+      409: apiErrorSchema,
+    },
+    summary: 'Edit name/default tariff and/or toggle active on a Room Type (Event Manager only)',
   },
 });
