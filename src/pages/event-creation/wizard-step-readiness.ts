@@ -16,6 +16,19 @@ export const WIZARD_STEP_READY_CHECKS: Partial<Record<WizardStepId, (stepData: W
     const sessions = stepData?.sessions;
     return Array.isArray(sessions) && sessions.length > 0;
   },
+  // STORY-066's own AC: "requires Check-in and Check-out to be set" — Room
+  // Lines may all be zero, so they're not part of this check. Also blocks
+  // an invalid range (check-out before check-in), same "Next must not lead
+  // to a nonsensical negative total_days" reasoning the step's own edge
+  // case documents.
+  accommodation: (stepData) => {
+    const checkInDate = stepData?.checkInDate;
+    const checkOutDate = stepData?.checkOutDate;
+    if (typeof checkInDate !== 'string' || !checkInDate || typeof checkOutDate !== 'string' || !checkOutDate) {
+      return false;
+    }
+    return checkOutDate >= checkInDate;
+  },
 };
 
 export const isWizardStepReady = (step: WizardStepId, stepData: WizardStepData | undefined): boolean => {
