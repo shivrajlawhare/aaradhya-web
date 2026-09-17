@@ -4,7 +4,13 @@ export const LOGIN_PATH = '/login';
 export const DASHBOARD_PATH = '/dashboard';
 export const USER_MANAGEMENT_PATH = '/users';
 export const EVENT_LIST_PATH = '/events';
+// EVENT_CREATE_PATH itself is now just the wizard's base — a bare visit
+// redirects to its first step (app.tsx); eventCreateStepPath(id) builds an
+// actual step URL (e.g. '/events/new/client-details'). Step ids/order/labels
+// live in pages/event-creation/wizard-steps.ts, not here — this file stays
+// pure string-building, matching eventDetailPath/quotationPreviewPath below.
 export const EVENT_CREATE_PATH = '/events/new';
+export const eventCreateStepPath = (step: string): string => `${EVENT_CREATE_PATH}/${step}`;
 // STORY-017 hasn't landed yet — this is the URL a successful Event creation
 // navigates to. EVENT_DETAIL_PATH_PATTERN is the <Route path> registered
 // against an EventDetailPlaceholderPage stand-in (mirrors DashboardPlaceholderPage's

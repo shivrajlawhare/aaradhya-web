@@ -5,7 +5,9 @@ import { Role } from './contract';
 import CalendarPage from './pages/calendar/calendar-page';
 import DashboardPage from './pages/dashboard/dashboard-page';
 import LoginPage from './pages/login/login-page';
-import EventCreationPage from './pages/event-creation/event-creation-page';
+import EventWizardShell from './pages/event-creation/event-wizard-shell';
+import WizardStepPlaceholder from './pages/event-creation/wizard-step-placeholder';
+import { WIZARD_STEPS } from './pages/event-creation/wizard-steps';
 import EventDetailPage from './pages/event-detail/event-detail-page';
 import EventListPage from './pages/event-list/event-list-page';
 import QuotationPreviewPage from './pages/quotation-preview/quotation-preview-page';
@@ -60,20 +62,32 @@ const App = () => {
           </AppShell>
         }
       />
-      <Route
-        path={EVENT_CREATE_PATH}
-        element={
-          // No title — EventCreationForm still renders its own "New Event"
-          // h1 (STORY-053's own AC never lists this screen for the
-          // dedup treatment the way it does Dashboard/Events/Calendar/User
-          // Management), so AppShell doesn't render a second one.
-          <AppShell>
-            <RequireRole roles={[Role.EventManager]}>
-              <EventCreationPage />
-            </RequireRole>
-          </AppShell>
-        }
-      />
+      {/* STORY-063 — a 5-step wizard replaces the old single-page form.
+          A bare /events/new visit redirects to the first step; each real
+          step path (e.g. /events/new/client-details) is its own route so
+          deep-linking works, per this story's own AC. Every one of the 5
+          currently renders WizardStepPlaceholder — each step's real content
+          lands in its own dedicated story (STORY-064 through 068), which
+          will replace only its own <Route>'s element here, unchanged
+          elsewhere. No title on EventWizardShell's routes — it renders its
+          own "New Event" h1 already, same "AppShell doesn't render a
+          second one" precedent EVENT_CREATE_PATH's route used before. */}
+      <Route path={EVENT_CREATE_PATH} element={<Navigate to={WIZARD_STEPS[0]?.path ?? EVENT_CREATE_PATH} replace />} />
+      {WIZARD_STEPS.map((step) => (
+        <Route
+          key={step.id}
+          path={step.path}
+          element={
+            <AppShell>
+              <RequireRole roles={[Role.EventManager]}>
+                <EventWizardShell step={step.id}>
+                  <WizardStepPlaceholder step={step.id} />
+                </EventWizardShell>
+              </RequireRole>
+            </AppShell>
+          }
+        />
+      ))}
       {/* No RequireRole — GET /events/:id (STORY-013) has no role
           restriction either; every role legitimately opens this screen,
           just seeing a different subset of tabs. EventDetailPage itself

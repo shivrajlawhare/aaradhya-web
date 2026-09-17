@@ -18,6 +18,7 @@ import {
   SETTINGS_PATH,
   USER_MANAGEMENT_PATH,
 } from '../../routes';
+import { WIZARD_STEPS } from '../../pages/event-creation/wizard-steps';
 
 export interface NavItem {
   id: string;
@@ -69,10 +70,15 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'new-event',
     label: 'New Event',
-    path: EVENT_CREATE_PATH,
+    // Links straight to the wizard's first real step (STORY-063) rather
+    // than the bare EVENT_CREATE_PATH — skips the redirect hop app.tsx
+    // still registers for a direct URL visit.
+    path: WIZARD_STEPS[0]?.path ?? EVENT_CREATE_PATH,
     Icon: EventAvailableOutlinedIcon,
     roles: [Role.EventManager],
-    isActive: (pathname) => pathname === EVENT_CREATE_PATH,
+    // Matches the bare path (a direct URL visit, before its redirect fires)
+    // and every real step path under it.
+    isActive: (pathname) => pathname === EVENT_CREATE_PATH || pathname.startsWith(`${EVENT_CREATE_PATH}/`),
   },
   {
     id: 'user-management',
