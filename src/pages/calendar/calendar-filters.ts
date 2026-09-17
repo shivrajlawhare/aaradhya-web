@@ -16,6 +16,13 @@ export interface CalendarFilters {
   venue: string | null;
   eventManagerId: string | null;
   eventFamilyType: string | null;
+  // The story's own "Event" filter (STORY-060) — per product direction,
+  // the same distinct-eventFamilyType list as the Event Type filter above,
+  // offered as its own separate dropdown rather than a search-by-specific-
+  // Event selector (SRS Assumption A10's other candidate reading). A
+  // second, independent knob over the same dimension, not an alias for
+  // `eventFamilyType` — AND-combining both narrows to their intersection.
+  event: string | null;
 }
 
 export const DEFAULT_CALENDAR_FILTERS: CalendarFilters = {
@@ -23,6 +30,7 @@ export const DEFAULT_CALENDAR_FILTERS: CalendarFilters = {
   venue: null,
   eventManagerId: null,
   eventFamilyType: null,
+  event: null,
 };
 
 // Every dimension is independently optional and AND-combined — the same
@@ -45,6 +53,9 @@ export const filterCalendarSessions = <T extends FilterableSession>(sessions: T[
     if (filters.eventFamilyType !== null && session.event.eventFamilyType !== filters.eventFamilyType) {
       return false;
     }
+    if (filters.event !== null && session.event.eventFamilyType !== filters.event) {
+      return false;
+    }
     return true;
   });
 
@@ -65,4 +76,8 @@ export const getDistinctEventFamilyTypes = (
 // possibly match" (this story's own edge case message) versus "there's
 // just nothing on the calendar this month."
 export const isCalendarFiltered = (filters: CalendarFilters): boolean =>
-  filters.status !== 'All' || filters.venue !== null || filters.eventManagerId !== null || filters.eventFamilyType !== null;
+  filters.status !== 'All' ||
+  filters.venue !== null ||
+  filters.eventManagerId !== null ||
+  filters.eventFamilyType !== null ||
+  filters.event !== null;

@@ -45,9 +45,9 @@ describe('parseCalendarSearchParams', () => {
     expect(result.filters.status).toBe('All');
   });
 
-  it('reads venue/eventManager/eventType filters from the URL', () => {
+  it('reads venue/eventManager/eventType/event filters from the URL', () => {
     const result = parseCalendarSearchParams(
-      new URLSearchParams('venue=Lawn&eventManager=manager-1&eventType=Wedding'),
+      new URLSearchParams('venue=Lawn&eventManager=manager-1&eventType=Wedding&event=Corporate Offsite'),
       { month: 9, year: 2026 },
     );
 
@@ -56,6 +56,7 @@ describe('parseCalendarSearchParams', () => {
       venue: 'Lawn',
       eventManagerId: 'manager-1',
       eventFamilyType: 'Wedding',
+      event: 'Corporate Offsite',
     });
   });
 
@@ -67,6 +68,7 @@ describe('parseCalendarSearchParams', () => {
       venue: null,
       eventManagerId: null,
       eventFamilyType: null,
+      event: null,
     });
   });
 });
@@ -86,6 +88,16 @@ describe('buildCalendarSearchParams', () => {
     expect(params.has('venue')).toBe(false);
     expect(params.has('eventManager')).toBe(false);
     expect(params.has('eventType')).toBe(false);
+    expect(params.has('event')).toBe(false);
+  });
+
+  it('writes the event filter', () => {
+    const params = buildCalendarSearchParams(
+      { month: 9, year: 2026 },
+      { ...DEFAULT_CALENDAR_FILTERS, event: 'Wedding' },
+    );
+
+    expect(params.get('event')).toBe('Wedding');
   });
 
   it('writes only the filters that are actually set', () => {
@@ -94,6 +106,7 @@ describe('buildCalendarSearchParams', () => {
       venue: 'Lawn',
       eventManagerId: null,
       eventFamilyType: null,
+      event: null,
     };
 
     const params = buildCalendarSearchParams({ month: 9, year: 2026 }, filters);
@@ -102,6 +115,7 @@ describe('buildCalendarSearchParams', () => {
     expect(params.get('venue')).toBe('Lawn');
     expect(params.has('eventManager')).toBe(false);
     expect(params.has('eventType')).toBe(false);
+    expect(params.has('event')).toBe(false);
   });
 
   it('round-trips through parseCalendarSearchParams unchanged', () => {
@@ -111,6 +125,7 @@ describe('buildCalendarSearchParams', () => {
       venue: 'Lawn',
       eventManagerId: 'manager-1',
       eventFamilyType: 'Wedding',
+      event: 'Corporate Offsite',
     };
 
     const params = buildCalendarSearchParams(monthShift, filters);

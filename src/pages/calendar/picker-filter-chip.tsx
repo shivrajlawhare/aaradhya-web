@@ -12,14 +12,19 @@ interface PickerFilterChipProps {
   options: PickerOption[];
   selectedValue: string | null;
   onSelect: (value: string | null) => void;
+  // Overrides the default "All {label}s" clear-option text — needed
+  // wherever appending 's' doesn't read right (e.g. "Status" -> "All
+  // Statuses", not "All Statuss").
+  allLabel?: string;
 }
 
-// Shared by the Venue/Event Manager/Event Type filters (this story's own
-// AC: each "opens a selectable list sourced from actual existing values").
-// The chip's own label switches to the selected option's label once one is
-// chosen (e.g. "Venue" becomes "Lawn") so the active chip itself carries
-// which value is filtering, not just that some value is.
-const PickerFilterChip = ({ label, options, selectedValue, onSelect }: PickerFilterChipProps) => {
+// Shared by the Status/Venue/Event/Event Manager/Event Type filters (this
+// story's own AC: each "opens a selectable list sourced from actual
+// existing values"). The chip's own label switches to the selected
+// option's label once one is chosen (e.g. "Venue" becomes "Lawn") so the
+// active chip itself carries which value is filtering, not just that some
+// value is.
+const PickerFilterChip = ({ label, options, selectedValue, onSelect, allLabel }: PickerFilterChipProps) => {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const selectedOption = options.find((option) => option.value === selectedValue) ?? null;
 
@@ -37,7 +42,7 @@ const PickerFilterChip = ({ label, options, selectedValue, onSelect }: PickerFil
       />
       <Menu anchorEl={anchorEl} open={anchorEl !== null} onClose={() => setAnchorEl(null)}>
         <MenuItem selected={selectedValue === null} onClick={() => handleSelect(null)}>
-          All {label}s
+          {allLabel ?? `All ${label}s`}
         </MenuItem>
         {options.map((option) => (
           <MenuItem key={option.value} selected={option.value === selectedValue} onClick={() => handleSelect(option.value)}>

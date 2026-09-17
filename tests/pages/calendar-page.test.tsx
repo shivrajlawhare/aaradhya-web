@@ -323,14 +323,20 @@ describe('CalendarPage', () => {
     expect(screen.getAllByText('F')).toHaveLength(1); // Fri
   });
 
-  it('renders the All/Tentative/Confirmed status chips, with "All" active by default', async () => {
+  // STORY-060: the three separate All/Tentative/Confirmed buttons became a
+  // single Status dropdown, matching Venue/Event/Event Manager/Event Type.
+  it('renders a Status picker offering All Statuses/Tentative/Confirmed, unselected by default', async () => {
     mockCalendarApi([]);
     renderPage();
 
-    const allChip = (await screen.findByText('All')).closest('.MuiChip-root');
-    expect(allChip).toHaveAttribute('aria-pressed', 'true');
-    const tentativeChip = (await screen.findByText('Tentative')).closest('.MuiChip-root');
-    expect(tentativeChip).toHaveAttribute('aria-pressed', 'false');
+    const statusChip = (await screen.findByText('Status')).closest('.MuiChip-root');
+    expect(statusChip).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(screen.getByText('Status'));
+
+    expect(await screen.findByRole('menuitem', { name: 'All Statuses' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Tentative' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Confirmed' })).toBeInTheDocument();
   });
 
   it('selecting a status chip hides Events of a different status and marks the chip active', async () => {
@@ -357,11 +363,15 @@ describe('CalendarPage', () => {
     await navigateToSeptember2026();
     await screen.findByText('Wedding');
 
-    fireEvent.click(screen.getByText('Confirmed'));
+    fireEvent.click(screen.getByText('Status'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Confirmed' }));
 
     expect(screen.queryByText('Wedding')).not.toBeInTheDocument();
     expect(await screen.findByText('Corporate Offsite')).toBeInTheDocument();
-    const confirmedChip = screen.getByText('Confirmed').closest('.MuiChip-root');
+    // Queried by role, not text — the just-closed menu's own "Confirmed"
+    // menuitem can still be mid-exit-transition in the DOM alongside the
+    // chip in a test environment with no real CSS timers.
+    const confirmedChip = screen.getByRole('button', { name: 'Confirmed' });
     expect(confirmedChip).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -387,10 +397,17 @@ describe('CalendarPage', () => {
     ]);
     renderPage();
     await navigateToSeptember2026();
-    fireEvent.click(await screen.findByText('Confirmed'));
+    fireEvent.click(await screen.findByText('Status'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Confirmed' }));
     expect(screen.queryByText('Wedding')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('All'));
+    // The chip's own label switches to "Confirmed" once selected (same
+    // convention every picker chip uses), so it's re-opened by that text —
+    // queried by role, not text, since the just-closed menu's own
+    // "Confirmed" menuitem can still be mid-exit-transition in the DOM
+    // alongside the chip in a test environment with no real CSS timers.
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmed' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'All Statuses' }));
 
     expect(await screen.findByText('Wedding')).toBeInTheDocument();
     expect(screen.getByText('Corporate Offsite')).toBeInTheDocument();
@@ -547,6 +564,41 @@ describe('CalendarPage', () => {
     expect(screen.queryByText('Corporate Offsite')).not.toBeInTheDocument();
   });
 
+  // STORY-060's own "Event" filter — same distinct-eventFamilyType list as
+  // Event Type, offered as its own separate dropdown per product direction.
+  it('the Event filter picker offers the same distinct family types as Event Type, and narrows the grid the same way', async () => {
+    mockCalendarApi([
+      makeSession({
+        id: 'session-1',
+        startDate: '2026-09-12T00:00:00.000Z',
+        endDate: '2026-09-12T00:00:00.000Z',
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+      }),
+      makeSession({
+        id: 'session-2',
+        startDate: '2026-09-12T00:00:00.000Z',
+        endDate: '2026-09-12T00:00:00.000Z',
+        event: {
+          id: 'event-2',
+          eventFamilyType: 'Corporate Offsite',
+          status: 'Tentative',
+          eventManager: 'manager-1',
+        },
+      }),
+    ]);
+    renderPage();
+    await navigateToSeptember2026();
+    fireEvent.click(await screen.findByText('Event'));
+
+    expect(await screen.findByRole('menuitem', { name: 'Wedding' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Corporate Offsite' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Wedding' }));
+
+    expect(await findCalendarEventTitle('Wedding')).toBeInTheDocument();
+    expect(screen.queryByText('Corporate Offsite')).not.toBeInTheDocument();
+  });
+
   it('combining two filters that together match nothing shows a message, not a stuck spinner', async () => {
     mockCalendarApi([
       makeSession({
@@ -561,7 +613,8 @@ describe('CalendarPage', () => {
     await navigateToSeptember2026();
     await screen.findByText('Wedding');
 
-    fireEvent.click(screen.getByText('Confirmed'));
+    fireEvent.click(screen.getByText('Status'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Confirmed' }));
 
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     expect(await screen.findByText('No Events match the selected filters.')).toBeInTheDocument();
@@ -583,11 +636,15 @@ describe('CalendarPage', () => {
     renderPage();
     await navigateToSeptember2026();
 
-    fireEvent.click(await screen.findByText('Confirmed'));
+    fireEvent.click(await screen.findByText('Status'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Confirmed' }));
     fireEvent.click(await screen.findByText('Venue'));
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Lawn' }));
-    const confirmedChip = await screen.findByText('Confirmed');
-    expect(confirmedChip.closest('.MuiChip-root')).toHaveAttribute('aria-pressed', 'true');
+    // Queried by role, not text — the just-closed menu's own "Confirmed"
+    // menuitem can still be mid-exit-transition in the DOM alongside the
+    // chip in a test environment with no real CSS timers.
+    const confirmedChip = await screen.findByRole('button', { name: 'Confirmed' });
+    expect(confirmedChip).toHaveAttribute('aria-pressed', 'true');
 
     fireEvent.click(await findCalendarEventTitle('Wedding'));
     await screen.findByText('event detail placeholder');
@@ -595,8 +652,8 @@ describe('CalendarPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
 
     expect(await screen.findByText('September 2026')).toBeInTheDocument();
-    const confirmedChipAfterBack = await screen.findByText('Confirmed');
-    expect(confirmedChipAfterBack.closest('.MuiChip-root')).toHaveAttribute('aria-pressed', 'true');
+    const confirmedChipAfterBack = await screen.findByRole('button', { name: 'Confirmed' });
+    expect(confirmedChipAfterBack).toHaveAttribute('aria-pressed', 'true');
     const venueChipAfterBack = screen.getByText('Lawn').closest('.MuiChip-root');
     expect(venueChipAfterBack).toHaveAttribute('aria-pressed', 'true');
   });

@@ -117,6 +117,28 @@ describe('filterCalendarSessions', () => {
     expect(filterCalendarSessions([wedding, corporate], filters).map((s) => s.id)).toEqual(['session-1']);
   });
 
+  // STORY-060's own "Event" filter — a second, independent dropdown over
+  // the same eventFamilyType dimension as Event Type above (per product
+  // direction, not a search-by-specific-Event selector).
+  it('narrows by event (the same dimension as eventFamilyType, offered as its own filter)', () => {
+    const wedding = makeSession({ event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-1' } });
+    const corporate = makeSession({ id: 'session-2', event: { id: 'event-2', eventFamilyType: 'Corporate Offsite', status: EventStatus.Tentative, eventManager: 'manager-1' } });
+    const filters: CalendarFilters = { ...DEFAULT_CALENDAR_FILTERS, event: 'Wedding' };
+
+    expect(filterCalendarSessions([wedding, corporate], filters).map((s) => s.id)).toEqual(['session-1']);
+  });
+
+  it('AND-combines event with eventFamilyType — a session matching only one of two different values matches neither', () => {
+    const wedding = makeSession({ event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-1' } });
+    const filters: CalendarFilters = {
+      ...DEFAULT_CALENDAR_FILTERS,
+      eventFamilyType: 'Wedding',
+      event: 'Corporate Offsite',
+    };
+
+    expect(filterCalendarSessions([wedding], filters)).toEqual([]);
+  });
+
   it('combines multiple filter dimensions with AND semantics', () => {
     const matches = makeSession({
       venue: 'Lawn',
@@ -174,6 +196,7 @@ describe('isCalendarFiltered', () => {
     ['venue', { ...DEFAULT_CALENDAR_FILTERS, venue: 'Lawn' }],
     ['eventManagerId', { ...DEFAULT_CALENDAR_FILTERS, eventManagerId: 'manager-1' }],
     ['eventFamilyType', { ...DEFAULT_CALENDAR_FILTERS, eventFamilyType: 'Wedding' }],
+    ['event', { ...DEFAULT_CALENDAR_FILTERS, event: 'Wedding' }],
   ])('is true once %s is set', (_dimension, filters: CalendarFilters) => {
     expect(isCalendarFiltered(filters)).toBe(true);
   });

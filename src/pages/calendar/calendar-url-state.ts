@@ -23,6 +23,7 @@ const STATUS_PARAM = 'status';
 const VENUE_PARAM = 'venue';
 const EVENT_MANAGER_PARAM = 'eventManager';
 const EVENT_TYPE_PARAM = 'eventType';
+const EVENT_PARAM = 'event';
 
 // Reads whatever combination of params is present, falling back field by
 // field (not all-or-nothing) so a URL with only `?status=Confirmed` still
@@ -48,6 +49,7 @@ export const parseCalendarSearchParams = (
     venue: searchParams.get(VENUE_PARAM),
     eventManagerId: searchParams.get(EVENT_MANAGER_PARAM),
     eventFamilyType: searchParams.get(EVENT_TYPE_PARAM),
+    event: searchParams.get(EVENT_PARAM),
   };
 
   return { monthShift, filters };
@@ -72,6 +74,9 @@ export const buildCalendarSearchParams = (monthShift: MonthShift, filters: Calen
   }
   if (filters.eventFamilyType !== null) {
     params.set(EVENT_TYPE_PARAM, filters.eventFamilyType);
+  }
+  if (filters.event !== null) {
+    params.set(EVENT_PARAM, filters.event);
   }
   return params;
 };
