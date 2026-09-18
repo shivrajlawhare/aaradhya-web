@@ -2,12 +2,20 @@ import type { ReactNode } from 'react';
 import { Box, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import type { z } from 'zod';
 import aaradhyaMark from '../../assets/aaradhya-mark.svg';
-import { ClientContactRole, SessionStatus, clientContactSchema, filteredSessionResultSchema } from '../../contract';
+import {
+  ClientContactRole,
+  SessionStatus,
+  clientContactSchema,
+  filteredAccommodationResultSchema,
+  filteredSessionResultSchema,
+} from '../../contract';
 import { toDateInputValue } from '../event-detail/date-input';
 import {
+  formatAccommodationDate,
   formatEventDate,
   formatQuotationAmount,
   formatQuotationGenerationDate,
+  formatQuotationRupees,
   formatSessionDuration,
 } from '../../utils/quotation-formatting';
 import {
@@ -26,6 +34,8 @@ import {
   tableStyles,
   titleRowStyles,
   titleTextStyles,
+  totalChargesCellStyles,
+  totalOccupancyCellStyles,
   wordmarkNameStyles,
   wordmarkTaglineStyles,
 } from './quotation-document.styles';
@@ -53,6 +63,25 @@ const CLIENT_CONTACT_ROLE_LABELS: Record<ClientContactRole, string> = {
   [ClientContactRole.Custom]: 'Custom',
 };
 
+// Matches accommodation-step.tsx's own EXTRA_BEDS_ROOM_TYPE constant — not
+// imported from there since that file doesn't export it (its own
+// wizard-local concern), same "mirrored, not shared" precedent this file's
+// CLIENT_CONTACT_ROLE_LABELS/ORG_* constants already set. A Room Line is
+// identified as the mandatory Extra Beds row by this exact roomType string,
+// the only signal the data model itself carries (RoomLineAttributes has no
+// separate "isExtraBeds" flag).
+const EXTRA_BEDS_ROOM_TYPE = 'Extra Beds';
+
+// Both reference PDFs print the exact same "12pm"/"11am" on every
+// Accommodation Details row regardless of Event — this is the org's own
+// fixed Room Check-in/Check-out policy (also spelled out in aaradhya-api's
+// quotation-pdf.ts static Terms & Conditions block: "Room Check-in: 12:00
+// PM | Check-out: 11:00 AM"), not a per-Event stored value; the
+// Accommodation Block's own data model has no check-in/check-out TIME
+// field at all (only checkIn/checkOut dates).
+const ACCOMMODATION_CHECK_IN_TIME = '12pm';
+const ACCOMMODATION_CHECK_OUT_TIME = '11am';
+
 // Derived from the contract's own Zod schemas (typescript-rules rule 3),
 // not hand-declared — matches this page's own pre-existing PublicSession
 // pattern (quotation-preview-page.tsx before this story) rather than
@@ -69,9 +98,22 @@ export type QuotationDocumentSession = Pick<
   'id' | 'sessionType' | 'venue' | 'venueCost' | 'startDate' | 'startTime' | 'endTime' | 'pax' | 'sessionStatus'
 >;
 
+// tariff/totalInclGst/totalCharges stay `.optional()` (filteredAccommodation
+// ResultSchema's own shape for a non-EventManager caller) — defaulted to 0
+// inside this component, same reasoning QuotationDocumentSession's venueCost
+// already documents.
+export type QuotationDocumentAccommodation = Pick<
+  z.infer<typeof filteredAccommodationResultSchema>,
+  'checkIn' | 'checkOut' | 'totalDays' | 'roomLines' | 'totalOccupancy' | 'totalCharges'
+>;
+
 export interface QuotationDocumentProps {
   clientContacts: QuotationDocumentClientContact[];
   sessions: QuotationDocumentSession[];
+  // `undefined` matches filteredEventResultSchema's own accommodation field
+  // (the whole block can be absent for a role that isn't EventManager) —
+  // treated the same as an accommodation with no dates and no Room Lines.
+  accommodation: QuotationDocumentAccommodation | undefined;
   // Injectable for deterministic tests — defaults to "now" (FR-QUO-6: always
   // the current date at generation time, never the Event's own createdAt).
   quotationDate?: Date;
@@ -83,7 +125,12 @@ export interface QuotationDocumentProps {
 // this story (STORY-069) covers the header through the Event Details table;
 // STORY-070 through STORY-073 add the remaining sections to this same
 // component as they land.
-const QuotationDocument = ({ clientContacts, sessions, quotationDate = new Date() }: QuotationDocumentProps) => {
+const QuotationDocument = ({
+  clientContacts,
+  sessions,
+  accommodation,
+  quotationDate = new Date(),
+}: QuotationDocumentProps) => {
   // A Cancelled Session isn't a real, billable line on the Quotation —
   // matches this screen's own pre-existing filter (quotation-preview-page.tsx,
   // itself mirroring aaradhya-api's STORY-043 PDF renderer and STORY-041's
@@ -132,6 +179,77 @@ const QuotationDocument = ({ clientContacts, sessions, quotationDate = new Date(
         </Table>
       </Box>
     );
+  }
+
+  // "Whatever custom room types were entered, in entry order, followed
+  // always by Extra Beds last" (this story's own AC) — a renderer-side
+  // guarantee, not an assumption about input order: accommodation-step.tsx's
+  // own "+ Add Room Line" appends new rows to the end of the array
+  // regardless of where the seeded Extra Beds row already sits, so the raw
+  // stored order can't be trusted to already end with it.
+  const roomLines = accommodation?.roomLines ?? [];
+  const orderedRoomLines = [
+    ...roomLines.filter((line) => line.roomType !== EXTRA_BEDS_ROOM_TYPE),
+    ...roomLines.filter((line) => line.roomType === EXTRA_BEDS_ROOM_TYPE),
+  ];
+
+  const checkInCellContent = (
+    <>
+      {accommodation?.checkIn ? formatAccommodationDate(toDateInputValue(accommodation.checkIn)) : '—'}
+      <br />
+      {ACCOMMODATION_CHECK_IN_TIME}
+    </>
+  );
+  const checkOutCellContent = (
+    <>
+      {accommodation?.checkOut ? formatAccommodationDate(toDateInputValue(accommodation.checkOut)) : '—'}
+      <br />
+      {ACCOMMODATION_CHECK_OUT_TIME}
+    </>
+  );
+  const totalDaysDisplay = accommodation?.totalDays ?? '—';
+
+  // Extracted rather than an inline ternary in the JSX below (typescript-
+  // rules rule 5). Check-in/Check-out/Total Days are merged (rowSpan) down
+  // the full height of the Room Line rows — reproducing both reference
+  // PDFs' layout exactly (this story's own AC) rather than repeating those
+  // three values on every row.
+  let roomLineRows: ReactNode;
+  if (orderedRoomLines.length === 0) {
+    // This story's own edge case: even with zero Room Lines at all (no
+    // Extra Beds row present in the data either), the table still renders
+    // its full column set rather than an empty/hidden table.
+    roomLineRows = (
+      <TableRow>
+        <TableCell>{checkInCellContent}</TableCell>
+        <TableCell>{checkOutCellContent}</TableCell>
+        <TableCell sx={numericCellStyles}>{totalDaysDisplay}</TableCell>
+        <TableCell />
+        <TableCell />
+        <TableCell />
+        <TableCell />
+        <TableCell />
+      </TableRow>
+    );
+  } else {
+    roomLineRows = orderedRoomLines.map((line, index) => (
+      <TableRow key={index}>
+        {index === 0 && (
+          <>
+            <TableCell rowSpan={orderedRoomLines.length}>{checkInCellContent}</TableCell>
+            <TableCell rowSpan={orderedRoomLines.length}>{checkOutCellContent}</TableCell>
+            <TableCell rowSpan={orderedRoomLines.length} sx={numericCellStyles}>
+              {totalDaysDisplay}
+            </TableCell>
+          </>
+        )}
+        <TableCell sx={rowLabelCellStyles}>{line.roomType}</TableCell>
+        <TableCell sx={numericCellStyles}>{line.occupancy}</TableCell>
+        <TableCell sx={numericCellStyles}>{line.tariff ?? 0}</TableCell>
+        <TableCell sx={numericCellStyles}>{line.noOfRooms}</TableCell>
+        <TableCell sx={numericCellStyles}>{line.totalInclGst ?? 0}</TableCell>
+      </TableRow>
+    ));
   }
 
   return (
@@ -200,6 +318,41 @@ const QuotationDocument = ({ clientContacts, sessions, quotationDate = new Date(
           Event Details
         </Typography>
         {eventDetailsSection}
+      </Box>
+
+      <Box sx={sectionStyles}>
+        <Typography component="h2" sx={sectionHeadingStyles}>
+          Accommodation Details
+        </Typography>
+        <Box sx={tableScrollStyles}>
+          <Table sx={tableStyles} aria-label="Accommodation Details">
+            <TableHead>
+              <TableRow>
+                <TableCell>Check in</TableCell>
+                <TableCell>Check out</TableCell>
+                <TableCell>Total Days</TableCell>
+                <TableCell>Room Type</TableCell>
+                <TableCell>Occ.</TableCell>
+                <TableCell>Tariff</TableCell>
+                <TableCell>No. Of Rooms</TableCell>
+                <TableCell>Total including GST</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {roomLineRows}
+              <TableRow>
+                <TableCell />
+                <TableCell />
+                <TableCell />
+                <TableCell sx={rowLabelCellStyles}>Total Occ.</TableCell>
+                <TableCell sx={totalOccupancyCellStyles}>{accommodation?.totalOccupancy ?? 0}</TableCell>
+                <TableCell />
+                <TableCell sx={rowLabelCellStyles}>Total Charges</TableCell>
+                <TableCell sx={totalChargesCellStyles}>{formatQuotationRupees(accommodation?.totalCharges ?? 0)}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </Box>
       </Box>
     </Box>
   );

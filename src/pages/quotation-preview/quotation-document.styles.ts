@@ -147,6 +147,37 @@ export const rowLabelCellStyles: SxProps<Theme> = {
   fontWeight: 700,
 };
 
+// textAlign: 'right' — both reference PDFs right-align every numeric
+// column (Occ./Tariff/No. Of Rooms/Total including GST here, STORY-070;
+// No. Of Guests/Selected Venue Cost in STORY-069's own Event Details), a
+// detail STORY-069 itself didn't apply — fixed here rather than left
+// inconsistent, since it's the same shared style both tables already use.
 export const numericCellStyles: SxProps<Theme> = {
   fontVariantNumeric: 'tabular-nums',
+  textAlign: 'right',
+};
+
+// Sampled from example_quatation_1.pdf/example_quatation_2.pdf's own Total
+// Occ./Total Charges footer cell shading (STORY-070's own AC, SRS §4.7e) —
+// a visual best-effort match, not a pixel-exact extraction (no tooling here
+// samples a PDF's own fill color), the same kind of explicit, separate,
+// one-time design decision HEADING_BLUE above already is.
+const TOTAL_OCCUPANCY_GREEN = '#A9D18E';
+const TOTAL_CHARGES_AMBER = '#FFD966';
+
+// Includes numericCellStyles' own properties directly rather than an sx
+// array — MUI's TableCell sx typing rejects an array of two SxProps<Theme>
+// values nested together (a plain array of style objects works, but not
+// one mixing already-typed SxProps values), so the numeric-cell look is
+// folded in here instead of composed at the call site.
+export const totalOccupancyCellStyles: SxProps<Theme> = {
+  bgcolor: TOTAL_OCCUPANCY_GREEN,
+  fontVariantNumeric: 'tabular-nums',
+  textAlign: 'right',
+};
+
+export const totalChargesCellStyles: SxProps<Theme> = {
+  bgcolor: TOTAL_CHARGES_AMBER,
+  fontVariantNumeric: 'tabular-nums',
+  textAlign: 'right',
 };

@@ -51,15 +51,20 @@ export const computeTotalCharges = (roomLines: WizardRoomLineInput[], totalDays:
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-// Inclusive of both the check-in and check-out date, matching the backend's
-// computeInclusiveDayCount (a same-day stay is 1 day, not 0). Deliberately
-// takes only the 'YYYY-MM-DD' date portion, not check-in/check-out time —
-// "nights stayed" is a calendar-day count a guest's exact arrival/departure
-// clock time shouldn't shift, same reasoning the Quotation's own eventual
-// total_days is expected to reflect. Returns null when either date is
-// missing or unparseable, and does not guard checkOut < checkIn (an invalid
-// range) — that's this step's own UI-level validation, not this pure
-// function's job.
+// Nights stayed (check-out − check-in), clamped to a minimum of 1 — STORY-070's
+// own fix, mirroring aaradhya-api's services/accommodation.ts computeTotalDays.
+// The previous "+1" inclusive-day formula (matching the backend's shared,
+// Session-duration-only computeInclusiveDayCount) silently returned 3 for a
+// check-in 10-12-2026 → check-out 12-12-2026 pair that both reference
+// quotations (docs/example_quatations, aaradhya-api repo) print as "Total
+// Days: 2" — a hotel stay is billed by nights, not inclusive calendar days,
+// unlike a Session's own multi-day duration (which genuinely wants "+1").
+// Deliberately takes only the 'YYYY-MM-DD' date portion, not check-in/
+// check-out time — "nights stayed" is a calendar-day count a guest's exact
+// arrival/departure clock time shouldn't shift. Returns null when either
+// date is missing or unparseable, and does not guard checkOut < checkIn (an
+// invalid range) — that's this step's own UI-level validation, not this
+// pure function's job.
 export const computeTotalDays = (checkInDate: string, checkOutDate: string): number | null => {
   if (!checkInDate || !checkOutDate) {
     return null;
@@ -69,5 +74,5 @@ export const computeTotalDays = (checkInDate: string, checkOutDate: string): num
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
     return null;
   }
-  return Math.floor((end.getTime() - start.getTime()) / MS_PER_DAY) + 1;
+  return Math.max(Math.floor((end.getTime() - start.getTime()) / MS_PER_DAY), 1);
 };

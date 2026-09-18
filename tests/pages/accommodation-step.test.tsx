@@ -200,14 +200,14 @@ describe('AccommodationStep', () => {
     expect(screen.getByLabelText('Occupancy for room line 1')).toHaveValue(0);
   });
 
-  it('derives Total days inclusively from Check-in/Check-out, and blocks with a message when Check-out is before Check-in', async () => {
+  it('derives Total days (nights stayed) from Check-in/Check-out, and blocks with a message when Check-out is before Check-in', async () => {
     const user = userEvent.setup();
     renderWizard(accommodationPath);
     await screen.findByText('Deluxe');
 
     await fillDatePicker(user, 'Check-in date', '12102026');
     await fillDatePicker(user, 'Check-out date', '12122026');
-    await waitFor(() => expect(screen.getByText(/Total days: 3/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Total days: 2/)).toBeInTheDocument());
 
     await fillDatePicker(user, 'Check-out date', '12082026');
 
@@ -224,11 +224,11 @@ describe('AccommodationStep', () => {
 
     await fillDatePicker(user, 'Check-in date', '12102026');
     await fillDatePicker(user, 'Check-out date', '12122026');
-    await waitFor(() => expect(screen.getByText(/Total days: 3/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Total days: 2/)).toBeInTheDocument());
 
     await fillDatePicker(user, 'Check-out date', '12152026');
 
-    await waitFor(() => expect(screen.getByText(/Total days: 6/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Total days: 5/)).toBeInTheDocument());
     // Room data entered before the date edit is untouched.
     expect(screen.getByLabelText('Number of rooms for room line 1')).toHaveValue(2);
   });
@@ -247,14 +247,14 @@ describe('AccommodationStep', () => {
     await screen.findByText('Deluxe');
     await fillDatePicker(user, 'Check-in date', '12102026');
     await fillDatePicker(user, 'Check-out date', '12122026');
-    await waitFor(() => expect(screen.getByText(/Total days: 3/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Total days: 2/)).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: '← Back' }));
     expect(screen.getByText('Event Details')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Next: Accommodation →' }));
     await screen.findByText('Deluxe');
-    expect(screen.getByText(/Total days: 3/)).toBeInTheDocument();
+    expect(screen.getByText(/Total days: 2/)).toBeInTheDocument();
   });
 
   it('does not re-seed default Room Lines after they were already removed and stored', async () => {

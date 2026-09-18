@@ -10,14 +10,3 @@ export const pageStyles: SxProps<Theme> = {
   p: `${spaceTokens.space16}px`,
 };
 
-export const sectionStyles: SxProps<Theme> = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: `${spaceTokens.space8}px`,
-};
-
-// tabular-nums, per this story's own Tokens line — every numeric line
-// (pax, venue cost, room totals) lines up on its digits.
-export const numericLineStyles: SxProps<Theme> = {
-  fontVariantNumeric: 'tabular-nums',
-};

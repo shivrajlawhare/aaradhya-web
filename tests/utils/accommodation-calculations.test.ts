@@ -64,11 +64,16 @@ describe('computeTotalCharges', () => {
 });
 
 describe('computeTotalDays', () => {
-  it('is inclusive of both check-in and check-out dates', () => {
-    expect(computeTotalDays('2026-12-10', '2026-12-12')).toBe(3);
+  // STORY-070 — this exact pair is example_quatation_1.pdf's own check-in/
+  // check-out, which prints "Total Days: 2"; the previous "+1" inclusive
+  // formula (matching the backend's since-corrected computeTotalDays)
+  // returned 3 here, silently inflating every Accommodation Total computed
+  // from it by 50%.
+  it('counts nights stayed (check-out − check-in), not inclusive calendar days', () => {
+    expect(computeTotalDays('2026-12-10', '2026-12-12')).toBe(2);
   });
 
-  it('is 1 for a same-day stay', () => {
+  it('is 1 for a same-day stay, not 0', () => {
     expect(computeTotalDays('2026-12-10', '2026-12-10')).toBe(1);
   });
 

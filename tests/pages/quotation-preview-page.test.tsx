@@ -240,7 +240,9 @@ describe('QuotationPreviewPage', () => {
     expect(screen.getByText('Wedding')).toBeInTheDocument();
     expect(screen.getByText('Lawn')).toBeInTheDocument();
     expect(screen.getByText('5,000/-')).toBeInTheDocument();
-    expect(screen.getByText('Double: 2 occupancy × 1 rooms — 5900')).toBeInTheDocument();
+    expect(screen.getByText('Double')).toBeInTheDocument();
+    expect(screen.getByText('5900')).toBeInTheDocument();
+    expect(screen.getByText('Rs. 5,900 /-')).toBeInTheDocument();
     // venueTotal 5000 + foodTotalInclGst (2000 × 1.18 = 2360) + accommodationTotal 5900 = 13260.
     expect(await screen.findByText('13,260')).toBeInTheDocument();
   });
@@ -254,13 +256,14 @@ describe('QuotationPreviewPage', () => {
     expect(screen.getByText('AARADHYA')).toBeInTheDocument();
   });
 
-  it('renders "None" for an Event with no Accommodation entered at all', async () => {
+  it('still renders the Accommodation Details table (zero footer) for an Event with no Accommodation entered at all', async () => {
     seedSession();
     mockApi({ event: makeEvent() });
     renderPage();
 
     await screen.findByText('Client Details');
-    expect(screen.getByText('None')).toBeInTheDocument();
+    expect(screen.getByText('Accommodation Details')).toBeInTheDocument();
+    expect(screen.getByText('Rs. 0 /-')).toBeInTheDocument();
   });
 
   it('excludes a Cancelled Session from the per-session list, matching the PDF', async () => {

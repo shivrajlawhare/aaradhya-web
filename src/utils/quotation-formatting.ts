@@ -83,3 +83,29 @@ const pad2 = (value: number): string => String(value).padStart(2, '0');
 // what a plain `new Date()` default at real generation time already means.
 export const formatQuotationGenerationDate = (date: Date): string =>
   `${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}/${date.getFullYear()}`;
+
+// 'YYYY-MM-DD' -> 'DD-MM-YYYY' — dashes, not formatEventDate's slashes.
+// Both reference PDFs use slashes for the Event Details "Event Date" column
+// but dashes for Accommodation Details' Check in/Check out (STORY-070's own
+// AC) — a genuine, deliberate difference between the two sections
+// within the SAME source document, not an inconsistency to reconcile away.
+export const formatAccommodationDate = (date: string): string => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) {
+    return '';
+  }
+  const [, year, month, day] = match;
+  return `${day}-${month}-${year}`;
+};
+
+// 'Rs. X,XX,XXX /-' — the summary-figure money format both reference PDFs
+// use for the Accommodation Details footer's "Total Charges" (STORY-070)
+// and the Total Cost Summary's own "Grand Total" (STORY-072) — distinct
+// from formatQuotationAmount's 'X,XX,XXX/-' (no "Rs." prefix, no space
+// before the slash), which the Event Details "Selected Venue Cost" column
+// uses (STORY-069). Neither formatter applies to a Room Line's own Tariff/
+// Total including GST cells or the Total Cost Summary's own line items —
+// both reference PDFs print those as bare, ungrouped numbers (e.g. "73500",
+// not "73,500" or "73,500/-"); only the named summary/total fields above
+// get digit-grouping and a Rupee prefix or suffix at all.
+export const formatQuotationRupees = (amount: number): string => `Rs. ${new Intl.NumberFormat('en-IN').format(amount)} /-`;

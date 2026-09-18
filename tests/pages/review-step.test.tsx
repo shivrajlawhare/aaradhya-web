@@ -199,10 +199,12 @@ describe('ReviewStep', () => {
     // since there's only one food row); with 5% GST (default) = 15,750.
     expect(screen.getAllByText('15,000')).toHaveLength(2);
     expect(screen.getByText('15,750')).toBeInTheDocument();
-    // Accommodation: 2500 × 2 rooms × 2 nights × 1.05 = 10,500.
-    expect(screen.getByText('10,500')).toBeInTheDocument();
-    // Grand Total: 60,000 + 15,750 + 10,500 = 86,250.
-    expect(screen.getByText('86,250')).toBeInTheDocument();
+    // Accommodation: 2500 × 2 rooms × 1 night × 1.05 = 5,250 — check-in
+    // 2026-09-12 to check-out 2026-09-13 is 1 calendar day apart (STORY-070:
+    // nights stayed, not an inclusive calendar-day count).
+    expect(screen.getByText('5,250')).toBeInTheDocument();
+    // Grand Total: 60,000 + 15,750 + 5,250 = 81,000.
+    expect(screen.getByText('81,000')).toBeInTheDocument();
   });
 
   it('recomputes Food Cost with GST and the Grand Total live when the GST % field changes', async () => {
@@ -212,9 +214,9 @@ describe('ReviewStep', () => {
 
     fireEvent.change(screen.getByLabelText('GST %'), { target: { value: '18' } });
 
-    // 15,000 × 1.18 = 17,700; Grand Total = 60,000 + 17,700 + 10,500 = 88,200.
+    // 15,000 × 1.18 = 17,700; Grand Total = 60,000 + 17,700 + 5,250 = 82,950.
     await waitFor(() => expect(screen.getByText('17,700')).toBeInTheDocument());
-    expect(screen.getByText('88,200')).toBeInTheDocument();
+    expect(screen.getByText('82,950')).toBeInTheDocument();
   });
 
   it('adds a manual line item with a note, included in the Grand Total, and can remove it again', async () => {
@@ -229,13 +231,13 @@ describe('ReviewStep', () => {
 
     await waitFor(() => expect(screen.getByText('Decoration')).toBeInTheDocument());
     expect(screen.getByText('poolside decor')).toBeInTheDocument();
-    // Grand Total: 86,250 + 5,000 = 91,250.
-    expect(screen.getByText('91,250')).toBeInTheDocument();
+    // Grand Total: 81,000 + 5,000 = 86,000.
+    expect(screen.getByText('86,000')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove Decoration line item' }));
 
     await waitFor(() => expect(screen.queryByText('Decoration')).not.toBeInTheDocument());
-    expect(screen.getByText('86,250')).toBeInTheDocument();
+    expect(screen.getByText('81,000')).toBeInTheDocument();
   });
 
   it('defaults Event Type from the last Session’s own sessionType', async () => {
@@ -412,7 +414,7 @@ describe('ReviewStep', () => {
     // Food Cost: (50×300) + (50×100) = 20,000; ×1.05 = 21,000.
     expect(screen.getByText('20,000')).toBeInTheDocument();
     expect(screen.getByText('21,000')).toBeInTheDocument();
-    // Grand Total: 60,000 + 21,000 + 10,500 + 5,000 (manual) = 96,500.
-    expect(screen.getByText('96,500')).toBeInTheDocument();
+    // Grand Total: 60,000 + 21,000 + 5,250 + 5,000 (manual) = 91,250.
+    expect(screen.getByText('91,250')).toBeInTheDocument();
   });
 });
