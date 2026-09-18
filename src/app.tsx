@@ -9,6 +9,7 @@ import AccommodationStep from './pages/event-creation/accommodation-step';
 import ClientDetailsStep from './pages/event-creation/client-details-step';
 import EventDetailsStep from './pages/event-creation/event-details-step';
 import EventWizardShell from './pages/event-creation/event-wizard-shell';
+import SessionsItemsStep from './pages/event-creation/sessions-items-step';
 import WizardStepPlaceholder from './pages/event-creation/wizard-step-placeholder';
 import { WIZARD_STEPS } from './pages/event-creation/wizard-steps';
 import EventDetailPage from './pages/event-detail/event-detail-page';
@@ -71,10 +72,10 @@ const App = () => {
           deep-linking works, per this story's own AC. Each step's real
           content lands in its own dedicated story (STORY-064 through 068)
           and replaces only its own <Route>'s element below — Client
-          Details (STORY-064), Event Details (STORY-065), and Accommodation
-          (STORY-066) are done; the remaining two still render
-          WizardStepPlaceholder via the generic map. No title on
-          EventWizardShell's routes — it renders
+          Details (STORY-064), Event Details (STORY-065), Accommodation
+          (STORY-066), and Sessions & Items (STORY-067) are done; the
+          remaining one still renders WizardStepPlaceholder via the generic
+          map. No title on EventWizardShell's routes — it renders
           its own "New Event" h1 already, same "AppShell doesn't render a
           second one" precedent EVENT_CREATE_PATH's route used before. */}
       <Route path={EVENT_CREATE_PATH} element={<Navigate to={WIZARD_STEPS[0]?.path ?? EVENT_CREATE_PATH} replace />} />
@@ -114,7 +115,19 @@ const App = () => {
           </AppShell>
         }
       />
-      {WIZARD_STEPS.slice(3).map((step) => (
+      <Route
+        path={WIZARD_STEPS[3]!.path}
+        element={
+          <AppShell>
+            <RequireRole roles={[Role.EventManager]}>
+              <EventWizardShell step="sessions-items">
+                <SessionsItemsStep />
+              </EventWizardShell>
+            </RequireRole>
+          </AppShell>
+        }
+      />
+      {WIZARD_STEPS.slice(4).map((step) => (
         <Route
           key={step.id}
           path={step.path}

@@ -157,6 +157,12 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  // vi.spyOn(window, 'confirm') returns the same spy instance across every
+  // `it()` in this file (window.confirm is never torn down between tests)
+  // — without restoring it here, a later test's own toHaveBeenCalledTimes
+  // assertion silently includes call counts left over from an earlier
+  // test's own spy usage.
+  vi.restoreAllMocks();
   sessionStorage.clear();
 });
 
@@ -340,6 +346,66 @@ describe('EventDetailsStep', () => {
     expect(screen.queryByText('Wedding')).not.toBeInTheDocument();
     const stored = JSON.parse(sessionStorage.getItem(WIZARD_STORAGE_KEY) ?? '{}');
     expect(stored['sessions-items'].byDate).toEqual({ '2026-09-13': [{ type: 'Ceremony' }] });
+  });
+
+  it('a multi-day Session removal checks/clears every date it spans, not just its start date', async () => {
+    const user = userEvent.setup();
+    sessionStorage.setItem(
+      WIZARD_STORAGE_KEY,
+      JSON.stringify({
+        'sessions-items': { byDate: { '2026-09-13': [{ type: 'Ceremony' }] } },
+      }),
+    );
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderWizard(eventDetailsPath);
+    await screen.findByLabelText('Event Type');
+    await selectOption('Event Type', 'Wedding');
+    await selectOption('Venue', 'Poolside');
+    await fillDatePicker(user, 'Start date', '09122026');
+    await fillDatePicker(user, 'End date', '09132026');
+    fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
+    await screen.findByText('Wedding');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Wedding row' }));
+
+    // The entries live under 09-13, not the Session's own startDate
+    // (09-12) — a date-range-unaware check (only ever looking at
+    // row.startDate) would have missed this and removed the Session with
+    // no prompt, leaving the 09-13 entries orphaned in the wizard store.
+    expect(window.confirm).toHaveBeenCalledTimes(1);
+    const stored = JSON.parse(sessionStorage.getItem(WIZARD_STORAGE_KEY) ?? '{}');
+    expect(stored['sessions-items'].byDate).toEqual({});
+  });
+
+  it('does not touch a date still covered by another remaining Session', async () => {
+    const user = userEvent.setup();
+    sessionStorage.setItem(
+      WIZARD_STORAGE_KEY,
+      JSON.stringify({
+        'sessions-items': { byDate: { '2027-02-26': [{ type: 'Ceremony' }] } },
+      }),
+    );
+    vi.spyOn(window, 'confirm');
+    renderWizard(eventDetailsPath);
+    await screen.findByLabelText('Event Type');
+
+    // Two same-date Sessions (STORY-065's own supported case) — both cover
+    // the date the stored Sessions & Items entries live under.
+    await fillMinimalEvent(user, { eventType: 'Haldi', venue: 'Poolside', mmddyyyy: '02262027' });
+    fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
+    await screen.findByText('Haldi');
+    await fillMinimalEvent(user, { eventType: 'Wedding', venue: 'Half Banquet', mmddyyyy: '02262027' });
+    fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
+    await screen.findByText('Wedding');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Haldi row' }));
+
+    // Wedding still covers 2027-02-26, so removing Haldi orphans nothing —
+    // no prompt, and the stored entries survive untouched.
+    expect(window.confirm).not.toHaveBeenCalled();
+    expect(screen.getByText('Wedding')).toBeInTheDocument();
+    const stored = JSON.parse(sessionStorage.getItem(WIZARD_STORAGE_KEY) ?? '{}');
+    expect(stored['sessions-items'].byDate).toEqual({ '2027-02-26': [{ type: 'Ceremony' }] });
   });
 
   it("declining the confirmation keeps both the Session row and its date's Sessions & Items", async () => {

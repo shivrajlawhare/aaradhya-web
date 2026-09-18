@@ -29,6 +29,13 @@ export const WIZARD_STEP_READY_CHECKS: Partial<Record<WizardStepId, (stepData: W
     }
     return checkOutDate >= checkInDate;
   },
+  // STORY-067's own AC: "does not require anything further to be added...
+  // but does require every date tab to have been visited at least once."
+  // allDatesVisited is derived and written by the step component itself
+  // (it alone can see Step 2's own distinct-dates list), not recomputed
+  // here — this registry only ever reads a step's own stored data, the
+  // same narrow contract every other entry above already keeps to.
+  'sessions-items': (stepData) => stepData?.allDatesVisited === true,
 };
 
 export const isWizardStepReady = (step: WizardStepId, stepData: WizardStepData | undefined): boolean => {

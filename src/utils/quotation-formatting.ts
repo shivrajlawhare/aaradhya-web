@@ -54,3 +54,12 @@ export const formatEventDate = (date: string): string => {
   const [, year, month, day] = match;
   return `${day}/${month}/${year}`;
 };
+
+// Glossary's "Limited Seating (L.S.)" — the literal rule the Quotation
+// renderer applies to a Meal Item's Pax cell (FR-QUO-8): 'L.S. (Npax)' when
+// the flag is set, else the bare number. Written once here (STORY-067's own
+// AC) so both the wizard's live "Shown on Quotation as:" preview and its
+// already-added rows list read the exact same text a future Quotation
+// renderer (STORY-069+) would also produce from the same inputs.
+export const formatQuotationPax = (pax: number, limitedSeating: boolean): string =>
+  limitedSeating ? `L.S. (${pax}pax)` : `${pax}`;

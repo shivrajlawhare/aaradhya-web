@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { formatEventDate, formatSessionDuration, formatTimeOfDay } from '../../src/utils/quotation-formatting';
+import {
+  formatEventDate,
+  formatQuotationPax,
+  formatSessionDuration,
+  formatTimeOfDay,
+} from '../../src/utils/quotation-formatting';
 
 describe('formatTimeOfDay', () => {
   it('formats an on-the-hour time with no minutes shown', () => {
@@ -51,5 +56,15 @@ describe('formatEventDate', () => {
   it('returns an empty string for a blank or invalid date', () => {
     expect(formatEventDate('')).toBe('');
     expect(formatEventDate('not-a-date')).toBe('');
+  });
+});
+
+describe('formatQuotationPax', () => {
+  it('formats a bare number when limited_seating is off', () => {
+    expect(formatQuotationPax(200, false)).toBe('200');
+  });
+
+  it('formats "L.S. (Npax)" when limited_seating is on, using the literal pax entered', () => {
+    expect(formatQuotationPax(200, true)).toBe('L.S. (200pax)');
   });
 });

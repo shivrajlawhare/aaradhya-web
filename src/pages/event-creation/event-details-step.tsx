@@ -23,6 +23,7 @@ import { tsr } from '../../api/client';
 import { fromPickerDate, fromPickerTime, toPickerDate, toPickerTime } from '../event-detail/date-input';
 import { useEventWizard } from '../../stores/event-wizard-context';
 import { formatEventDate, formatSessionDuration } from '../../utils/quotation-formatting';
+import { enumerateDates, getDistinctDates } from '../../utils/session-dates';
 import {
   addButtonStyles,
   formCardStyles,
@@ -173,26 +174,39 @@ const EventDetailsStep = () => {
   });
 
   // Removing a Session also removes any Step 4 (Sessions & Items) entries
-  // already made against that Session's date, with a confirmation prompt
-  // if any exist (this story's own AC) — Step 4 has no real content yet
-  // (STORY-067), so this can never actually fire today; it's wired against
-  // the forward contract above so it works correctly the moment it does.
+  // already made against that Session's own date(s), with a confirmation
+  // prompt if any exist (this story's own AC) — STORY-067 gives Step 4 real
+  // content, keyed by every calendar date a Session spans (not just its
+  // startDate), so a multi-day Session's removal is checked/cleared across
+  // its whole date range. A date still covered by another remaining Session
+  // (e.g. two same-day Sessions at different venues) is never touched here
+  // — its own tab, and whatever was entered against it, still legitimately
+  // exists after this one Session is gone.
   const handleRemoveRow = (row: WizardSessionRow) => {
-    const sessionsItemsData = data['sessions-items'] as SessionsItemsStoreShape | undefined;
-    const existingForDate = sessionsItemsData?.byDate?.[row.startDate] ?? [];
+    const remainingRows = rows.filter((existing) => existing.id !== row.id);
+    const remainingDates = new Set(getDistinctDates(remainingRows));
+    const orphanedDates = enumerateDates(row.startDate, row.endDate).filter((date) => !remainingDates.has(date));
 
-    if (existingForDate.length > 0) {
+    const sessionsItemsData = data['sessions-items'] as SessionsItemsStoreShape | undefined;
+    const datesWithEntries = orphanedDates.filter((date) => (sessionsItemsData?.byDate?.[date] ?? []).length > 0);
+
+    if (datesWithEntries.length > 0) {
+      const dateList = datesWithEntries.map(formatEventDate).join(', ');
+      const verb = datesWithEntries.length > 1 ? 'already have' : 'already has';
       const confirmed = window.confirm(
-        `${formatEventDate(row.startDate)} already has Sessions & Items entered in Step 4. Removing this Session will also remove them. Continue?`,
+        `${dateList} ${verb} Sessions & Items entered in Step 4. Removing this Session will also remove them. Continue?`,
       );
       if (!confirmed) {
         return;
       }
-      const { [row.startDate]: _removedDate, ...remainingByDate } = sessionsItemsData?.byDate ?? {};
+      const remainingByDate = { ...(sessionsItemsData?.byDate ?? {}) };
+      for (const date of datesWithEntries) {
+        delete remainingByDate[date];
+      }
       setStepData('sessions-items', { ...sessionsItemsData, byDate: remainingByDate });
     }
 
-    setRows((current) => current.filter((existing) => existing.id !== row.id));
+    setRows(remainingRows);
   };
 
   const formatRowDate = (row: WizardSessionRow): string =>
