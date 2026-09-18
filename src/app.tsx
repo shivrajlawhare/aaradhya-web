@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AppShell from './components/app-shell/app-shell';
 import RequireRole from './components/ui/require-role';
@@ -9,8 +10,8 @@ import AccommodationStep from './pages/event-creation/accommodation-step';
 import ClientDetailsStep from './pages/event-creation/client-details-step';
 import EventDetailsStep from './pages/event-creation/event-details-step';
 import EventWizardShell from './pages/event-creation/event-wizard-shell';
+import ReviewStep from './pages/event-creation/review-step';
 import SessionsItemsStep from './pages/event-creation/sessions-items-step';
-import WizardStepPlaceholder from './pages/event-creation/wizard-step-placeholder';
 import { WIZARD_STEPS } from './pages/event-creation/wizard-steps';
 import EventDetailPage from './pages/event-detail/event-detail-page';
 import EventListPage from './pages/event-list/event-list-page';
@@ -30,6 +31,14 @@ import {
 } from './routes';
 
 const App = () => {
+  // The shared wizard footer's "Generate Quotation" button (event-wizard-
+  // shell.tsx's own onNext hook, STORY-063) is wired one layer above
+  // ReviewStep's own EventWizardProvider, with no access to that step's
+  // local state (manual line items, GST%, Event Type) — ReviewStep
+  // registers its own latest submit closure into this ref every render
+  // instead, so the route-level onNext below always calls through to it.
+  const reviewSubmitRef = useRef<() => void>(() => {});
+
   return (
     <Routes>
       <Route path="/" element={<Navigate to={LOGIN_PATH} replace />} />
@@ -70,12 +79,13 @@ const App = () => {
           A bare /events/new visit redirects to the first step; each real
           step path (e.g. /events/new/client-details) is its own route so
           deep-linking works, per this story's own AC. Each step's real
-          content lands in its own dedicated story (STORY-064 through 068)
-          and replaces only its own <Route>'s element below — Client
-          Details (STORY-064), Event Details (STORY-065), Accommodation
-          (STORY-066), and Sessions & Items (STORY-067) are done; the
-          remaining one still renders WizardStepPlaceholder via the generic
-          map. No title on EventWizardShell's routes — it renders
+          content landed in its own dedicated story (STORY-064 through
+          068) and replaced only its own <Route>'s element below — all
+          five (Client Details, Event Details, Accommodation, Sessions &
+          Items, Review & Quotation) are done; WizardStepPlaceholder no
+          longer backs any route here, though it's still used by several
+          of these steps' own tests as a stand-in for a sibling step not
+          under test. No title on EventWizardShell's routes — it renders
           its own "New Event" h1 already, same "AppShell doesn't render a
           second one" precedent EVENT_CREATE_PATH's route used before. */}
       <Route path={EVENT_CREATE_PATH} element={<Navigate to={WIZARD_STEPS[0]?.path ?? EVENT_CREATE_PATH} replace />} />
@@ -127,21 +137,18 @@ const App = () => {
           </AppShell>
         }
       />
-      {WIZARD_STEPS.slice(4).map((step) => (
-        <Route
-          key={step.id}
-          path={step.path}
-          element={
-            <AppShell>
-              <RequireRole roles={[Role.EventManager]}>
-                <EventWizardShell step={step.id}>
-                  <WizardStepPlaceholder step={step.id} />
-                </EventWizardShell>
-              </RequireRole>
-            </AppShell>
-          }
-        />
-      ))}
+      <Route
+        path={WIZARD_STEPS[4]!.path}
+        element={
+          <AppShell>
+            <RequireRole roles={[Role.EventManager]}>
+              <EventWizardShell step="review" onNext={() => reviewSubmitRef.current()}>
+                <ReviewStep registerSubmit={(submit) => (reviewSubmitRef.current = submit)} />
+              </EventWizardShell>
+            </RequireRole>
+          </AppShell>
+        }
+      />
       {/* No RequireRole — GET /events/:id (STORY-013) has no role
           restriction either; every role legitimately opens this screen,
           just seeing a different subset of tabs. EventDetailPage itself

@@ -167,12 +167,13 @@ describe('AccommodationStep', () => {
 
     fireEvent.change(screen.getByLabelText('Occupancy for room line 1'), { target: { value: '2' } });
     fireEvent.change(screen.getByLabelText('Number of rooms for room line 1'), { target: { value: '3' } });
-    // tariff 4000 * 3 rooms * 1.18 = 14,160
-    expect(screen.getByText('14,160')).toBeInTheDocument();
+    // No check-in/check-out set — total_days falls back to 1.
+    // tariff 4000 * 3 rooms * 1 day * 1.05 = 12,600
+    expect(screen.getByText('12,600')).toBeInTheDocument();
 
     // occupancy 2 * 3 rooms = 6
     expect(screen.getByText('Total Occupancy: 6')).toBeInTheDocument();
-    expect(screen.getByText('Total Charges: 14,160')).toBeInTheDocument();
+    expect(screen.getByText('Total Charges: 12,600')).toBeInTheDocument();
   });
 
   it('"Next: Sessions & Items" is disabled until Check-in and Check-out are both set', async () => {

@@ -139,13 +139,6 @@ export const eventIdParamsSchema = z.object({
   id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid event id.'),
 });
 
-export const createEventBodySchema = z.object({
-  eventFamilyType: z.string().trim().min(1),
-  status: z.nativeEnum(EventStatus).optional(),
-  eventManager: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid event_manager id.'),
-  clientContacts: z.array(clientContactSchema).min(1),
-});
-
 // Every field optional (PATCH semantics) — same shape as createEventBodySchema
 // otherwise, including clientContacts still needing at least one row (STORY-014
 // rejects removing the last remaining Client Contact).
@@ -289,6 +282,22 @@ export const updateEventExtrasBodySchema = extrasFieldsSchema.strict();
 // Every Event always has all three amounts (defaulted to 0), same "always
 // instantiated" convention payment/documentsChecklist already use.
 export const extrasResultSchema = extrasFieldsSchema.required();
+
+// SRS FR-QUO-9a / Assumption A13 — mirrors aaradhya-api's own
+// manualLineItemFieldsSchema/manualLineItemResultSchema (STORY-068): an
+// open-ended manual line item for the Total Cost Summary, additive
+// alongside decoration/photographer/bhatji above, not a replacement.
+export const manualLineItemSchema = z.object({
+  name: z.string().trim().min(1),
+  note: z.string().trim().min(1).optional(),
+  amount: z.number().min(0),
+});
+
+export const manualLineItemResultSchema = z.object({
+  name: z.string(),
+  note: z.string().nullable(),
+  amount: z.number(),
+});
 
 // The exact 6 fields aaradhya-api's computeTotalCostSummary produces
 // (STORY-039) — mirrors quotationSummaryResultSchema field-for-field.
@@ -533,6 +542,39 @@ const eventItemBodySchema = z.object({
 
 export const createItemBodySchema = z.discriminatedUnion('type', [mealItemBodySchema, eventItemBodySchema]);
 
+// STORY-068 — a Session as it's nested inside createEventBodySchema below,
+// mirroring aaradhya-api's own createEventSessionInputSchema: identical to
+// createSessionBodySchema except it also accepts its own `items` up front.
+const createEventSessionInputSchema = z.object({
+  sessionType: z.string().trim().min(1),
+  venue: z.string().trim().min(1),
+  venueCost: z.number().min(0).optional(),
+  startDate: z.string(),
+  endDate: z.string(),
+  startTime: z.string().trim().min(1).optional(),
+  endTime: z.string().trim().min(1).optional(),
+  pax: z.number().min(0).optional(),
+  setup: sessionSetupSchema.optional(),
+  items: z.array(createItemBodySchema).optional(),
+});
+
+// STORY-068 — the wizard's own "Generate Quotation" submits the entire
+// accumulated flow (Client Contacts, Sessions with their own Items,
+// Accommodation, and the Total Cost Summary's manual line items) as this
+// single call, mirroring aaradhya-api's own extended createEventBodySchema
+// (FR-EVT-8: "exactly one data-entry flow," never a sequence of partial
+// per-step writes).
+export const createEventBodySchema = z.object({
+  eventFamilyType: z.string().trim().min(1),
+  status: z.nativeEnum(EventStatus).optional(),
+  eventManager: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid event_manager id.'),
+  clientContacts: z.array(clientContactSchema).min(1),
+  sessions: z.array(createEventSessionInputSchema).optional(),
+  accommodation: updateAccommodationBodySchema.optional(),
+  extras: extrasFieldsSchema.optional(),
+  extraLineItems: z.array(manualLineItemSchema).optional(),
+});
+
 // Every field optional (PATCH semantics) — a caller sends only what
 // changed. No `type` — switching an Item between Meal/Event isn't
 // offered, mirroring aaradhya-api's own updateItemBodySchema.
@@ -633,6 +675,7 @@ export const eventResultSchema = z.object({
   payment: paymentResultSchema,
   documentsChecklist: documentsChecklistResultSchema,
   extras: extrasResultSchema,
+  extraLineItems: z.array(manualLineItemResultSchema),
   sessions: z.array(sessionResultSchema),
   createdBy: z.string(),
   createdAt: z.string(),
@@ -654,6 +697,7 @@ export const filteredEventResultSchema = eventResultSchema.extend({
   accommodation: filteredAccommodationResultSchema.optional(),
   payment: paymentResultSchema.optional(),
   extras: extrasResultSchema.optional(),
+  extraLineItems: z.array(manualLineItemResultSchema).optional(),
   sessions: z.array(filteredSessionResultSchema),
 });
 

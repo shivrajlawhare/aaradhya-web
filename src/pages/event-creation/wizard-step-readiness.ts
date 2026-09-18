@@ -36,6 +36,13 @@ export const WIZARD_STEP_READY_CHECKS: Partial<Record<WizardStepId, (stepData: W
   // here — this registry only ever reads a step's own stored data, the
   // same narrow contract every other entry above already keeps to.
   'sessions-items': (stepData) => stepData?.allDatesVisited === true,
+  // STORY-068 — disables the shared footer's "Generate Quotation" button
+  // while a submission is in flight (review-step.tsx mirrors its own
+  // isSubmitting into the wizard store precisely so this registry, not a
+  // prop threaded down from outside, can gate it) — otherwise a second
+  // click during the async POST /events call could fire a duplicate
+  // submission.
+  review: (stepData) => stepData?.isSubmitting !== true,
 };
 
 export const isWizardStepReady = (step: WizardStepId, stepData: WizardStepData | undefined): boolean => {

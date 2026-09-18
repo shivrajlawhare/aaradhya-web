@@ -150,6 +150,11 @@ const AccommodationStep = () => {
   // reasoning event-details-step.tsx's own endDate check documents.
   const isRangeInvalid = Boolean(checkInDate) && Boolean(checkOutDate) && checkOutDate < checkInDate;
   const totalDays = !isRangeInvalid ? computeTotalDays(checkInDate, checkOutDate) : null;
+  // A room line entered before check-in/check-out are both set still needs
+  // some total to display — falls back to 1 (STORY-068's own decision,
+  // matching aaradhya-api's own identical fallback) rather than always
+  // reading 0 for every line until dates are chosen.
+  const totalDaysForMath = totalDays ?? 1;
 
   const handleAddRoomLine = () => {
     setRows((current) => [...current, { id: createRowId(), roomType: '', occupancy: 0, tariff: 0, noOfRooms: 0, locked: false }]);
@@ -174,7 +179,7 @@ const AccommodationStep = () => {
   };
 
   const totalOccupancy = computeTotalOccupancy(rows);
-  const totalCharges = computeTotalCharges(rows);
+  const totalCharges = computeTotalCharges(rows, totalDaysForMath);
 
   if (isMasterListsLoading) {
     return (
@@ -304,7 +309,7 @@ const AccommodationStep = () => {
                   />
                 </TableCell>
                 <TableCell sx={numericCellStyles}>
-                  <Typography variant="bodyM">{formatAmount(computeRoomLineTotalInclGst(row))}</Typography>
+                  <Typography variant="bodyM">{formatAmount(computeRoomLineTotalInclGst(row, totalDaysForMath))}</Typography>
                 </TableCell>
                 <TableCell>
                   {!row.locked && (
