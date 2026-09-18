@@ -63,3 +63,23 @@ export const formatEventDate = (date: string): string => {
 // renderer (STORY-069+) would also produce from the same inputs.
 export const formatQuotationPax = (pax: number, limitedSeating: boolean): string =>
   limitedSeating ? `L.S. (${pax}pax)` : `${pax}`;
+
+// 'X,XX,XXX/-' — Indian digit grouping, trailing '/-', no currency symbol
+// (this story's own AC for the Event Details "Selected Venue Cost" column).
+// Deliberately re-implements format-amount.ts's own Intl.NumberFormat
+// ('en-IN') grouping rather than importing it — that helper lives under
+// pages/event-detail, and this file (src/utils) is meant to stay a leaf
+// dependency other pages/tests can import without pulling in a page module.
+export const formatQuotationAmount = (amount: number): string => `${new Intl.NumberFormat('en-IN').format(amount)}/-`;
+
+const pad2 = (value: number): string => String(value).padStart(2, '0');
+
+// 'DD/MM/YYYY' from a real Date (as opposed to formatEventDate above, which
+// parses the wizard's own 'YYYY-MM-DD' strings) — the Quotation's own
+// "Quotation Date" row (FR-QUO-6): always today, computed at render/
+// generation time, never a stored/editable value. Deliberately reads local
+// calendar getters (getDate/getMonth/getFullYear), not UTC ones — "today"
+// for an Aaradhya business day means the caller's own local day, matching
+// what a plain `new Date()` default at real generation time already means.
+export const formatQuotationGenerationDate = (date: Date): string =>
+  `${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}/${date.getFullYear()}`;

@@ -234,20 +234,24 @@ describe('QuotationPreviewPage', () => {
     });
     renderPage();
 
-    expect(await screen.findByText('Priya Nair — 9876543210 (Bride)')).toBeInTheDocument();
-    expect(screen.getByText('Wedding — Lawn')).toBeInTheDocument();
+    expect(await screen.findByText('Bride')).toBeInTheDocument();
+    expect(screen.getByText('Priya Nair')).toBeInTheDocument();
+    expect(screen.getByText('9876543210')).toBeInTheDocument();
+    expect(screen.getByText('Wedding')).toBeInTheDocument();
+    expect(screen.getByText('Lawn')).toBeInTheDocument();
+    expect(screen.getByText('5,000/-')).toBeInTheDocument();
     expect(screen.getByText('Double: 2 occupancy × 1 rooms — 5900')).toBeInTheDocument();
     // venueTotal 5000 + foodTotalInclGst (2000 × 1.18 = 2360) + accommodationTotal 5900 = 13260.
     expect(await screen.findByText('13,260')).toBeInTheDocument();
   });
 
-  it('uses the display typeface prominently for the header', async () => {
+  it('renders the "Event Quotation" title and the Aaradhya wordmark', async () => {
     seedSession();
     mockApi({ event: makeEvent() });
     renderPage();
 
-    const heading = await screen.findByRole('heading', { name: 'Aaradhya' });
-    expect(heading).toHaveClass('MuiTypography-display');
+    expect(await screen.findByRole('heading', { name: 'Event Quotation' })).toBeInTheDocument();
+    expect(screen.getByText('AARADHYA')).toBeInTheDocument();
   });
 
   it('renders "None" for an Event with no Accommodation entered at all', async () => {
@@ -255,7 +259,7 @@ describe('QuotationPreviewPage', () => {
     mockApi({ event: makeEvent() });
     renderPage();
 
-    await screen.findByText('ARD-EVT-2026-001', { exact: false });
+    await screen.findByText('Client Details');
     expect(screen.getByText('None')).toBeInTheDocument();
   });
 
@@ -282,7 +286,7 @@ describe('QuotationPreviewPage', () => {
 
     await screen.findByText('Client Details');
     expect(screen.getByText('No Sessions yet.')).toBeInTheDocument();
-    expect(screen.queryByText('Wedding — Lawn')).not.toBeInTheDocument();
+    expect(screen.queryByText('Wedding')).not.toBeInTheDocument();
   });
 
   it("matches the PDF's grand total exactly for the same Event (cross-check against STORY-043)", async () => {

@@ -1,23 +1,13 @@
 import type { ReactNode } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import { Box, CircularProgress, Link, Stack, Typography } from '@mui/material';
-import type { z } from 'zod';
 import { tsr } from '../../api/client';
-import { SessionStatus, type filteredEventResultSchema } from '../../contract';
 import GenerateQuotationPdfButton from '../event-detail/generate-quotation-pdf-button';
 import { toDateInputValue } from '../event-detail/date-input';
 import TotalCostSummaryPanel from '../event-detail/total-cost-summary-panel';
 import { EVENT_LIST_PATH } from '../../routes';
-import { headerStyles, numericLineStyles, pageStyles, sectionStyles } from './quotation-preview-page.styles';
-
-type PublicSession = z.infer<typeof filteredEventResultSchema>['sessions'][number];
-
-// A Cancelled Session is excluded here, matching aaradhya-api's own
-// STORY-043 PDF renderer exactly — its cost isn't counted in the Total
-// Cost Summary (STORY-041's own filter), so showing it as a real scheduled
-// item on this "mirrors the same data" preview would diverge from what the
-// PDF (and the Grand Total below it) actually reflects.
-const isActiveSession = (session: PublicSession): boolean => session.sessionStatus === SessionStatus.Active;
+import QuotationDocument from './quotation-document';
+import { numericLineStyles, pageStyles, sectionStyles } from './quotation-preview-page.styles';
 
 const QuotationPreviewPage = () => {
   const { id } = useParams();
@@ -62,7 +52,6 @@ const QuotationPreviewPage = () => {
     );
   } else {
     const event = eventQuery.data.body;
-    const activeSessions = event.sessions.filter(isActiveSession);
 
     // Extracted to a variable rather than an inline ternary in the JSX
     // below (typescript-rules rule 5) — also handles `accommodation` itself
@@ -92,77 +81,16 @@ const QuotationPreviewPage = () => {
       );
     }
 
-    const dateRange =
-      activeSessions.length === 0
-        ? null
-        : {
-            start: activeSessions.reduce(
-              (earliest, session) => (session.startDate < earliest ? session.startDate : earliest),
-              activeSessions[0]!.startDate,
-            ),
-            end: activeSessions.reduce(
-              (latest, session) => (session.endDate > latest ? session.endDate : latest),
-              activeSessions[0]!.endDate,
-            ),
-          };
-
     content = (
       <>
-        <Box sx={headerStyles}>
-          {/* type-display (Fraunces), per this story's own Tokens line —
-              one of the few places the theme's own rule says the app is
-              "speaking as Aaradhya". */}
-          <Typography variant="display" component="h1">
-            Aaradhya
-          </Typography>
-          <Typography variant="titleM" component="h2">
-            {event.eventFamilyType} — {event.eventId}
-          </Typography>
-          <Typography variant="bodyM">
-            {dateRange
-              ? `${toDateInputValue(dateRange.start)} to ${toDateInputValue(dateRange.end)}`
-              : 'No Sessions scheduled yet.'}
-          </Typography>
-        </Box>
-
-        <Stack sx={sectionStyles}>
-          <Typography variant="titleM" component="h2">
-            Client Details
-          </Typography>
-          {/* `?? []` — RequireRole (app.tsx) already guarantees every
-              session reaching this component is an Event Manager, whose
-              own clientContacts is always present unfiltered; the fallback
-              exists purely to satisfy the field's `.optional()` type
-              (STORY-052's filteredEventResultSchema), matching this page's
-              own defensive posture elsewhere (Accommodation, Sessions'
-              venue cost) rather than trusting the route guard alone. */}
-          {(event.clientContacts ?? []).map((contact, index) => (
-            <Typography key={index} variant="bodyM">
-              {contact.name} — {contact.contactNumber} ({contact.role})
-            </Typography>
-          ))}
-        </Stack>
-
-        <Stack sx={sectionStyles}>
-          <Typography variant="titleM" component="h2">
-            Sessions
-          </Typography>
-          {activeSessions.length === 0 ? (
-            <Typography variant="bodyM">No Sessions yet.</Typography>
-          ) : (
-            activeSessions.map((session) => (
-              <Stack key={session.id}>
-                <Typography variant="bodyL">
-                  {session.sessionType} — {session.venue}
-                </Typography>
-                <Typography variant="bodyM" sx={numericLineStyles}>
-                  {toDateInputValue(session.startDate)} to {toDateInputValue(session.endDate)} · {session.pax} pax ·
-                  venue cost {session.venueCost ?? '—'}
-                </Typography>
-              </Stack>
-            ))
-          )}
-        </Stack>
+        {/* One shared render tree for both this on-screen preview and the
+            eventual server-side Playwright PDF render (STORY-069's own UI
+            line, Aaradhya_Quotation_PDF_Strategy.md §4) — `?? []` matches
+            this page's own pre-existing defensive posture elsewhere
+            (Accommodation, Sessions' venue cost) for a field that's
+            `.optional()` on filteredEventResultSchema (STORY-052) even
+            though RequireRole already guarantees an Event Manager here. */}
+        <QuotationDocument clientContacts={event.clientContacts ?? []} sessions={event.sessions} />
 
         <Stack sx={sectionStyles}>
           <Typography variant="titleM" component="h2">

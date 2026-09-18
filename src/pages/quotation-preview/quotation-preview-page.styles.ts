@@ -10,16 +10,6 @@ export const pageStyles: SxProps<Theme> = {
   p: `${spaceTokens.space16}px`,
 };
 
-// line, per this story's own Tokens line — separates the display-typeface
-// header from the body sections below it.
-export const headerStyles: SxProps<Theme> = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: `${spaceTokens.space4}px`,
-  pb: `${spaceTokens.space16}px`,
-  borderBottom: `1px solid ${colorTokens.line}`,
-};
-
 export const sectionStyles: SxProps<Theme> = {
   display: 'flex',
   flexDirection: 'column',
