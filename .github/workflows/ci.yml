@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Least-privilege default: this job only reads code and runs local
+# commands, it never needs to write to repo contents, PRs, or anything
+# else — explicit here rather than inheriting whatever the repository's
+# own default workflow permissions happen to be set to.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Typecheck, test, and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      # Includes tests/pages/quotation-fidelity.test.tsx (STORY-075) — the
+      # acceptance test proving the Quotation renderer reproduces both
+      # reference PDFs (docs/example_quatations/, aaradhya-api repo) table
+      # by table. A future change that breaks fidelity against either
+      # reference fails this step, and therefore the build, rather than
+      # silently regressing (this story's own AC).
+      - run: npm test
+
+      - run: npm run build
