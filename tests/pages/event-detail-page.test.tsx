@@ -701,13 +701,14 @@ const renderPage = (id = 'event-1') => {
 
 // MUI X's DatePicker (STORY-057) has no single <input> to fireEvent.change
 // the way the native <input type="date"> it replaced did — its field is a
-// group of separate Month/Day/Year sections (role="spinbutton"), filled by
+// group of separate Day/Month/Year sections (role="spinbutton"), filled by
 // typing digits into the first section and letting each section
 // auto-advance, the same interaction a real user's keyboard typing drives.
+// Digit order is DD/MM/YYYY (theme.ts's own MuiDatePicker defaultProps).
 const fillDatePicker = async (
   user: ReturnType<typeof userEvent.setup>,
   labelText: string,
-  mmddyyyy: string,
+  ddmmyyyy: string,
 ) => {
   const group = screen.getByRole('group', { name: labelText });
   const sections = within(group).getAllByRole('spinbutton');
@@ -716,7 +717,7 @@ const fillDatePicker = async (
     throw new Error(`expected ${labelText} to have at least one date section`);
   }
   await user.click(firstSection);
-  await user.keyboard(mmddyyyy);
+  await user.keyboard(ddmmyyyy);
 };
 
 afterEach(() => {
@@ -1452,8 +1453,8 @@ describe('EventDetailPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
 
     await screen.findByRole('group', { name: 'Start date' });
-    await fillDatePicker(user, 'Start date', '06152026');
-    await fillDatePicker(user, 'End date', '06152026');
+    await fillDatePicker(user, 'Start date', '15062026');
+    await fillDatePicker(user, 'End date', '15062026');
     fireEvent.click(screen.getByRole('button', { name: 'Add session' }));
 
     expect(await screen.findByText('Engagement — Poolside')).toBeInTheDocument();
@@ -1469,8 +1470,8 @@ describe('EventDetailPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
 
     await screen.findByRole('group', { name: 'Start date' });
-    await fillDatePicker(user, 'Start date', '06152026');
-    await fillDatePicker(user, 'End date', '06152026');
+    await fillDatePicker(user, 'Start date', '15062026');
+    await fillDatePicker(user, 'End date', '15062026');
 
     const stageToggle = screen.getByRole('button', { name: 'Stage' });
     fireEvent.click(stageToggle); // on
@@ -1492,8 +1493,8 @@ describe('EventDetailPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
 
     await screen.findByRole('group', { name: 'Start date' });
-    await fillDatePicker(user, 'Start date', '06152026');
-    await fillDatePicker(user, 'End date', '06142026');
+    await fillDatePicker(user, 'Start date', '15062026');
+    await fillDatePicker(user, 'End date', '14062026');
     fireEvent.click(screen.getByRole('button', { name: 'Add session' }));
 
     expect(await screen.findByText('End date must be on or after start date.')).toBeInTheDocument();

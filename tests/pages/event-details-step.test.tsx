@@ -118,12 +118,14 @@ const renderWizard = (initialPath: string) => {
 const eventDetailsPath = WIZARD_STEPS[1]!.path;
 
 // MUI X's DatePicker has no single <input> to fireEvent.change — its field
-// is a group of separate Month/Day/Year sections (role="spinbutton"),
+// is a group of separate Day/Month/Year sections (role="spinbutton"),
 // filled by typing digits into the first section and letting each section
 // auto-advance, the same pattern event-detail-page.test.tsx's own
 // fillDatePicker already established for session-form.tsx's identical
-// DatePicker usage.
-const fillDatePicker = async (user: ReturnType<typeof userEvent.setup>, labelText: string, mmddyyyy: string) => {
+// DatePicker usage. Digit order is DD/MM/YYYY — theme.ts's own MuiDatePicker
+// defaultProps (format: 'DD/MM/YYYY'), so Day is the first section, not
+// Month.
+const fillDatePicker = async (user: ReturnType<typeof userEvent.setup>, labelText: string, ddmmyyyy: string) => {
   const group = screen.getByRole('group', { name: labelText });
   const sections = within(group).getAllByRole('spinbutton');
   const firstSection = sections[0];
@@ -131,7 +133,7 @@ const fillDatePicker = async (user: ReturnType<typeof userEvent.setup>, labelTex
     throw new Error(`expected ${labelText} to have at least one date section`);
   }
   await user.click(firstSection);
-  await user.keyboard(mmddyyyy);
+  await user.keyboard(ddmmyyyy);
 };
 
 const selectOption = async (labelText: string, optionName: string) => {
@@ -141,12 +143,12 @@ const selectOption = async (labelText: string, optionName: string) => {
 
 const fillMinimalEvent = async (
   user: ReturnType<typeof userEvent.setup>,
-  { eventType = 'Wedding', venue = 'Poolside', mmddyyyy = '09122026' } = {},
+  { eventType = 'Wedding', venue = 'Poolside', ddmmyyyy = '12092026' } = {},
 ) => {
   await selectOption('Event Type', eventType);
   await selectOption('Venue', venue);
-  await fillDatePicker(user, 'Start date', mmddyyyy);
-  await fillDatePicker(user, 'End date', mmddyyyy);
+  await fillDatePicker(user, 'Start date', ddmmyyyy);
+  await fillDatePicker(user, 'End date', ddmmyyyy);
 };
 
 beforeEach(() => {
@@ -281,11 +283,11 @@ describe('EventDetailsStep', () => {
     renderWizard(eventDetailsPath);
     await screen.findByLabelText('Event Type');
 
-    await fillMinimalEvent(user, { eventType: 'Haldi', venue: 'Poolside', mmddyyyy: '02262027' });
+    await fillMinimalEvent(user, { eventType: 'Haldi', venue: 'Poolside', ddmmyyyy: '26022027' });
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
     await screen.findByText('Haldi');
 
-    await fillMinimalEvent(user, { eventType: 'Wedding', venue: 'Half Banquet', mmddyyyy: '02262027' });
+    await fillMinimalEvent(user, { eventType: 'Wedding', venue: 'Half Banquet', ddmmyyyy: '26022027' });
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
 
     expect(await screen.findByText('Wedding')).toBeInTheDocument();
@@ -301,8 +303,8 @@ describe('EventDetailsStep', () => {
     await screen.findByLabelText('Event Type');
     await selectOption('Event Type', 'Wedding');
     await selectOption('Venue', 'Poolside');
-    await fillDatePicker(user, 'Start date', '09152026');
-    await fillDatePicker(user, 'End date', '09102026');
+    await fillDatePicker(user, 'Start date', '15092026');
+    await fillDatePicker(user, 'End date', '10092026');
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
 
@@ -336,7 +338,7 @@ describe('EventDetailsStep', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderWizard(eventDetailsPath);
     await screen.findByLabelText('Event Type');
-    await fillMinimalEvent(user, { mmddyyyy: '09122026' });
+    await fillMinimalEvent(user, { ddmmyyyy: '12092026' });
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
     await screen.findByText('Wedding');
 
@@ -361,8 +363,8 @@ describe('EventDetailsStep', () => {
     await screen.findByLabelText('Event Type');
     await selectOption('Event Type', 'Wedding');
     await selectOption('Venue', 'Poolside');
-    await fillDatePicker(user, 'Start date', '09122026');
-    await fillDatePicker(user, 'End date', '09132026');
+    await fillDatePicker(user, 'Start date', '12092026');
+    await fillDatePicker(user, 'End date', '13092026');
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
     await screen.findByText('Wedding');
 
@@ -391,10 +393,10 @@ describe('EventDetailsStep', () => {
 
     // Two same-date Sessions (STORY-065's own supported case) — both cover
     // the date the stored Sessions & Items entries live under.
-    await fillMinimalEvent(user, { eventType: 'Haldi', venue: 'Poolside', mmddyyyy: '02262027' });
+    await fillMinimalEvent(user, { eventType: 'Haldi', venue: 'Poolside', ddmmyyyy: '26022027' });
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
     await screen.findByText('Haldi');
-    await fillMinimalEvent(user, { eventType: 'Wedding', venue: 'Half Banquet', mmddyyyy: '02262027' });
+    await fillMinimalEvent(user, { eventType: 'Wedding', venue: 'Half Banquet', ddmmyyyy: '26022027' });
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
     await screen.findByText('Wedding');
 
@@ -417,7 +419,7 @@ describe('EventDetailsStep', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(false);
     renderWizard(eventDetailsPath);
     await screen.findByLabelText('Event Type');
-    await fillMinimalEvent(user, { mmddyyyy: '09122026' });
+    await fillMinimalEvent(user, { ddmmyyyy: '12092026' });
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
     await screen.findByText('Wedding');
 

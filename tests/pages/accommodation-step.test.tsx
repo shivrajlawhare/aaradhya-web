@@ -81,7 +81,8 @@ const accommodationPath = WIZARD_STEPS[2]!.path;
 
 // Same sectioned-spinbutton fill pattern event-details-step.test.tsx's own
 // fillDatePicker already established for this exact DatePicker component.
-const fillDatePicker = async (user: ReturnType<typeof userEvent.setup>, labelText: string, mmddyyyy: string) => {
+// Digit order is DD/MM/YYYY (theme.ts's own MuiDatePicker defaultProps).
+const fillDatePicker = async (user: ReturnType<typeof userEvent.setup>, labelText: string, ddmmyyyy: string) => {
   const group = screen.getByRole('group', { name: labelText });
   const sections = within(group).getAllByRole('spinbutton');
   const firstSection = sections[0];
@@ -89,7 +90,7 @@ const fillDatePicker = async (user: ReturnType<typeof userEvent.setup>, labelTex
     throw new Error(`expected ${labelText} to have at least one date section`);
   }
   await user.click(firstSection);
-  await user.keyboard(mmddyyyy);
+  await user.keyboard(ddmmyyyy);
 };
 
 beforeEach(() => {
@@ -183,7 +184,7 @@ describe('AccommodationStep', () => {
 
     expect(screen.getByRole('button', { name: 'Next: Sessions & Items →' })).toBeDisabled();
 
-    await fillDatePicker(user, 'Check-in date', '12102026');
+    await fillDatePicker(user, 'Check-in date', '10122026');
     await fillDatePicker(user, 'Check-out date', '12122026');
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Next: Sessions & Items →' })).toBeEnabled());
@@ -193,7 +194,7 @@ describe('AccommodationStep', () => {
     const user = userEvent.setup();
     renderWizard(accommodationPath);
     await screen.findByText('Deluxe');
-    await fillDatePicker(user, 'Check-in date', '12102026');
+    await fillDatePicker(user, 'Check-in date', '10122026');
     await fillDatePicker(user, 'Check-out date', '12122026');
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Next: Sessions & Items →' })).toBeEnabled());
@@ -205,11 +206,11 @@ describe('AccommodationStep', () => {
     renderWizard(accommodationPath);
     await screen.findByText('Deluxe');
 
-    await fillDatePicker(user, 'Check-in date', '12102026');
+    await fillDatePicker(user, 'Check-in date', '10122026');
     await fillDatePicker(user, 'Check-out date', '12122026');
     await waitFor(() => expect(screen.getByText(/Total days: 2/)).toBeInTheDocument());
 
-    await fillDatePicker(user, 'Check-out date', '12082026');
+    await fillDatePicker(user, 'Check-out date', '08122026');
 
     expect(await screen.findByText('Check-out must be on or after check-in.')).toBeInTheDocument();
     expect(screen.getByText(/Total days: —/)).toBeInTheDocument();
@@ -222,11 +223,11 @@ describe('AccommodationStep', () => {
     await screen.findByText('Deluxe');
     fireEvent.change(screen.getByLabelText('Number of rooms for room line 1'), { target: { value: '2' } });
 
-    await fillDatePicker(user, 'Check-in date', '12102026');
+    await fillDatePicker(user, 'Check-in date', '10122026');
     await fillDatePicker(user, 'Check-out date', '12122026');
     await waitFor(() => expect(screen.getByText(/Total days: 2/)).toBeInTheDocument());
 
-    await fillDatePicker(user, 'Check-out date', '12152026');
+    await fillDatePicker(user, 'Check-out date', '15122026');
 
     await waitFor(() => expect(screen.getByText(/Total days: 5/)).toBeInTheDocument());
     // Room data entered before the date edit is untouched.
@@ -245,7 +246,7 @@ describe('AccommodationStep', () => {
     );
     renderWizard(accommodationPath);
     await screen.findByText('Deluxe');
-    await fillDatePicker(user, 'Check-in date', '12102026');
+    await fillDatePicker(user, 'Check-in date', '10122026');
     await fillDatePicker(user, 'Check-out date', '12122026');
     await waitFor(() => expect(screen.getByText(/Total days: 2/)).toBeInTheDocument());
 

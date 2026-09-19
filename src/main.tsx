@@ -29,7 +29,10 @@ createRoot(rootElement).render(
           <CssBaseline />
           {/* Every DatePicker/StaticTimePicker in the app (STORY-057) reads
               from this one adapter — dayjs, the lightest of the date libs
-              @mui/x-date-pickers supports. */}
+              @mui/x-date-pickers supports. DD/MM/YYYY comes from theme.ts's
+              own MuiDatePicker defaultProps, not a locale swap here — a
+              locale also changes week-start/month names as a side effect,
+              which this fix isn't about. */}
           <LocalizationProvider dateAdapter={AdapterDayjs}>
             <AuthProvider>
               <BrowserRouter>
