@@ -532,10 +532,14 @@ const mealItemBodySchema = z.object({
   endTime: z.string().trim().min(1).optional(),
 });
 
+// STORY-071 — eventName/venue relaxed from required to optional, mirroring
+// aaradhya-api's own eventItemBodySchema: both reference quotations
+// (aaradhya-api's docs/example_quatations/) print Ceremony/Event Items with
+// no venue at all, and one has a Ceremony Item with every field left blank.
 const eventItemBodySchema = z.object({
   type: z.literal(ItemType.Event),
-  eventName: z.string().trim().min(1),
-  venue: z.string().trim().min(1),
+  eventName: z.string().trim().optional(),
+  venue: z.string().trim().optional(),
   startTime: z.string().trim().min(1).optional(),
   endTime: z.string().trim().min(1).optional(),
 });
@@ -578,14 +582,17 @@ export const createEventBodySchema = z.object({
 // Every field optional (PATCH semantics) — a caller sends only what
 // changed. No `type` — switching an Item between Meal/Event isn't
 // offered, mirroring aaradhya-api's own updateItemBodySchema.
+// eventName/venue no longer require min(1) (STORY-071, mirroring
+// aaradhya-api) — an explicit "" clears a previously-set value back to
+// blank rather than being rejected.
 export const updateItemBodySchema = z.object({
   mealName: z.string().trim().min(1).optional(),
   pax: z.number().min(0).optional(),
   costPerPlate: z.number().min(0).optional(),
   limitedSeating: z.boolean().optional(),
   menuItems: z.array(menuItemRefSchema).optional(),
-  eventName: z.string().trim().min(1).optional(),
-  venue: z.string().trim().min(1).optional(),
+  eventName: z.string().trim().optional(),
+  venue: z.string().trim().optional(),
   startTime: z.string().trim().min(1).optional(),
   endTime: z.string().trim().min(1).optional(),
 });

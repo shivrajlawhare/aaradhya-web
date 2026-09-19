@@ -109,3 +109,12 @@ export const formatAccommodationDate = (date: string): string => {
 // not "73,500" or "73,500/-"); only the named summary/total fields above
 // get digit-grouping and a Rupee prefix or suffix at all.
 export const formatQuotationRupees = (amount: number): string => `Rs. ${new Intl.NumberFormat('en-IN').format(amount)} /-`;
+
+// '<amount>/-' — a bare, ungrouped number (STORY-071's own per-date Event
+// Details "Cost" column). Verified against both reference quotations: even
+// a 5-digit value (example_quatation_1.pdf's own "Chaat Counter" row, cost
+// 45000) prints "45000/-", not "45,000/-" — the same "no digit grouping"
+// convention a Room Line's own Tariff/Total including GST cells already
+// established (STORY-070), just with a trailing "/-" this column also
+// happens to print.
+export const formatQuotationItemCost = (amount: number): string => `${amount}/-`;

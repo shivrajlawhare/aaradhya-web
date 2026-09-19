@@ -45,6 +45,12 @@ const makeAccommodation = (overrides: Partial<MockAccommodation> = {}): MockAcco
 interface MockItem {
   type: string;
   totalCost: number | null;
+  // STORY-071 — QuotationDocument resolves each Item's own menuItems id
+  // array to display names; every real Item the API returns always has
+  // this field (itemResultSchema's own `menuItems: z.array(z.string())`,
+  // never `.optional()`), so these fixtures match that shape too rather
+  // than the page defensively guarding against a state that can't happen.
+  menuItems: string[];
 }
 
 interface MockSession {
@@ -162,6 +168,13 @@ const mockApi = ({ event, notFound = false }: { event?: MockEvent; notFound?: bo
       if (event && url.endsWith(`/events/${event.id}/quotation.pdf`)) {
         return pdfResponse(event);
       }
+      // STORY-071 — QuotationDocument now resolves each Meal Item's raw
+      // menuItems id array to display names via this list, fetched once by
+      // quotation-preview-page.tsx itself; no mock Event in this file's own
+      // fixtures attaches any menuItems id, so an empty list is enough.
+      if (url.includes('/menu-items')) {
+        return jsonResponse(200, []);
+      }
       if (/\/events\/[^/]+$/.test(url)) {
         if (notFound || !event) {
           return jsonResponse(404, { error: { code: 'EVENT_NOT_FOUND', message: 'No Event with that id.' } });
@@ -227,7 +240,7 @@ describe('QuotationPreviewPage', () => {
             endDate: '2026-06-15T00:00:00.000Z',
             pax: 200,
             sessionStatus: 'Active',
-            items: [{ type: 'Meal', totalCost: 2000 }],
+            items: [{ type: 'Meal', totalCost: 2000, menuItems: [] }],
           },
         ],
       }),
@@ -306,7 +319,7 @@ describe('QuotationPreviewPage', () => {
           endDate: '2026-06-15T00:00:00.000Z',
           pax: 200,
           sessionStatus: 'Active',
-          items: [{ type: 'Meal', totalCost: 2000 }],
+          items: [{ type: 'Meal', totalCost: 2000, menuItems: [] }],
         },
       ],
       extras: { decoration: 1000, photographer: 0, bhatji: 0 },

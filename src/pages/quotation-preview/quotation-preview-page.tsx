@@ -30,8 +30,19 @@ const QuotationPreviewPage = () => {
     retry: false,
   });
 
+  // STORY-071 — the full Menu Item master list, fetched once here the same
+  // way items-section.tsx's own pre-existing menuItemsById lookup already
+  // is: a Meal Item's own `menuItems` field is an array of ids only (no
+  // populate/expand convention exists anywhere), so this page resolves them
+  // to display names itself before handing them to QuotationDocument, which
+  // stays a pure, id-lookup-free render tree.
+  const menuItemsQuery = tsr.listMenuItems.useQuery({
+    queryKey: ['menu-items'],
+    queryData: { query: {} },
+  });
+
   let content: ReactNode;
-  if (!id || eventQuery.isPending) {
+  if (!id || eventQuery.isPending || menuItemsQuery.isPending) {
     content = <CircularProgress aria-label="Loading event" />;
   } else if (eventQuery.isError) {
     const error = eventQuery.error;
@@ -49,8 +60,31 @@ const QuotationPreviewPage = () => {
         </Typography>
       </Box>
     );
+  } else if (menuItemsQuery.isError) {
+    // Without this branch, a failed GET /menu-items would silently fall
+    // through to the success branch below with an empty menuItemsById map —
+    // every Meal Item's Menu column would then print raw Menu Item ObjectId
+    // strings instead of names, with no indication anything went wrong.
+    content = (
+      <Box>
+        <Typography variant="bodyM">Something went wrong. Please try again.</Typography>
+      </Box>
+    );
   } else {
     const event = eventQuery.data.body;
+    const menuItemsById = new Map((menuItemsQuery.data?.body ?? []).map((menuItem) => [menuItem.id, menuItem.name]));
+    // Resolves each Session's raw `items` (menuItems as ids only) into the
+    // shape QuotationDocument actually wants (STORY-071) — `?? []` matches
+    // this page's own pre-existing defensive posture for `items` being
+    // `.optional()` on filteredSessionResultSchema (STORY-052) even though
+    // RequireRole already guarantees an Event Manager here.
+    const sessionsForQuotation = event.sessions.map((session) => ({
+      ...session,
+      items: (session.items ?? []).map((item) => ({
+        ...item,
+        menuItemNames: item.menuItems.map((menuItemId) => menuItemsById.get(menuItemId) ?? menuItemId),
+      })),
+    }));
 
     content = (
       <>
@@ -63,7 +97,7 @@ const QuotationPreviewPage = () => {
             already guarantees an Event Manager here. */}
         <QuotationDocument
           clientContacts={event.clientContacts ?? []}
-          sessions={event.sessions}
+          sessions={sessionsForQuotation}
           accommodation={event.accommodation}
         />
 

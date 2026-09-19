@@ -5,8 +5,9 @@ import QuotationDocument, {
   type QuotationDocumentAccommodation,
   type QuotationDocumentClientContact,
   type QuotationDocumentSession,
+  type QuotationDocumentSessionItem,
 } from '../../src/pages/quotation-preview/quotation-document';
-import { ClientContactRole, SessionStatus } from '../../src/contract';
+import { ClientContactRole, ItemType, SessionStatus } from '../../src/contract';
 import { theme } from '../../src/theme/theme';
 
 interface RenderOptions {
@@ -55,6 +56,37 @@ const makeSession = (overrides: Partial<QuotationDocumentSession> = {}): Quotati
   endTime: '22:00',
   pax: 30,
   sessionStatus: SessionStatus.Active,
+  items: [],
+  ...overrides,
+});
+
+const makeMealItem = (overrides: Partial<QuotationDocumentSessionItem> = {}): QuotationDocumentSessionItem => ({
+  id: 'meal-item-1',
+  type: ItemType.Meal,
+  mealName: 'Hi Tea snacks - poolside',
+  pax: 30,
+  costPerPlate: 275,
+  limitedSeating: false,
+  eventName: null,
+  venue: null,
+  startTime: '18:00',
+  endTime: '19:00',
+  menuItemNames: ['Tea', 'Coffee'],
+  ...overrides,
+});
+
+const makeCeremonyItem = (overrides: Partial<QuotationDocumentSessionItem> = {}): QuotationDocumentSessionItem => ({
+  id: 'ceremony-item-1',
+  type: ItemType.Event,
+  mealName: null,
+  pax: null,
+  costPerPlate: null,
+  limitedSeating: null,
+  eventName: 'Muhurta',
+  venue: null,
+  startTime: null,
+  endTime: null,
+  menuItemNames: [],
   ...overrides,
 });
 
@@ -282,5 +314,278 @@ describe('QuotationDocument', () => {
 
     const table = screen.getByRole('table', { name: 'Accommodation Details' });
     expect(within(table).getByText('Rs. 0 /-')).toBeInTheDocument();
+  });
+
+  describe('per-date Event Details tables (STORY-071)', () => {
+    it('renders one table per distinct date, in date order, headed "Event Details – DD/MM/YYYY"', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            id: 'wedding',
+            sessionType: 'Wedding',
+            startDate: '2026-12-11T00:00:00.000Z',
+            items: [makeMealItem({ id: 'breakfast', mealName: 'Breakfast' })],
+          }),
+          makeSession({
+            id: 'engagement',
+            sessionType: 'Engagement',
+            startDate: '2026-12-10T00:00:00.000Z',
+            items: [makeMealItem({ id: 'hitea', mealName: 'Hi Tea snacks - poolside' })],
+          }),
+        ],
+      });
+
+      const headings = screen.getAllByRole('heading', { level: 2 });
+      const dateHeadings = headings.filter((heading) => heading.textContent?.startsWith('Event Details –'));
+      // Date order (10/12 before 11/12), not Session entry order (Wedding
+      // was listed first above).
+      expect(dateHeadings.map((heading) => heading.textContent)).toEqual([
+        'Event Details – 10/12/2026',
+        'Event Details – 11/12/2026',
+      ]);
+      expect(screen.getByRole('table', { name: 'Event Details – 10/12/2026' })).toBeInTheDocument();
+      expect(screen.getByRole('table', { name: 'Event Details – 11/12/2026' })).toBeInTheDocument();
+    });
+
+    it('renders a Food/Dining row exactly like example_quatation_1.pdf\'s own "Hi Tea" row', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            startDate: '2026-12-10T00:00:00.000Z',
+            items: [
+              makeMealItem({
+                mealName: 'Hi Tea snacks - poolside',
+                startTime: '18:00',
+                endTime: '19:00',
+                pax: 30,
+                costPerPlate: 275,
+                limitedSeating: false,
+                menuItemNames: ['Tea', 'Coffee', 'Cold Drinks - black', 'Onion Pakoda', 'Veg Sandwich', 'Biscuits'],
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const table = screen.getByRole('table', { name: 'Event Details – 10/12/2026' });
+      const row = within(table).getAllByRole('row')[1]!;
+      const cells = within(row).getAllByRole('cell');
+      expect(cells[0]!.textContent).toBe('Hi Tea snacks - poolside');
+      expect(cells[1]!.textContent).toBe('6pm to 7pm');
+      expect(cells[2]!.textContent).toBe('30');
+      // Ungrouped, not '275/-' formatted with Indian digit grouping — same
+      // "bare number" convention a Room Line's own Tariff cell already
+      // established (STORY-070), just with a trailing "/-".
+      expect(cells[3]!.textContent).toBe('275/-');
+      expect(cells[4]!.textContent).toBe('1. Tea2. Coffee3. Cold Drinks - black4. Onion Pakoda5. Veg Sandwich6. Biscuits');
+    });
+
+    it('renders Number of Pax as "L.S. (Npax)" when limitedSeating is set (FR-QUO-8)', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            startDate: '2026-12-11T00:00:00.000Z',
+            items: [makeMealItem({ mealName: 'Chaat Counter', pax: 300, limitedSeating: true, costPerPlate: 45000 })],
+          }),
+        ],
+      });
+
+      const table = screen.getByRole('table', { name: 'Event Details – 11/12/2026' });
+      expect(within(table).getByText('L.S. (300pax)')).toBeInTheDocument();
+      // A 5-digit Cost still prints bare, no comma grouping (example_
+      // quatation_1.pdf's own "Chaat Counter" row: "45000/-").
+      expect(within(table).getByText('45000/-')).toBeInTheDocument();
+    });
+
+    it('renders a Food/Dining row with a blank Time when the Item\'s own time fields are blank', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            startDate: '2026-12-11T00:00:00.000Z',
+            items: [makeMealItem({ mealName: 'Starter', startTime: null, endTime: null, menuItemNames: [] })],
+          }),
+        ],
+      });
+
+      const table = screen.getByRole('table', { name: 'Event Details – 11/12/2026' });
+      const row = within(table).getAllByRole('row')[1]!;
+      const cells = within(row).getAllByRole('cell');
+      expect(cells[1]!.textContent).toBe('');
+      expect(cells[4]!.textContent).toBe('');
+    });
+
+    it('renders a Ceremony row merged across all 5 columns, shaded grey, with venue appended (no time)', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            startDate: '2026-12-10T00:00:00.000Z',
+            items: [makeCeremonyItem({ eventName: 'Engagement Sangeet', venue: 'Poolside', startTime: null, endTime: null })],
+          }),
+        ],
+      });
+
+      const table = screen.getByRole('table', { name: 'Event Details – 10/12/2026' });
+      const row = within(table).getAllByRole('row')[1]!;
+      const cell = within(row).getAllByRole('cell')[0]!;
+      expect(cell).toHaveAttribute('colspan', '5');
+      expect(cell.textContent).toBe('Engagement Sangeet - Poolside');
+      expect(cell).toHaveStyle({ backgroundColor: 'rgb(217, 217, 217)' });
+    });
+
+    it('renders a Ceremony row with time appended (no venue)', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            startDate: '2026-12-11T00:00:00.000Z',
+            items: [makeCeremonyItem({ eventName: 'Muhurta', venue: null, startTime: '11:00', endTime: '12:30' })],
+          }),
+        ],
+      });
+
+      const table = screen.getByRole('table', { name: 'Event Details – 11/12/2026' });
+      const cell = within(table).getAllByRole('row')[1]!.querySelector('td')!;
+      expect(cell.textContent).toBe('Muhurta 11am to 12:30pm');
+    });
+
+    it('renders a bare Ceremony row (name only, neither time nor venue set)', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            startDate: '2027-02-27T00:00:00.000Z',
+            items: [makeCeremonyItem({ eventName: 'Muhurta', venue: null, startTime: null, endTime: null })],
+          }),
+        ],
+      });
+
+      const table = screen.getByRole('table', { name: 'Event Details – 27/02/2027' });
+      const cell = within(table).getAllByRole('row')[1]!.querySelector('td')!;
+      expect(cell.textContent).toBe('Muhurta');
+    });
+
+    it('renders a wholly-blank Ceremony divider row (example_quatation_2.pdf), not filtered out', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            startDate: '2027-02-26T00:00:00.000Z',
+            items: [
+              makeMealItem({ id: 'hitea', mealName: 'Hi Tea' }),
+              makeCeremonyItem({ id: 'blank', eventName: null, venue: null, startTime: null, endTime: null }),
+              makeMealItem({ id: 'dinner', mealName: 'Dinner - Poolside' }),
+            ],
+          }),
+        ],
+      });
+
+      const table = screen.getByRole('table', { name: 'Event Details – 26/02/2027' });
+      const rows = within(table).getAllByRole('row');
+      // Header + 3 Item rows (Meal, blank Ceremony, Meal) — the blank row
+      // is a real, rendered row, not silently dropped.
+      expect(rows).toHaveLength(4);
+      const blankRowCell = within(rows[2]!).getAllByRole('cell')[0]!;
+      expect(blankRowCell).toHaveAttribute('colspan', '5');
+      expect(blankRowCell.textContent).toBe('');
+    });
+
+    it('pools two Sessions sharing a date into one table, interleaving Items in Session-then-own-item order (example_quatation_2.pdf: Halad+Engagement)', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            id: 'halad',
+            sessionType: 'Halad',
+            startDate: '2027-02-26T00:00:00.000Z',
+            items: [
+              makeMealItem({ id: 'breakfast', mealName: 'Breakfast' }),
+              makeCeremonyItem({ id: 'haldi-event', eventName: 'Haldi Event' }),
+            ],
+          }),
+          makeSession({
+            id: 'engagement',
+            sessionType: 'Engagement',
+            startDate: '2027-02-26T00:00:00.000Z',
+            items: [
+              makeMealItem({ id: 'hitea', mealName: 'Hi Tea' }),
+              makeMealItem({ id: 'dinner', mealName: 'Dinner - Poolside' }),
+            ],
+          }),
+        ],
+      });
+
+      // One table for the shared date, not two.
+      expect(screen.getAllByRole('table', { name: 'Event Details – 26/02/2027' })).toHaveLength(1);
+      const table = screen.getByRole('table', { name: 'Event Details – 26/02/2027' });
+      const rows = within(table).getAllByRole('row');
+      // Header + 4 Item rows, Halad's own two first, then Engagement's own two.
+      expect(rows).toHaveLength(5);
+      expect(within(rows[1]!).getByText('Breakfast')).toBeInTheDocument();
+      expect(within(rows[2]!).getByText('Haldi Event')).toBeInTheDocument();
+      expect(within(rows[3]!).getByText('Hi Tea')).toBeInTheDocument();
+      expect(within(rows[4]!).getByText('Dinner - Poolside')).toBeInTheDocument();
+    });
+
+    it('still renders a valid table with headers for a date with only Ceremony rows and zero Food/Dining rows', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            startDate: '2026-12-10T00:00:00.000Z',
+            items: [makeCeremonyItem({ eventName: 'Muhurta' })],
+          }),
+        ],
+      });
+
+      const table = screen.getByRole('table', { name: 'Event Details – 10/12/2026' });
+      expect(within(table).getByRole('columnheader', { name: 'Time' })).toBeInTheDocument();
+      expect(within(table).getByRole('columnheader', { name: 'Number of Pax' })).toBeInTheDocument();
+      expect(within(table).getByRole('columnheader', { name: 'Cost' })).toBeInTheDocument();
+      expect(within(table).getByRole('columnheader', { name: 'Menu' })).toBeInTheDocument();
+      expect(within(table).getAllByRole('row')).toHaveLength(2);
+    });
+
+    it('does not truncate a long Menu list (example_quatation_1.pdf\'s own 16-item Dinner menu)', () => {
+      const sixteenItemMenu = [
+        'Veg Manchow Soup',
+        'Veg Manchurian',
+        'Paneer Tikka',
+        'Jeera Rice',
+        'Dal Fry',
+        'Veg Kolhapuri',
+        'Paneer Bhurji',
+        'Tandoori Roti',
+        'Fulke',
+        'Butter on the side',
+        'Peanut Salad',
+        'Veg Raita',
+        'Green Salad',
+        'Rabdi Jalebi',
+        'Gulabjamun',
+        'Kulfi',
+      ];
+      renderDocument({
+        sessions: [
+          makeSession({
+            startDate: '2026-12-10T00:00:00.000Z',
+            items: [makeMealItem({ mealName: 'Dinner - poolside', menuItemNames: sixteenItemMenu })],
+          }),
+        ],
+      });
+
+      const table = screen.getByRole('table', { name: 'Event Details – 10/12/2026' });
+      expect(within(table).getByText('1. Veg Manchow Soup')).toBeInTheDocument();
+      expect(within(table).getByText('16. Kulfi')).toBeInTheDocument();
+    });
+
+    it('excludes a Cancelled Session\'s Items from the per-date tables', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            startDate: '2026-12-10T00:00:00.000Z',
+            sessionStatus: SessionStatus.Cancelled,
+            items: [makeMealItem({ mealName: 'Cancelled Lunch' })],
+          }),
+        ],
+      });
+
+      expect(screen.queryByText('Cancelled Lunch')).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: /Event Details –/ })).not.toBeInTheDocument();
+    });
   });
 });

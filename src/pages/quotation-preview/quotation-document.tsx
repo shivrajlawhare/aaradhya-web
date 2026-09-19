@@ -4,9 +4,11 @@ import type { z } from 'zod';
 import aaradhyaMark from '../../assets/aaradhya-mark.svg';
 import {
   ClientContactRole,
+  ItemType,
   SessionStatus,
   clientContactSchema,
   filteredAccommodationResultSchema,
+  filteredItemResultSchema,
   filteredSessionResultSchema,
 } from '../../contract';
 import { toDateInputValue } from '../event-detail/date-input';
@@ -15,11 +17,14 @@ import {
   formatEventDate,
   formatQuotationAmount,
   formatQuotationGenerationDate,
+  formatQuotationItemCost,
+  formatQuotationPax,
   formatQuotationRupees,
   formatSessionDuration,
 } from '../../utils/quotation-formatting';
 import {
   brandLockupStyles,
+  ceremonyRowStyles,
   headerRowStyles,
   markImageStyles,
   numericCellStyles,
@@ -93,10 +98,27 @@ const ACCOMMODATION_CHECK_OUT_TIME = '11am';
 // Playwright PDF render also feeds (Aaradhya_Quotation_PDF_Strategy.md §4).
 export type QuotationDocumentClientContact = z.infer<typeof clientContactSchema>;
 
+// STORY-071 — a Session's own Items, as this document needs them for the
+// per-date Event Details tables below. `menuItemNames` replaces the raw
+// contract shape's own `menuItems` (an array of ids only, "no populate/
+// expand convention exists anywhere yet" per aaradhya-api's own
+// itemResultSchema comment) with already-resolved display names — the
+// id → name Menu Item lookup is the caller's job (this page today, a future
+// server-side Playwright render later, Aaradhya_Quotation_PDF_Strategy.md
+// §4), not something this shared render tree should have to do twice.
+export type QuotationDocumentSessionItem = Pick<
+  z.infer<typeof filteredItemResultSchema>,
+  'id' | 'type' | 'mealName' | 'pax' | 'costPerPlate' | 'limitedSeating' | 'eventName' | 'venue' | 'startTime' | 'endTime'
+> & {
+  menuItemNames: string[];
+};
+
 export type QuotationDocumentSession = Pick<
   z.infer<typeof filteredSessionResultSchema>,
   'id' | 'sessionType' | 'venue' | 'venueCost' | 'startDate' | 'startTime' | 'endTime' | 'pax' | 'sessionStatus'
->;
+> & {
+  items: QuotationDocumentSessionItem[];
+};
 
 // tariff/totalInclGst/totalCharges stay `.optional()` (filteredAccommodation
 // ResultSchema's own shape for a non-EventManager caller) — defaulted to 0
@@ -252,6 +274,113 @@ const QuotationDocument = ({
     ));
   }
 
+  // STORY-071 — one Event Details table per distinct calendar date spanned
+  // by the Event's Sessions, in date order. Keyed by each Session's own
+  // startDate only, not its full startDate..endDate range — neither
+  // reference quotation (docs/example_quatations/) has a multi-day Session,
+  // so spanning a Session's items across every date it covers is unverified
+  // and left for a future story if it's ever actually needed. Two Sessions
+  // sharing a date (example_quatation_2.pdf's Halad + Engagement, both
+  // 26/02/2027) pool into ONE table for that date rather than two — their
+  // Items interleave in the same order the Sessions themselves already
+  // appear in (activeSessions' own array order, i.e. entry order) followed
+  // by each Session's own item order, exactly reproducing example_
+  // quatation_2.pdf's own row sequence (Halad's Items, then Engagement's).
+  const dateGroups: { date: string; items: QuotationDocumentSessionItem[] }[] = [];
+  for (const session of activeSessions) {
+    const dateKey = toDateInputValue(session.startDate);
+    const existingGroup = dateGroups.find((group) => group.date === dateKey);
+    if (existingGroup) {
+      existingGroup.items.push(...session.items);
+    } else {
+      dateGroups.push({ date: dateKey, items: [...session.items] });
+    }
+  }
+  dateGroups.sort((a, b) => a.date.localeCompare(b.date));
+
+  // Extracted rather than an inline ternary in the JSX below (typescript-
+  // rules rule 5). Reproduces every one of the three inline-label variants
+  // both reference PDFs show for a Ceremony/Event Item row (this story's
+  // own AC): venue only ("Engagement Sangeet - Poolside"), time only
+  // ("Muhurta 11am to 12.30pm"), and neither (bare "Muhurta") — an Item
+  // with every field blank (example_quatation_2.pdf's own wholly-blank
+  // divider row) falls out of the same logic as an empty string. Time is
+  // joined via the existing formatSessionDuration ("to", not the reference's
+  // own one-off "–") and venue is always appended with " - " — both
+  // reference PDFs disagree with each other on this exact punctuation
+  // (example_quatation_1.pdf's "Muhurta 11am – 12.30pm" vs. example_
+  // quatation_2.pdf's own dominant "to" convention, itself shared by the
+  // Event Details "Duration" column and the Food/Dining "Time" column in
+  // both documents), so this picks the one convention already used
+  // everywhere else rather than reproducing the outlier, the same kind of
+  // "sources disagree, standardize on one" call this story's own heading
+  // format bullet already makes explicitly.
+  const buildCeremonyLabel = (item: QuotationDocumentSessionItem): string => {
+    const nameAndTimeParts: string[] = [];
+    if (item.eventName) {
+      nameAndTimeParts.push(item.eventName);
+    }
+    const timePart = formatSessionDuration(item.startTime ?? '', item.endTime ?? '');
+    if (timePart) {
+      nameAndTimeParts.push(timePart);
+    }
+    const nameAndTime = nameAndTimeParts.join(' ');
+    if (!item.venue) {
+      return nameAndTime;
+    }
+    return nameAndTime ? `${nameAndTime} - ${item.venue}` : item.venue;
+  };
+
+  // Extracted rather than an inline ternary in the JSX below (typescript-
+  // rules rule 5) — a Ceremony Item renders as one merged grey row, a
+  // Food/Dining Item as the full 5-column row.
+  const renderDateItemRow = (item: QuotationDocumentSessionItem): ReactNode => {
+    if (item.type === ItemType.Event) {
+      return (
+        <TableRow key={item.id}>
+          <TableCell colSpan={5} sx={ceremonyRowStyles}>
+            {buildCeremonyLabel(item)}
+          </TableCell>
+        </TableRow>
+      );
+    }
+    return (
+      <TableRow key={item.id}>
+        <TableCell sx={rowLabelCellStyles}>{item.mealName}</TableCell>
+        <TableCell>{formatSessionDuration(item.startTime ?? '', item.endTime ?? '')}</TableCell>
+        <TableCell sx={numericCellStyles}>{formatQuotationPax(item.pax ?? 0, item.limitedSeating ?? false)}</TableCell>
+        <TableCell sx={numericCellStyles}>{formatQuotationItemCost(item.costPerPlate ?? 0)}</TableCell>
+        <TableCell>
+          {item.menuItemNames.map((menuItemName, index) => (
+            <div key={index}>{`${index + 1}. ${menuItemName}`}</div>
+          ))}
+        </TableCell>
+      </TableRow>
+    );
+  };
+
+  const eventDetailsByDateSections = dateGroups.map((group) => (
+    <Box key={group.date} sx={sectionStyles}>
+      <Typography component="h2" sx={sectionHeadingStyles}>
+        Event Details – {formatEventDate(group.date)}
+      </Typography>
+      <Box sx={tableScrollStyles}>
+        <Table sx={tableStyles} aria-label={`Event Details – ${formatEventDate(group.date)}`}>
+          <TableHead>
+            <TableRow>
+              <TableCell />
+              <TableCell>Time</TableCell>
+              <TableCell>Number of Pax</TableCell>
+              <TableCell>Cost</TableCell>
+              <TableCell>Menu</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>{group.items.map((item) => renderDateItemRow(item))}</TableBody>
+        </Table>
+      </Box>
+    </Box>
+  ));
+
   return (
     <Box sx={rootStyles}>
       <Box sx={headerRowStyles}>
@@ -354,6 +483,8 @@ const QuotationDocument = ({
           </Table>
         </Box>
       </Box>
+
+      {eventDetailsByDateSections}
     </Box>
   );
 };

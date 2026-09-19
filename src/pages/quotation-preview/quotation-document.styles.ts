@@ -181,3 +181,14 @@ export const totalChargesCellStyles: SxProps<Theme> = {
   fontVariantNumeric: 'tabular-nums',
   textAlign: 'right',
 };
+
+// Sampled from both reference PDFs' own Ceremony-row shading (STORY-071's
+// own Tokens line) — a visual best-effort match, same "not a pixel-exact
+// extraction" caveat TOTAL_OCCUPANCY_GREEN/TOTAL_CHARGES_AMBER above
+// already carry.
+const CEREMONY_ROW_GREY = '#D9D9D9';
+
+export const ceremonyRowStyles: SxProps<Theme> = {
+  bgcolor: CEREMONY_ROW_GREY,
+  fontWeight: 700,
+};
