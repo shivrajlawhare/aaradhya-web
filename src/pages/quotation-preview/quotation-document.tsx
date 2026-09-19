@@ -32,6 +32,7 @@ import {
   closingLineStyles,
   costSummaryHighlightLabelCellStyles,
   costSummaryHighlightNumericCellStyles,
+  dateSectionStyles,
   headerRowStyles,
   headerTextImageStyles,
   markImageStyles,
@@ -444,7 +445,7 @@ const QuotationDocument = ({
   };
 
   const eventDetailsByDateSections = dateGroups.map((group) => (
-    <Box key={group.date} sx={sectionStyles}>
+    <Box key={group.date} sx={dateSectionStyles}>
       <Typography component="h2" sx={sectionHeadingStyles}>
         Event Details – {formatEventDate(group.date)}
       </Typography>

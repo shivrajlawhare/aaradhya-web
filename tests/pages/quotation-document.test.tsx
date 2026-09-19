@@ -363,6 +363,33 @@ describe('QuotationDocument', () => {
       expect(screen.getByRole('table', { name: 'Event Details – 11/12/2026' })).toBeInTheDocument();
     });
 
+    it('forces every per-date table onto its own page in the generated PDF, including the first (nothing after Accommodation Details shares page 1)', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            id: 'engagement',
+            startDate: '2026-12-10T00:00:00.000Z',
+            items: [makeMealItem({ id: 'hitea', mealName: 'Hi Tea' })],
+          }),
+          makeSession({
+            id: 'wedding',
+            startDate: '2026-12-11T00:00:00.000Z',
+            items: [makeMealItem({ id: 'breakfast', mealName: 'Breakfast' })],
+          }),
+        ],
+      });
+
+      const headings = screen.getAllByRole('heading', { level: 2 });
+      const dateHeadings = headings.filter((heading) => heading.textContent?.startsWith('Event Details –'));
+      expect(dateHeadings).toHaveLength(2);
+      for (const heading of dateHeadings) {
+        // Walks up to the section's own outer Box — the heading itself
+        // isn't what carries the break style.
+        const section = heading.closest('div')!;
+        expect(section).toHaveStyle({ breakBefore: 'page' });
+      }
+    });
+
     it('renders a Food/Dining row exactly like example_quatation_1.pdf\'s own "Hi Tea" row', () => {
       renderDocument({
         sessions: [

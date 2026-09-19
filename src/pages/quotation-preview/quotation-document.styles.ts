@@ -107,6 +107,20 @@ export const sectionStyles: SxProps<Theme> = {
   gap: '6px',
 };
 
+// Each per-date Event Details table always starts its own page in the
+// generated PDF — applied to every one of them, including the first, so
+// page 1 ends right after Accommodation Details rather than spilling the
+// first date's own table onto it. `breakBefore` is the modern CSS
+// Fragmentation property; `pageBreakBefore` is the older alias some print
+// engines still key off — both target the same outcome, harmless to set
+// together. Has no visible effect on-screen (only `@media print`/PDF
+// generation honors either property), so the live preview is unchanged.
+export const dateSectionStyles: SxProps<Theme> = {
+  ...sectionStyles,
+  breakBefore: 'page',
+  pageBreakBefore: 'always',
+};
+
 export const sectionHeadingStyles: SxProps<Theme> = {
   fontFamily: DOCUMENT_FONT_FAMILY,
   fontStyle: 'italic',
