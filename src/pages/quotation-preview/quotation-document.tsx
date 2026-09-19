@@ -50,6 +50,7 @@ import {
   titleRowStyles,
   titleTextStyles,
   totalChargesCellStyles,
+  totalCostSummarySectionStyles,
   totalOccupancyCellStyles,
 } from './quotation-document.styles';
 
@@ -504,6 +505,14 @@ const QuotationDocument = ({
   // rupee (that only happens for the Grand Total's own formatted display,
   // via formatQuotationRupees — see this table's own JSX below).
   const foodCostWithGst = roundToCurrency(foodCostTotal * (1 + foodGstRatePercent / 100));
+  // The new "GST on food X%" column's own aggregate cell — derived from the
+  // two already-reference-verified totals above (foodCostWithGst -
+  // foodCostTotal) rather than summing each row's own rounded
+  // computeFoodItemGst below, so this cell and Total Cost/Total Cost with
+  // GST beside it always add up exactly, with no per-row rounding drift.
+  const foodGstOnFoodTotal = roundToCurrency(foodCostWithGst - foodCostTotal);
+  const computeFoodItemGst = (item: QuotationDocumentSessionItem): number =>
+    roundToCurrency(computeFoodItemTotalCost(item) * (foodGstRatePercent / 100));
   const venueTotal = roundToCurrency(activeSessions.reduce((total, session) => total + (session.venueCost ?? 0), 0));
   const accommodationTotal = accommodation?.totalCharges ?? 0;
   const manualLineItemsTotal = roundToCurrency(extraLineItems.reduce((total, item) => total + item.amount, 0));
@@ -543,6 +552,7 @@ const QuotationDocument = ({
             <TableCell />
             <TableCell />
             <TableCell />
+            <TableCell />
             <TableCell sx={numericCellStyles}>{row.session.venueCost ?? 0}</TableCell>
           </TableRow>
         );
@@ -557,6 +567,7 @@ const QuotationDocument = ({
           <TableCell sx={numericCellStyles}>{pax}</TableCell>
           <TableCell sx={numericCellStyles}>{costPerPlate}</TableCell>
           <TableCell sx={numericCellStyles}>{computeFoodItemTotalCost(row.item)}</TableCell>
+          <TableCell sx={numericCellStyles}>{computeFoodItemGst(row.item)}</TableCell>
           <TableCell />
         </TableRow>
       );
@@ -670,7 +681,7 @@ const QuotationDocument = ({
 
       {eventDetailsByDateSections}
 
-      <Box sx={sectionStyles}>
+      <Box sx={totalCostSummarySectionStyles}>
         <Typography component="h2" sx={sectionHeadingStyles}>
           Total Cost Summary
         </Typography>
@@ -683,6 +694,7 @@ const QuotationDocument = ({
                 <TableCell>Pax</TableCell>
                 <TableCell>Cost Per Plate</TableCell>
                 <TableCell>Total Cost</TableCell>
+                <TableCell>GST on food {foodGstRatePercent}%</TableCell>
                 <TableCell>Total Cost with GST</TableCell>
               </TableRow>
             </TableHead>
@@ -694,10 +706,12 @@ const QuotationDocument = ({
                 <TableCell sx={costSummaryHighlightLabelCellStyles} />
                 <TableCell sx={costSummaryHighlightLabelCellStyles} />
                 <TableCell sx={costSummaryHighlightNumericCellStyles}>{foodCostTotal}</TableCell>
+                <TableCell sx={costSummaryHighlightNumericCellStyles}>{foodGstOnFoodTotal}</TableCell>
                 <TableCell sx={costSummaryHighlightNumericCellStyles}>{foodCostWithGst}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell sx={rowLabelCellStyles}>Accommodation</TableCell>
+                <TableCell />
                 <TableCell />
                 <TableCell />
                 <TableCell />
@@ -711,6 +725,7 @@ const QuotationDocument = ({
                   <TableCell />
                   <TableCell />
                   <TableCell />
+                  <TableCell />
                   <TableCell sx={numericCellStyles}>{item.amount}</TableCell>
                 </TableRow>
               ))}
@@ -719,6 +734,7 @@ const QuotationDocument = ({
                 <TableCell />
                 <TableCell />
                 <TableCell sx={costSummaryHighlightLabelCellStyles}>Grand Total</TableCell>
+                <TableCell sx={costSummaryHighlightLabelCellStyles} />
                 <TableCell sx={costSummaryHighlightLabelCellStyles} />
                 <TableCell sx={costSummaryHighlightNumericCellStyles}>{formatQuotationRupees(grandTotal)}</TableCell>
               </TableRow>

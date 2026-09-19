@@ -107,18 +107,32 @@ export const sectionStyles: SxProps<Theme> = {
   gap: '6px',
 };
 
+// `breakBefore` is the modern CSS Fragmentation property; `pageBreakBefore`
+// is the older alias some print engines still key off — both target the
+// same outcome, harmless to set together. Has no visible effect on-screen
+// (only `@media print`/PDF generation honors either property), so the live
+// preview is unchanged wherever this is used below.
+const pageBreakBeforeStyles: SxProps<Theme> = {
+  breakBefore: 'page',
+  pageBreakBefore: 'always',
+};
+
 // Each per-date Event Details table always starts its own page in the
 // generated PDF — applied to every one of them, including the first, so
 // page 1 ends right after Accommodation Details rather than spilling the
-// first date's own table onto it. `breakBefore` is the modern CSS
-// Fragmentation property; `pageBreakBefore` is the older alias some print
-// engines still key off — both target the same outcome, harmless to set
-// together. Has no visible effect on-screen (only `@media print`/PDF
-// generation honors either property), so the live preview is unchanged.
+// first date's own table onto it.
 export const dateSectionStyles: SxProps<Theme> = {
   ...sectionStyles,
-  breakBefore: 'page',
-  pageBreakBefore: 'always',
+  ...pageBreakBeforeStyles,
+};
+
+// Total Cost Summary always starts its own page too, regardless of how many
+// per-date sections precede it (and however much of the last one's own page
+// they leave free) — a separate, deliberately-forced break of its own, not
+// a side effect of dateSectionStyles above.
+export const totalCostSummarySectionStyles: SxProps<Theme> = {
+  ...sectionStyles,
+  ...pageBreakBeforeStyles,
 };
 
 export const sectionHeadingStyles: SxProps<Theme> = {

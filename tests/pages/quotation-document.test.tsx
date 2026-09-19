@@ -664,15 +664,20 @@ describe('QuotationDocument', () => {
       expect(halfBanquetRow[0]!.textContent).toBe('Wedding Venue and Catering – 26/02/2027');
       expect(halfBanquetRow[0]!).toHaveAttribute('rowspan', '2');
       expect(halfBanquetRow[1]!.textContent).toBe('Half Banquet');
-      expect(halfBanquetRow[5]!.textContent).toBe('60000');
+      // A venue row never carries a food GST amount — cell 5 (GST on food)
+      // stays blank; the venue cost itself sits in cell 6 (Total Cost with
+      // GST).
+      expect(halfBanquetRow[5]!.textContent).toBe('');
+      expect(halfBanquetRow[6]!.textContent).toBe('60000');
 
       // Second venue row has no Cost Item cell of its own — the merged
       // cell above accounts for it, same rowSpan pattern Accommodation
       // Details' own Check-in/Check-out cells already establish.
       const poolsideRow = within(rows[2]!).getAllByRole('cell');
-      expect(poolsideRow).toHaveLength(5);
+      expect(poolsideRow).toHaveLength(6);
       expect(poolsideRow[0]!.textContent).toBe('Poolside');
-      expect(poolsideRow[4]!.textContent).toBe('60000');
+      expect(poolsideRow[4]!.textContent).toBe('');
+      expect(poolsideRow[5]!.textContent).toBe('60000');
     });
 
     it('bills a limited-seating Meal Item\'s Total Cost at pax=1, not the literal headcount (FR-QUO-8)', () => {
@@ -699,7 +704,10 @@ describe('QuotationDocument', () => {
       // Total Cost = 1 × 45000 = 45000, matching example_quatation_1.pdf's
       // own printed figure for this exact row.
       expect(cells[3]!.textContent).toBe('45000');
-      expect(cells[4]!.textContent).toBe('');
+      // GST on food (5% default) = 45000 × 0.05 = 2250; the per-row Total
+      // Cost with GST cell stays blank, same as before this column existed.
+      expect(cells[4]!.textContent).toBe('2250');
+      expect(cells[5]!.textContent).toBe('');
     });
 
     it('renders a Meal Item genuinely entered with pax/cost 0 as a real 0 row, not hidden (example_quatation_1.pdf\'s own blank/zero row)', () => {
@@ -746,11 +754,14 @@ describe('QuotationDocument', () => {
       expect(within(table).getAllByText('Food Cost')).toHaveLength(1);
       const foodCostRow = within(table).getByText('Food Cost').closest('tr')!;
       const cells = within(foodCostRow).getAllByRole('cell');
-      // 30×275 + 50×350 = 8250 + 17500 = 25750; ×1.05 = 27037.5.
+      // 30×275 + 50×350 = 8250 + 17500 = 25750; ×1.05 = 27037.5;
+      // GST on food = 27037.5 - 25750 = 1287.5.
       expect(cells[4]!.textContent).toBe('25750');
-      expect(cells[5]!.textContent).toBe('27037.5');
+      expect(cells[5]!.textContent).toBe('1287.5');
+      expect(cells[6]!.textContent).toBe('27037.5');
       expect(cells[0]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
       expect(cells[5]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
+      expect(cells[6]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
     });
 
     it('uses a custom foodGstRatePercent instead of the 5% default (SRS §4.9)', () => {
@@ -779,7 +790,7 @@ describe('QuotationDocument', () => {
       const table = screen.getByRole('table', { name: 'Total Cost Summary' });
       const accommodationRow = within(table).getByText('Accommodation').closest('tr')!;
       const cells = within(accommodationRow).getAllByRole('cell');
-      expect(cells.map((cell) => cell.textContent)).toEqual(['Accommodation', '', '', '', '', '109200']);
+      expect(cells.map((cell) => cell.textContent)).toEqual(['Accommodation', '', '', '', '', '', '109200']);
     });
 
     it('renders manual line items with name/note/amount, blank note when absent (STORY-068)', () => {
@@ -834,10 +845,11 @@ describe('QuotationDocument', () => {
       expect(cells[3]!.textContent).toBe('Grand Total');
       // venueTotal 60000 + foodCostWithGst (8250×1.05=8662.5) + accommodation
       // 10000 + manual 5000 = 83662.5, rounded to the nearest rupee for
-      // display.
-      expect(cells[5]!.textContent).toBe('Rs. 83,663 /-');
+      // display. Now in cell 6 (Total Cost with GST) — the new GST on food
+      // column (cell 5) stays blank on this row.
+      expect(cells[6]!.textContent).toBe('Rs. 83,663 /-');
       expect(cells[3]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
-      expect(cells[5]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
+      expect(cells[6]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
     });
 
     // Full end-to-end reproduction of example_quatation_1.pdf's own Total
@@ -902,6 +914,22 @@ describe('QuotationDocument', () => {
       // venueTotal 180000 + foodCostWithGst 627007.5 + accommodation 109200
       // + manual 157000 = 1073207.5 -> Rs. 10,73,208 /- after rounding.
       expect(within(grandTotalRow).getByText('Rs. 10,73,208 /-')).toBeInTheDocument();
+    });
+
+    it('labels the GST-on-food column with the actual foodGstRatePercent, not a hardcoded 5%', () => {
+      renderDocument({ foodGstRatePercent: 18 });
+
+      const table = screen.getByRole('table', { name: 'Total Cost Summary' });
+      expect(within(table).getByText('GST on food 18%')).toBeInTheDocument();
+      expect(within(table).queryByText('GST on food 5%')).not.toBeInTheDocument();
+    });
+
+    it('always starts its own page in the generated PDF, regardless of how many per-date sections precede it', () => {
+      renderDocument();
+
+      const heading = screen.getByRole('heading', { level: 2, name: 'Total Cost Summary' });
+      const section = heading.closest('div')!;
+      expect(section).toHaveStyle({ breakBefore: 'page' });
     });
   });
 
