@@ -131,8 +131,8 @@ describe('QuotationDocument', () => {
   it('renders the header, title row, and generation date exactly as the reference PDFs do', () => {
     renderDocument({ sessions: [makeSession()], quotationDate: new Date(2026, 7, 23) });
 
-    expect(screen.getByText('AARADHYA')).toBeInTheDocument();
-    expect(screen.getByText('A COMPLETE DESTINATION')).toBeInTheDocument();
+    expect(screen.getByAltText('Aaradhya')).toBeInTheDocument();
+    expect(screen.getByAltText('Aaradhya — A Complete Destination')).toBeInTheDocument();
     expect(screen.getByText('GST No.: 27ABLFA0695F1ZC', { exact: false })).toBeInTheDocument();
     expect(screen.getByText('+91 9423362122', { exact: false })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Event Quotation' })).toBeInTheDocument();

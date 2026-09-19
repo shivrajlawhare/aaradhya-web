@@ -275,7 +275,7 @@ describe('QuotationPreviewPage', () => {
     renderPage();
 
     expect(await screen.findByRole('heading', { name: 'Event Quotation' })).toBeInTheDocument();
-    expect(screen.getByText('AARADHYA')).toBeInTheDocument();
+    expect(screen.getByAltText('Aaradhya — A Complete Destination')).toBeInTheDocument();
   });
 
   it('still renders the Accommodation Details table (zero footer) for an Event with no Accommodation entered at all', async () => {

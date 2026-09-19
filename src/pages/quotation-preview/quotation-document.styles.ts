@@ -13,7 +13,6 @@ import type { SxProps, Theme } from '@mui/material';
 export const DOCUMENT_FONT_FAMILY = '"Times New Roman", Times, serif';
 const HEADING_BLUE = '#1F4E79';
 const BORDER_COLOR = '#000000';
-const MUTED_TEXT = '#4A4A4A';
 
 export const rootStyles: SxProps<Theme> = {
   bgcolor: '#FFFFFF',
@@ -51,20 +50,14 @@ export const markImageStyles: SxProps<Theme> = {
   flexShrink: 0,
 };
 
-export const wordmarkNameStyles: SxProps<Theme> = {
-  fontFamily: DOCUMENT_FONT_FAMILY,
-  fontWeight: 700,
-  fontSize: '22px',
-  letterSpacing: '1px',
-  lineHeight: 1.1,
-  color: '#000000',
-};
-
-export const wordmarkTaglineStyles: SxProps<Theme> = {
-  fontFamily: DOCUMENT_FONT_FAMILY,
-  fontSize: '10px',
-  letterSpacing: '2px',
-  color: MUTED_TEXT,
+// Replaces the previous hand-typed "AARADHYA"/"A COMPLETE DESTINATION"
+// Typography lines with the org's own real wordmark image (intrinsic
+// 50727×10000, ~5.07:1) — `width: auto` preserves that aspect ratio off a
+// single fixed height, matching the reference PDFs' own header proportions
+// (crown mark roughly square, wordmark spanning a wider strip beside it).
+export const headerTextImageStyles: SxProps<Theme> = {
+  height: '44px',
+  width: 'auto',
 };
 
 export const orgDetailsStyles: SxProps<Theme> = {

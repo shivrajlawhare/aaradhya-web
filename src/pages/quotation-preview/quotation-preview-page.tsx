@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link as RouterLink, useParams } from 'react-router-dom';
+import { Link as RouterLink, useParams, useSearchParams } from 'react-router-dom';
 import { Box, CircularProgress, Link, Typography } from '@mui/material';
 import { tsr } from '../../api/client';
 import GenerateQuotationPdfButton from '../event-detail/generate-quotation-pdf-button';
@@ -10,6 +10,14 @@ import { pageStyles } from './quotation-preview-page.styles';
 
 const QuotationPreviewPage = () => {
   const { id } = useParams();
+  // `?print=1` — the exact URL the backend's own Playwright PDF render
+  // navigates to (services/browser-pdf.ts, aaradhya-api), so the generated
+  // PDF is byte-for-byte this same render tree with no editable-looking
+  // chrome baked into a downloaded document (the extras panel, the "Share
+  // PDF" button itself). Renders the identical <QuotationDocument> either
+  // way — this flag only ever changes what ELSE mounts alongside it.
+  const [searchParams] = useSearchParams();
+  const isPrintMode = searchParams.get('print') === '1';
   // The whole route is now RequireRole([EventManager])-gated (STORY-052,
   // app.tsx) — this screen shows the exact same full financial breakdown
   // (Grand Total, extras, accommodation/session costs) STORY-052 scoped
@@ -103,21 +111,26 @@ const QuotationPreviewPage = () => {
           foodGstRatePercent={event.foodGstRatePercent}
         />
 
-        {/* Read-only here (canEdit={false}) — this is a preview to
-            sanity-check numbers before sharing, not another place to edit
-            extras; that already exists on the Overview tab. `event.extras &&`
-            satisfies the field's own `.optional()` type (STORY-052) —
-            RequireRole already guarantees it's actually present here. */}
-        {event.extras && (
-          <TotalCostSummaryPanel
-            eventId={event.id}
-            extras={event.extras}
-            canEdit={false}
-            onEventChanged={() => eventQuery.refetch()}
-          />
-        )}
+        {!isPrintMode && (
+          <>
+            {/* Read-only here (canEdit={false}) — this is a preview to
+                sanity-check numbers before sharing, not another place to
+                edit extras; that already exists on the Overview tab.
+                `event.extras &&` satisfies the field's own `.optional()`
+                type (STORY-052) — RequireRole already guarantees it's
+                actually present here. */}
+            {event.extras && (
+              <TotalCostSummaryPanel
+                eventId={event.id}
+                extras={event.extras}
+                canEdit={false}
+                onEventChanged={() => eventQuery.refetch()}
+              />
+            )}
 
-        <GenerateQuotationPdfButton event={event} label="Share PDF" />
+            <GenerateQuotationPdfButton event={event} label="Share PDF" />
+          </>
+        )}
       </>
     );
   }

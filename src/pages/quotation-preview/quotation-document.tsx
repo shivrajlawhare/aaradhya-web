@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Box, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import type { z } from 'zod';
 import aaradhyaMark from '../../assets/aaradhya-mark.svg';
+import aaradhyaHeaderText from '../../assets/header-text.svg';
 import {
   ClientContactRole,
   ItemType,
@@ -32,6 +33,7 @@ import {
   costSummaryHighlightLabelCellStyles,
   costSummaryHighlightNumericCellStyles,
   headerRowStyles,
+  headerTextImageStyles,
   markImageStyles,
   numberedListStyles,
   numericCellStyles,
@@ -48,8 +50,6 @@ import {
   titleTextStyles,
   totalChargesCellStyles,
   totalOccupancyCellStyles,
-  wordmarkNameStyles,
-  wordmarkTaglineStyles,
 } from './quotation-document.styles';
 
 // The org's own real, static letterhead details (SRS §4.7a) — identical on
@@ -567,10 +567,12 @@ const QuotationDocument = ({
       <Box sx={headerRowStyles}>
         <Box sx={brandLockupStyles}>
           <Box component="img" src={aaradhyaMark} alt="Aaradhya" sx={markImageStyles} />
-          <Box>
-            <Typography sx={wordmarkNameStyles}>AARADHYA</Typography>
-            <Typography sx={wordmarkTaglineStyles}>A COMPLETE DESTINATION</Typography>
-          </Box>
+          <Box
+            component="img"
+            src={aaradhyaHeaderText}
+            alt="Aaradhya — A Complete Destination"
+            sx={headerTextImageStyles}
+          />
         </Box>
         <Box sx={orgDetailsStyles}>
           <Typography component="div" sx={orgDetailsLineStyles}>
