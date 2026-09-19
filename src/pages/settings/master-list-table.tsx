@@ -12,10 +12,11 @@ interface MasterListTableProps {
 }
 
 // Desktop's right-hand panel body (this story's own AC): Name, Default Cost
-// where the section has one, Status — plus an Edit action and a
-// Deactivate/Reactivate toggle, both omitted for a section whose config
-// has `supportsStatus: false` (Menu Items — see settings-sections.ts for
-// why that section has neither).
+// where the section has one, Status where the section has one — plus a
+// Deactivate/Reactivate toggle (gated on `supportsStatus`) and an Edit
+// action (gated on `supportsEdit`) as two independent columns, not one
+// combined "Status" capability — Menu Items has the latter but not the
+// former (settings-sections.ts for why).
 const MasterListTable = ({ section, rows, isMutating, onToggleActive, onEdit }: MasterListTableProps) => (
   <Paper sx={tableCardStyles}>
     <Table>
@@ -34,7 +35,7 @@ const MasterListTable = ({ section, rows, isMutating, onToggleActive, onEdit }: 
               <Typography variant="labelS">Status</Typography>
             </TableCell>
           )}
-          {section.supportsStatus && <TableCell />}
+          {section.supportsEdit && <TableCell />}
         </TableRow>
       </TableHead>
       <TableBody>
@@ -58,9 +59,9 @@ const MasterListTable = ({ section, rows, isMutating, onToggleActive, onEdit }: 
                 />
               </TableCell>
             )}
-            {section.supportsStatus && (
+            {section.supportsEdit && (
               <TableCell>
-                <IconButton aria-label={`Edit ${row.name}`} onClick={() => onEdit(row)}>
+                <IconButton aria-label={`Edit ${row.name}`} disabled={isMutating} onClick={() => onEdit(row)}>
                   <EditOutlinedIcon fontSize="small" />
                 </IconButton>
               </TableCell>

@@ -440,9 +440,23 @@ export const createMenuItemBodySchema = z.object({
   defaultCostPerPlate: z.number().min(0).optional(),
 });
 
+// Mirrors aaradhya-api's own updateMenuItemBodySchema — no `active` (that
+// section still has no such field), editing name/cost is a separate
+// capability from deactivating one.
+export const updateMenuItemBodySchema = z.object({
+  name: z.string().trim().min(1).optional(),
+  defaultCostPerPlate: z.number().min(0).optional(),
+});
+
+export const menuItemIdParamsSchema = z.object({
+  id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid menu item id.'),
+});
+
 // STORY-061's three master lists — Venue/EventType/RoomType. No `active`
 // on Menu Item (above) since aaradhya-api's own MenuItem model has never
-// had one; Settings (STORY-062) treats that section as add/browse-only.
+// had one — Settings still has no deactivate toggle for that section, but
+// name/cost are editable (updateMenuItemBodySchema above), a genuinely
+// separate capability from deactivating one.
 export const venueResultSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -1005,6 +1019,18 @@ export const contract = c.router({
       409: apiErrorSchema,
     },
     summary: 'Add a Menu Item to the shared master list (any authenticated caller)',
+  },
+  updateMenuItem: {
+    method: 'PATCH',
+    path: '/menu-items/:id',
+    pathParams: menuItemIdParamsSchema,
+    body: updateMenuItemBodySchema,
+    responses: {
+      200: menuItemResultSchema,
+      404: apiErrorSchema,
+      409: apiErrorSchema,
+    },
+    summary: 'Edit name/default cost on a Menu Item (any authenticated caller)',
   },
   createItem: {
     method: 'POST',

@@ -22,9 +22,10 @@ interface MasterListCardListProps {
 
 // Mobile's card list (this story's own AC): one card per entry —
 // name + default cost + status — below SectionChipRow, matching
-// STORY-055/056's card pattern (events-card-list.tsx). Edit and the
-// Deactivate/Reactivate toggle live here too, not display-only like
-// UsersCardList — this story's own AC asks for both on every row.
+// STORY-055/056's card pattern (events-card-list.tsx). The Deactivate/
+// Reactivate toggle (`supportsStatus`) and the Edit action (`supportsEdit`)
+// are independent — Menu Items has the latter but not the former
+// (settings-sections.ts for why); the actions row renders if either is on.
 const MasterListCardList = ({ section, rows, isMutating, onToggleActive, onEdit }: MasterListCardListProps) => {
   if (rows.length === 0) {
     return (
@@ -51,17 +52,21 @@ const MasterListCardList = ({ section, rows, isMutating, onToggleActive, onEdit 
               {section.costLabel}: {row.cost}
             </Typography>
           )}
-          {section.supportsStatus && (
+          {(section.supportsStatus || section.supportsEdit) && (
             <Box sx={actionsRowStyles}>
-              <Switch
-                checked={row.active}
-                disabled={isMutating}
-                onChange={() => onToggleActive(row)}
-                slotProps={{ input: { 'aria-label': `Toggle active for ${row.name}` } }}
-              />
-              <IconButton aria-label={`Edit ${row.name}`} onClick={() => onEdit(row)}>
-                <EditOutlinedIcon fontSize="small" />
-              </IconButton>
+              {section.supportsStatus && (
+                <Switch
+                  checked={row.active}
+                  disabled={isMutating}
+                  onChange={() => onToggleActive(row)}
+                  slotProps={{ input: { 'aria-label': `Toggle active for ${row.name}` } }}
+                />
+              )}
+              {section.supportsEdit && (
+                <IconButton aria-label={`Edit ${row.name}`} disabled={isMutating} onClick={() => onEdit(row)}>
+                  <EditOutlinedIcon fontSize="small" />
+                </IconButton>
+              )}
             </Box>
           )}
         </Paper>

@@ -161,6 +161,11 @@ const mockSettingsApi = (initial: {
         menuItems = [...menuItems, created];
         return jsonResponse(201, created);
       }
+      if (method === 'PATCH' && url.includes('/menu-items/')) {
+        const id = url.split('/menu-items/')[1];
+        menuItems = menuItems.map((menuItem) => (menuItem.id === id ? { ...menuItem, ...body } : menuItem));
+        return jsonResponse(200, menuItems.find((menuItem) => menuItem.id === id));
+      }
 
       throw new Error(`Unhandled request: ${method} ${url}`);
     }),
@@ -293,7 +298,7 @@ describe('SettingsPage', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
-    it('renders the Menu Items section as add/browse-only — no Status column, no Edit, no toggle', async () => {
+    it('renders the Menu Items section with no Status column or toggle, but WITH an Edit action', async () => {
       mockMatchMedia(true);
       mockSettingsApi({ menuItems: [makeMenuItem({ name: 'Paneer Tikka', defaultCostPerPlate: 250 })] });
       renderPage();
@@ -306,8 +311,30 @@ describe('SettingsPage', () => {
       }
       expect(within(row).getByText('250')).toBeInTheDocument();
       expect(within(row).queryByRole('switch')).not.toBeInTheDocument();
-      expect(within(row).queryByRole('button')).not.toBeInTheDocument();
+      expect(within(row).getByRole('button', { name: 'Edit Paneer Tikka' })).toBeInTheDocument();
       expect(screen.queryByText('Status')).not.toBeInTheDocument();
+    });
+
+    it('edits a Menu Item\'s name and default cost per plate via the Edit dialog', async () => {
+      mockMatchMedia(true);
+      mockSettingsApi({ menuItems: [makeMenuItem({ name: 'Paneer Tikka', defaultCostPerPlate: 250 })] });
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: 'Menu Items' }));
+      const row = (await screen.findByText('Paneer Tikka')).closest('tr');
+      if (!row) {
+        throw new Error('expected a row to render');
+      }
+
+      fireEvent.click(within(row).getByRole('button', { name: 'Edit Paneer Tikka' }));
+      const nameField = await screen.findByLabelText('Name');
+      expect(nameField).toHaveValue('Paneer Tikka');
+      fireEvent.change(nameField, { target: { value: 'Paneer Butter Masala' } });
+      fireEvent.change(screen.getByLabelText('Default Cost / Plate'), { target: { value: '300' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(screen.getByText('Paneer Butter Masala')).toBeInTheDocument());
+      expect(screen.getByText('300')).toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     it('edge case: deactivating a Venue only PATCHes /venues/:id — no Event/Session/Calendar request', async () => {
@@ -370,7 +397,7 @@ describe('SettingsPage', () => {
       expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
     });
 
-    it('Menu Items cards have no Edit action or toggle', async () => {
+    it('Menu Items cards have no toggle, but DO have an Edit action', async () => {
       mockMatchMedia(false);
       mockSettingsApi({ menuItems: [makeMenuItem({ name: 'Paneer Tikka' })] });
       renderPage();
@@ -382,7 +409,7 @@ describe('SettingsPage', () => {
         throw new Error('expected a card to render');
       }
       expect(within(card).queryByRole('switch')).not.toBeInTheDocument();
-      expect(within(card).queryByRole('button')).not.toBeInTheDocument();
+      expect(within(card).getByRole('button', { name: 'Edit Paneer Tikka' })).toBeInTheDocument();
     });
   });
 });

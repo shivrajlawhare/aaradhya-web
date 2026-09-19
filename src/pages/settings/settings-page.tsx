@@ -104,6 +104,10 @@ const SettingsPage = () => {
     onSuccess: () => refetchSection('roomTypes'),
     onError: (error) => setEditError(errorMessageFrom(error)),
   });
+  const updateMenuItemMutation = tsr.updateMenuItem.useMutation({
+    onSuccess: () => refetchSection('menuItems'),
+    onError: (error) => setEditError(errorMessageFrom(error)),
+  });
 
   const isInitialLoading =
     venuesQuery.isPending || eventTypesQuery.isPending || roomTypesQuery.isPending || menuItemsQuery.isPending;
@@ -178,6 +182,11 @@ const SettingsPage = () => {
         { params: { id: editingRow.id }, body: { name: values.name, defaultTariff: values.cost ?? 0 } },
         { onSuccess },
       );
+    } else if (selectedSectionId === 'menuItems') {
+      updateMenuItemMutation.mutate(
+        { params: { id: editingRow.id }, body: { name: values.name, defaultCostPerPlate: values.cost ?? 0 } },
+        { onSuccess },
+      );
     }
   };
 
@@ -233,6 +242,10 @@ const SettingsPage = () => {
           ? createRoomTypeMutation.isPending
           : createMenuItemMutation.isPending;
 
+  // Also doubles as the Edit dialog's own `isPending` (below) — for
+  // menuItems this only ever reflects updateMenuItemMutation, never a
+  // status toggle (section.supportsStatus is false there, so the
+  // Switch this otherwise also disables never renders for that section).
   const isMutatingStatus =
     selectedSectionId === 'venues'
       ? updateVenueMutation.isPending
@@ -240,7 +253,7 @@ const SettingsPage = () => {
         ? updateEventTypeMutation.isPending
         : selectedSectionId === 'roomTypes'
           ? updateRoomTypeMutation.isPending
-          : false;
+          : updateMenuItemMutation.isPending;
 
   const addForm = isAddFormOpen && (
     <AddItemForm
