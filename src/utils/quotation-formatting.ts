@@ -108,7 +108,18 @@ export const formatAccommodationDate = (date: string): string => {
 // both reference PDFs print those as bare, ungrouped numbers (e.g. "73500",
 // not "73,500" or "73,500/-"); only the named summary/total fields above
 // get digit-grouping and a Rupee prefix or suffix at all.
-export const formatQuotationRupees = (amount: number): string => `Rs. ${new Intl.NumberFormat('en-IN').format(amount)} /-`;
+// Rounds to the nearest whole rupee before formatting — STORY-072 found
+// that Intl.NumberFormat's own default maximumFractionDigits (3, not 0)
+// otherwise prints a genuinely fractional Grand Total (e.g. Food Cost with
+// GST landing on a .5 rupee, 597150 × 1.05 = 627007.5) verbatim, as
+// "Rs. 10,73,207.5 /-" instead of both reference quotations' own printed
+// "Rs. 10,73,208 /-" — this formatter is only ever used for a final
+// summary/footer figure (Accommodation's Total Charges, the Total Cost
+// Summary's own Grand Total), never a line item that needs its exact
+// fractional value preserved (those print via plain, unrounded
+// interpolation — see quotation-document.tsx's own Food Cost row comment).
+export const formatQuotationRupees = (amount: number): string =>
+  `Rs. ${new Intl.NumberFormat('en-IN').format(Math.round(amount))} /-`;
 
 // '<amount>/-' — a bare, ungrouped number (STORY-071's own per-date Event
 // Details "Cost" column). Verified against both reference quotations: even

@@ -147,6 +147,8 @@ export const updateEventBodySchema = z.object({
   status: z.nativeEnum(EventStatus).optional(),
   eventManager: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid event_manager id.').optional(),
   clientContacts: z.array(clientContactSchema).min(1).optional(),
+  // STORY-072 — mirrors aaradhya-api's own updateEventBodySchema.
+  foodGstRatePercent: z.number().min(0).optional(),
 });
 
 // Exported for the same reason as clientContactSchema — one place a Room
@@ -577,6 +579,9 @@ export const createEventBodySchema = z.object({
   accommodation: updateAccommodationBodySchema.optional(),
   extras: extrasFieldsSchema.optional(),
   extraLineItems: z.array(manualLineItemSchema).optional(),
+  // STORY-072 — defaults to 5 server-side when omitted (mirrors
+  // aaradhya-api's own createEventBodySchema).
+  foodGstRatePercent: z.number().min(0).optional(),
 });
 
 // Every field optional (PATCH semantics) — a caller sends only what
@@ -683,6 +688,8 @@ export const eventResultSchema = z.object({
   documentsChecklist: documentsChecklistResultSchema,
   extras: extrasResultSchema,
   extraLineItems: z.array(manualLineItemResultSchema),
+  // STORY-072 — mirrors aaradhya-api's own eventResultSchema.
+  foodGstRatePercent: z.number(),
   sessions: z.array(sessionResultSchema),
   createdBy: z.string(),
   createdAt: z.string(),
@@ -705,6 +712,9 @@ export const filteredEventResultSchema = eventResultSchema.extend({
   payment: paymentResultSchema.optional(),
   extras: extrasResultSchema.optional(),
   extraLineItems: z.array(manualLineItemResultSchema).optional(),
+  // STORY-072 — hidden for every non-EventManager role, mirrors
+  // aaradhya-api's own filteredEventResultSchema.
+  foodGstRatePercent: z.number().optional(),
   sessions: z.array(filteredSessionResultSchema),
 });
 

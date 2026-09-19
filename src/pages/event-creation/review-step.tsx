@@ -419,6 +419,18 @@ const ReviewStep = ({ registerSubmit }: ReviewStepProps) => {
         sessions: mapSessionsForSubmit(sessions, byDate),
         accommodation: mapAccommodationForSubmit(accommodation),
         extraLineItems: manualLineItems.map(({ name, note, amount }) => ({ name, note: note.trim() || undefined, amount })),
+        // STORY-072 — this Step's own GST% field was previously computed
+        // here only for this Step's own live preview and then discarded;
+        // now persisted so the Quotation's own Total Cost Summary (and any
+        // later fidelity re-check) recomputes the Food Cost with the SAME
+        // rate actually used here, not always the 5% default. Clamped to 0
+        // rather than trusting the field's own min={0} (a visual hint on
+        // the input, not an enforced constraint on the controlled value) —
+        // a negative value would otherwise reach the backend's own
+        // z.number().min(0) and fail Event creation with a generic
+        // "Something went wrong" error that gives no hint the GST field is
+        // the actual cause.
+        foodGstRatePercent: Number.isFinite(gstPercent) ? Math.max(0, gstPercent) : 0,
       },
     });
   };

@@ -10,8 +10,10 @@ import {
   filteredAccommodationResultSchema,
   filteredItemResultSchema,
   filteredSessionResultSchema,
+  manualLineItemResultSchema,
 } from '../../contract';
 import { toDateInputValue } from '../event-detail/date-input';
+import { roundToCurrency } from '../../utils/accommodation-calculations';
 import {
   formatAccommodationDate,
   formatEventDate,
@@ -25,6 +27,8 @@ import {
 import {
   brandLockupStyles,
   ceremonyRowStyles,
+  costSummaryHighlightLabelCellStyles,
+  costSummaryHighlightNumericCellStyles,
   headerRowStyles,
   markImageStyles,
   numericCellStyles,
@@ -87,6 +91,24 @@ const EXTRA_BEDS_ROOM_TYPE = 'Extra Beds';
 const ACCOMMODATION_CHECK_IN_TIME = '12pm';
 const ACCOMMODATION_CHECK_OUT_TIME = '11am';
 
+// Mirrors aaradhya-api's own services/quotation.ts FOOD_GST_RATE_PERCENT —
+// the fallback when an Event's own foodGstRatePercent is entirely absent
+// (a role this document is fed for that doesn't see it, per filteredEvent
+// ResultSchema — see QuotationDocumentProps' own comment), not a value this
+// component ever chooses over an Event's real stored rate.
+const FOOD_GST_RATE_PERCENT_DEFAULT = 5;
+
+// This story's own AC: the two reference PDFs phrase the Total Cost
+// Summary's per-date block label differently ("Wedding Venue and Catering
+// – 10/12/2026" vs "Venue and Catering 26 feb 2027") — picked example_
+// quatation_1.pdf's own fuller wording and applied it to every Quotation
+// this renders, the same "sources disagree, standardize on one convention"
+// call STORY-071's own Event Details heading already makes. "Wedding" here
+// is this fixed label's own literal text, not the Event's actual
+// eventFamilyType — an Engagement-only Quotation still prints this same
+// word, matching what "applied consistently" requires.
+const TOTAL_COST_SUMMARY_DATE_LABEL_PREFIX = 'Wedding Venue and Catering';
+
 // Derived from the contract's own Zod schemas (typescript-rules rule 3),
 // not hand-declared — matches this page's own pre-existing PublicSession
 // pattern (quotation-preview-page.tsx before this story) rather than
@@ -129,6 +151,11 @@ export type QuotationDocumentAccommodation = Pick<
   'checkIn' | 'checkOut' | 'totalDays' | 'roomLines' | 'totalOccupancy' | 'totalCharges'
 >;
 
+// STORY-072 — the Total Cost Summary's own "manually-added rows" (SRS
+// FR-QUO-9a/A13, wizard Step 5). Note stays nullable (manualLineItemResult
+// Schema's own shape) — rendered blank, never fabricated, when absent.
+export type QuotationDocumentManualLineItem = z.infer<typeof manualLineItemResultSchema>;
+
 export interface QuotationDocumentProps {
   clientContacts: QuotationDocumentClientContact[];
   sessions: QuotationDocumentSession[];
@@ -136,6 +163,12 @@ export interface QuotationDocumentProps {
   // (the whole block can be absent for a role that isn't EventManager) —
   // treated the same as an accommodation with no dates and no Room Lines.
   accommodation: QuotationDocumentAccommodation | undefined;
+  extraLineItems: QuotationDocumentManualLineItem[];
+  // `undefined` matches filteredEventResultSchema's own foodGstRatePercent
+  // field (hidden for non-EventManager roles) — defaulted to the same 5%
+  // FOOD_GST_RATE_PERCENT the backend falls back to when this Event never
+  // had an explicit rate stored (STORY-072).
+  foodGstRatePercent: number | undefined;
   // Injectable for deterministic tests — defaults to "now" (FR-QUO-6: always
   // the current date at generation time, never the Event's own createdAt).
   quotationDate?: Date;
@@ -151,6 +184,8 @@ const QuotationDocument = ({
   clientContacts,
   sessions,
   accommodation,
+  extraLineItems,
+  foodGstRatePercent = FOOD_GST_RATE_PERCENT_DEFAULT,
   quotationDate = new Date(),
 }: QuotationDocumentProps) => {
   // A Cancelled Session isn't a real, billable line on the Quotation —
@@ -381,6 +416,103 @@ const QuotationDocument = ({
     </Box>
   ));
 
+  // STORY-072 — Total Cost Summary (SRS FR-QUO-9). Reuses dateGroups
+  // (STORY-071's own per-date Session+Item pooling, already in date order)
+  // rather than a second, possibly-divergent grouping: a venue row is one
+  // per Active Session on that date (not one per date — example_
+  // quatation_2.pdf's own Halad+Engagement both dated 26/02/2027 print two
+  // separate venue rows), a food row is one per Meal Item on that date
+  // (Ceremony/Event Items never appear in this table at all, in either
+  // reference PDF).
+  const costSummaryDateBlocks = dateGroups.map((group) => ({
+    date: group.date,
+    sessionsForDate: activeSessions.filter((session) => toDateInputValue(session.startDate) === group.date),
+    mealItemsForDate: group.items.filter((item) => item.type === ItemType.Meal),
+  }));
+
+  // FR-QUO-8: a limited-seating Meal Item's Total Cost is billed as pax=1
+  // (a flat per-slot charge), not the literal headcount — verified against
+  // example_quatation_1.pdf's own "Chaat Counter" row (1 × 12000 = 12000)
+  // reproduced identically for every L.S. row in both reference PDFs.
+  // Rounded per-row, not only once on the accumulated sum — matches
+  // total-cost-summary.ts's own computeFoodItemTotalCost exactly, so the
+  // wizard's live Step 5 preview and this actually-generated Quotation
+  // can't drift apart over a fractional Cost Per Plate.
+  const computeFoodItemTotalCost = (item: QuotationDocumentSessionItem): number =>
+    roundToCurrency((item.limitedSeating ? 1 : (item.pax ?? 0)) * (item.costPerPlate ?? 0));
+
+  // Exactly one Food Cost row for the WHOLE table (a per-date subtotal is
+  // this story's own explicit non-goal) — summed across every date's own
+  // Meal Items, not just costSummaryDateBlocks' last entry.
+  const allMealItemsAcrossDates = dateGroups.flatMap((group) => group.items.filter((item) => item.type === ItemType.Meal));
+  const foodCostTotal = roundToCurrency(
+    allMealItemsAcrossDates.reduce((total, item) => total + computeFoodItemTotalCost(item), 0),
+  );
+  // Verified against both reference PDFs' own printed figures: 597150 ×
+  // 1.05 = 627007.5 (example_quatation_1.pdf), 391500 × 1.05 = 411075
+  // (example_quatation_2.pdf) — printed as-is, not rounded to a whole
+  // rupee (that only happens for the Grand Total's own formatted display,
+  // via formatQuotationRupees — see this table's own JSX below).
+  const foodCostWithGst = roundToCurrency(foodCostTotal * (1 + foodGstRatePercent / 100));
+  const venueTotal = roundToCurrency(activeSessions.reduce((total, session) => total + (session.venueCost ?? 0), 0));
+  const accommodationTotal = accommodation?.totalCharges ?? 0;
+  const manualLineItemsTotal = roundToCurrency(extraLineItems.reduce((total, item) => total + item.amount, 0));
+  // Deliberately excludes the older, fixed extras.decoration/photographer/
+  // bhatji trio (STORY-042) — this story's own AC enumerates exactly four
+  // categories feeding the Grand Total (venue rows, the one Food Cost row,
+  // Accommodation, "every manual row"), and both reference PDFs' own
+  // Decoration/Photographer/Bhatji lines carry a note (STORY-068's own
+  // extraLineItems has one; the fixed trio never did), so those three rows
+  // are themselves manually-added rows here, not a separate category. A
+  // real, non-zero extras.decoration/photographer/bhatji on an Event would
+  // NOT appear in this table or its Grand Total — a known, accepted
+  // divergence from the older getQuotationSummary/TotalCostSummaryPanel
+  // rollup (which still combines both), not something this story asks to
+  // reconcile.
+  const grandTotal = roundToCurrency(venueTotal + foodCostWithGst + accommodationTotal + manualLineItemsTotal);
+
+  const totalCostSummaryRows = costSummaryDateBlocks.flatMap((block) => {
+    const blockRows = [
+      ...block.sessionsForDate.map((session) => ({ kind: 'venue' as const, session })),
+      ...block.mealItemsForDate.map((item) => ({ kind: 'food' as const, item })),
+    ];
+    const blockLabel = `${TOTAL_COST_SUMMARY_DATE_LABEL_PREFIX} – ${formatEventDate(block.date)}`;
+
+    return blockRows.map((row, index) => {
+      const costItemCell = index === 0 && (
+        <TableCell rowSpan={blockRows.length} sx={rowLabelCellStyles}>
+          {blockLabel}
+        </TableCell>
+      );
+
+      if (row.kind === 'venue') {
+        return (
+          <TableRow key={row.session.id}>
+            {costItemCell}
+            <TableCell>{row.session.venue}</TableCell>
+            <TableCell />
+            <TableCell />
+            <TableCell />
+            <TableCell sx={numericCellStyles}>{row.session.venueCost ?? 0}</TableCell>
+          </TableRow>
+        );
+      }
+
+      const pax = row.item.limitedSeating ? 1 : (row.item.pax ?? 0);
+      const costPerPlate = row.item.costPerPlate ?? 0;
+      return (
+        <TableRow key={row.item.id}>
+          {costItemCell}
+          <TableCell>{row.item.mealName}</TableCell>
+          <TableCell sx={numericCellStyles}>{pax}</TableCell>
+          <TableCell sx={numericCellStyles}>{costPerPlate}</TableCell>
+          <TableCell sx={numericCellStyles}>{computeFoodItemTotalCost(row.item)}</TableCell>
+          <TableCell />
+        </TableRow>
+      );
+    });
+  });
+
   return (
     <Box sx={rootStyles}>
       <Box sx={headerRowStyles}>
@@ -485,6 +617,63 @@ const QuotationDocument = ({
       </Box>
 
       {eventDetailsByDateSections}
+
+      <Box sx={sectionStyles}>
+        <Typography component="h2" sx={sectionHeadingStyles}>
+          Total Cost Summary
+        </Typography>
+        <Box sx={tableScrollStyles}>
+          <Table sx={tableStyles} aria-label="Total Cost Summary">
+            <TableHead>
+              <TableRow>
+                <TableCell>Cost Item</TableCell>
+                <TableCell>Sub Cost Item</TableCell>
+                <TableCell>Pax</TableCell>
+                <TableCell>Cost Per Plate</TableCell>
+                <TableCell>Total Cost</TableCell>
+                <TableCell>Total Cost with GST</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {totalCostSummaryRows}
+              <TableRow>
+                <TableCell sx={costSummaryHighlightLabelCellStyles}>Food Cost</TableCell>
+                <TableCell sx={costSummaryHighlightLabelCellStyles} />
+                <TableCell sx={costSummaryHighlightLabelCellStyles} />
+                <TableCell sx={costSummaryHighlightLabelCellStyles} />
+                <TableCell sx={costSummaryHighlightNumericCellStyles}>{foodCostTotal}</TableCell>
+                <TableCell sx={costSummaryHighlightNumericCellStyles}>{foodCostWithGst}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell sx={rowLabelCellStyles}>Accommodation</TableCell>
+                <TableCell />
+                <TableCell />
+                <TableCell />
+                <TableCell />
+                <TableCell sx={numericCellStyles}>{accommodationTotal}</TableCell>
+              </TableRow>
+              {extraLineItems.map((item, index) => (
+                <TableRow key={index}>
+                  <TableCell sx={rowLabelCellStyles}>{item.name}</TableCell>
+                  <TableCell>{item.note ?? ''}</TableCell>
+                  <TableCell />
+                  <TableCell />
+                  <TableCell />
+                  <TableCell sx={numericCellStyles}>{item.amount}</TableCell>
+                </TableRow>
+              ))}
+              <TableRow>
+                <TableCell />
+                <TableCell />
+                <TableCell />
+                <TableCell sx={costSummaryHighlightLabelCellStyles}>Grand Total</TableCell>
+                <TableCell sx={costSummaryHighlightLabelCellStyles} />
+                <TableCell sx={costSummaryHighlightNumericCellStyles}>{formatQuotationRupees(grandTotal)}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </Box>
+      </Box>
     </Box>
   );
 };

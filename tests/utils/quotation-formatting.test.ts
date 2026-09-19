@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatEventDate,
+  formatQuotationItemCost,
   formatQuotationPax,
+  formatQuotationRupees,
   formatSessionDuration,
   formatTimeOfDay,
 } from '../../src/utils/quotation-formatting';
@@ -66,5 +68,28 @@ describe('formatQuotationPax', () => {
 
   it('formats "L.S. (Npax)" when limited_seating is on, using the literal pax entered', () => {
     expect(formatQuotationPax(200, true)).toBe('L.S. (200pax)');
+  });
+});
+
+describe('formatQuotationItemCost', () => {
+  it('formats a bare number with a trailing "/-", no digit grouping', () => {
+    expect(formatQuotationItemCost(275)).toBe('275/-');
+    // example_quatation_1.pdf's own "Chaat Counter" row — no comma even at
+    // 5 digits.
+    expect(formatQuotationItemCost(45000)).toBe('45000/-');
+  });
+});
+
+describe('formatQuotationRupees', () => {
+  it('formats a whole number with Indian digit grouping and a "Rs. ... /-" wrapper', () => {
+    expect(formatQuotationRupees(109200)).toBe('Rs. 1,09,200 /-');
+  });
+
+  // STORY-072 — both reference quotations' own printed Grand Total
+  // ("Rs. 10,73,208 /-" from an underlying 1073207.5, "Rs. 9,49,555 /-"
+  // from 949555) round to the nearest whole rupee; Intl.NumberFormat's own
+  // default maximumFractionDigits (3) would otherwise print the .5 verbatim.
+  it('rounds a fractional amount to the nearest whole rupee', () => {
+    expect(formatQuotationRupees(1073207.5)).toBe('Rs. 10,73,208 /-');
   });
 });

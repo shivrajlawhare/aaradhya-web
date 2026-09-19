@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { tsr } from '../../src/api/client';
@@ -250,11 +250,20 @@ describe('QuotationPreviewPage', () => {
     expect(await screen.findByText('Bride')).toBeInTheDocument();
     expect(screen.getByText('Priya Nair')).toBeInTheDocument();
     expect(screen.getByText('9876543210')).toBeInTheDocument();
-    expect(screen.getByText('Wedding')).toBeInTheDocument();
-    expect(screen.getByText('Lawn')).toBeInTheDocument();
-    expect(screen.getByText('5,000/-')).toBeInTheDocument();
+    // STORY-072's own Total Cost Summary table also has a "Lawn" venue row
+    // and a "5000" (bare, ungrouped) Total Cost with GST cell alongside the
+    // Event Details summary table's own "Wedding"/"Lawn"/"5,000/-" —
+    // scoped to that specific table so this test still pins down its own
+    // section rather than asserting on an now-ambiguous bare text query.
+    const eventDetailsTable = screen.getByRole('table', { name: 'Event Details' });
+    expect(within(eventDetailsTable).getByText('Wedding')).toBeInTheDocument();
+    expect(within(eventDetailsTable).getByText('Lawn')).toBeInTheDocument();
+    expect(within(eventDetailsTable).getByText('5,000/-')).toBeInTheDocument();
     expect(screen.getByText('Double')).toBeInTheDocument();
-    expect(screen.getByText('5900')).toBeInTheDocument();
+    // "5900" also appears in the new Total Cost Summary's own Accommodation
+    // row (STORY-072), so this one's scoped to Accommodation Details too.
+    const accommodationTable = screen.getByRole('table', { name: 'Accommodation Details' });
+    expect(within(accommodationTable).getByText('5900')).toBeInTheDocument();
     expect(screen.getByText('Rs. 5,900 /-')).toBeInTheDocument();
     // venueTotal 5000 + foodTotalInclGst (2000 × 1.18 = 2360) + accommodationTotal 5900 = 13260.
     expect(await screen.findByText('13,260')).toBeInTheDocument();
@@ -276,7 +285,10 @@ describe('QuotationPreviewPage', () => {
 
     await screen.findByText('Client Details');
     expect(screen.getByText('Accommodation Details')).toBeInTheDocument();
-    expect(screen.getByText('Rs. 0 /-')).toBeInTheDocument();
+    // Two "Rs. 0 /-" cells for a wholly-empty Event now that STORY-072 adds
+    // its own Grand Total row alongside Accommodation's own Total Charges
+    // footer — both are genuinely zero here, not a single shared element.
+    expect(screen.getAllByText('Rs. 0 /-')).toHaveLength(2);
   });
 
   it('excludes a Cancelled Session from the per-session list, matching the PDF', async () => {

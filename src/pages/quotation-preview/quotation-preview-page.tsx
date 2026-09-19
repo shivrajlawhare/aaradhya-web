@@ -99,6 +99,8 @@ const QuotationPreviewPage = () => {
           clientContacts={event.clientContacts ?? []}
           sessions={sessionsForQuotation}
           accommodation={event.accommodation}
+          extraLineItems={event.extraLineItems ?? []}
+          foodGstRatePercent={event.foodGstRatePercent}
         />
 
         {/* Read-only here (canEdit={false}) — this is a preview to

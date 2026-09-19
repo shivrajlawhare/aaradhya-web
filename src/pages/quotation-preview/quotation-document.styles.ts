@@ -192,3 +192,19 @@ export const ceremonyRowStyles: SxProps<Theme> = {
   bgcolor: CEREMONY_ROW_GREY,
   fontWeight: 700,
 };
+
+// STORY-072 — the Total Cost Summary's own Food Cost and Grand Total rows
+// (SRS §4.7e/FR-QUO-9's color-coding note), reusing the exact same amber
+// shade TOTAL_CHARGES_AMBER above already samples from the reference PDFs'
+// Accommodation footer — the two are visually indistinguishable in both
+// reference documents, not two independently-sampled colors.
+export const costSummaryHighlightLabelCellStyles: SxProps<Theme> = {
+  bgcolor: TOTAL_CHARGES_AMBER,
+  fontWeight: 700,
+};
+
+export const costSummaryHighlightNumericCellStyles: SxProps<Theme> = {
+  bgcolor: TOTAL_CHARGES_AMBER,
+  fontVariantNumeric: 'tabular-nums',
+  textAlign: 'right',
+};

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import QuotationDocument, {
   type QuotationDocumentAccommodation,
   type QuotationDocumentClientContact,
+  type QuotationDocumentManualLineItem,
   type QuotationDocumentSession,
   type QuotationDocumentSessionItem,
 } from '../../src/pages/quotation-preview/quotation-document';
@@ -14,6 +15,8 @@ interface RenderOptions {
   clientContacts?: QuotationDocumentClientContact[];
   sessions?: QuotationDocumentSession[];
   accommodation?: QuotationDocumentAccommodation | undefined;
+  extraLineItems?: QuotationDocumentManualLineItem[];
+  foodGstRatePercent?: number | undefined;
   // Local-time Date construction (year, 0-indexed month, day) rather than a
   // UTC-midnight ISO string — formatQuotationGenerationDate reads local
   // calendar getters (getDate/getMonth/getFullYear), same as the real
@@ -33,6 +36,8 @@ const renderDocument = ({
   clientContacts = [bride()],
   sessions = [],
   accommodation = undefined,
+  extraLineItems = [],
+  foodGstRatePercent = 5,
   quotationDate = new Date(2026, 7, 23),
 }: RenderOptions = {}) =>
   render(
@@ -41,10 +46,21 @@ const renderDocument = ({
         clientContacts={clientContacts}
         sessions={sessions}
         accommodation={accommodation}
+        extraLineItems={extraLineItems}
+        foodGstRatePercent={foodGstRatePercent}
         quotationDate={quotationDate}
       />
     </ThemeProvider>,
   );
+
+const makeManualLineItem = (
+  overrides: Partial<QuotationDocumentManualLineItem> = {},
+): QuotationDocumentManualLineItem => ({
+  name: 'Decoration',
+  note: null,
+  amount: 0,
+  ...overrides,
+});
 
 const makeSession = (overrides: Partial<QuotationDocumentSession> = {}): QuotationDocumentSession => ({
   id: 'session-1',
@@ -586,6 +602,279 @@ describe('QuotationDocument', () => {
 
       expect(screen.queryByText('Cancelled Lunch')).not.toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: /Event Details –/ })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Total Cost Summary (STORY-072)', () => {
+    it('renders one venue row per Session on a shared date, both merged under one date-block label (example_quatation_2.pdf: Halad+Engagement)', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            id: 'halad',
+            sessionType: 'Halad',
+            venue: 'Half Banquet',
+            venueCost: 60000,
+            startDate: '2027-02-26T00:00:00.000Z',
+            items: [],
+          }),
+          makeSession({
+            id: 'engagement',
+            sessionType: 'Engagement',
+            venue: 'Poolside',
+            venueCost: 60000,
+            startDate: '2027-02-26T00:00:00.000Z',
+            items: [],
+          }),
+        ],
+      });
+
+      const table = screen.getByRole('table', { name: 'Total Cost Summary' });
+      const rows = within(table).getAllByRole('row');
+      // Header + 2 venue rows + Food Cost + Accommodation + Grand Total.
+      expect(rows).toHaveLength(6);
+
+      const halfBanquetRow = within(rows[1]!).getAllByRole('cell');
+      expect(halfBanquetRow[0]!.textContent).toBe('Wedding Venue and Catering – 26/02/2027');
+      expect(halfBanquetRow[0]!).toHaveAttribute('rowspan', '2');
+      expect(halfBanquetRow[1]!.textContent).toBe('Half Banquet');
+      expect(halfBanquetRow[5]!.textContent).toBe('60000');
+
+      // Second venue row has no Cost Item cell of its own — the merged
+      // cell above accounts for it, same rowSpan pattern Accommodation
+      // Details' own Check-in/Check-out cells already establish.
+      const poolsideRow = within(rows[2]!).getAllByRole('cell');
+      expect(poolsideRow).toHaveLength(5);
+      expect(poolsideRow[0]!.textContent).toBe('Poolside');
+      expect(poolsideRow[4]!.textContent).toBe('60000');
+    });
+
+    it('bills a limited-seating Meal Item\'s Total Cost at pax=1, not the literal headcount (FR-QUO-8)', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            startDate: '2026-12-11T00:00:00.000Z',
+            venue: 'Full Banquet',
+            venueCost: 0,
+            items: [makeMealItem({ mealName: 'Chaat Counter', pax: 300, limitedSeating: true, costPerPlate: 45000 })],
+          }),
+        ],
+      });
+
+      const table = screen.getByRole('table', { name: 'Total Cost Summary' });
+      // Venue row (pax 0) then the food row — food row is rows[2]. No
+      // merged Cost Item cell of its own (the venue row above already
+      // rendered it), so this row has 5 cells, not 6.
+      const foodRow = within(table).getAllByRole('row')[2]!;
+      const cells = within(foodRow).getAllByRole('cell');
+      expect(cells[0]!.textContent).toBe('Chaat Counter');
+      expect(cells[1]!.textContent).toBe('1');
+      expect(cells[2]!.textContent).toBe('45000');
+      // Total Cost = 1 × 45000 = 45000, matching example_quatation_1.pdf's
+      // own printed figure for this exact row.
+      expect(cells[3]!.textContent).toBe('45000');
+      expect(cells[4]!.textContent).toBe('');
+    });
+
+    it('renders a Meal Item genuinely entered with pax/cost 0 as a real 0 row, not hidden (example_quatation_1.pdf\'s own blank/zero row)', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            startDate: '2026-12-10T00:00:00.000Z',
+            venueCost: 0,
+            items: [makeMealItem({ mealName: '', pax: 0, costPerPlate: 0, limitedSeating: false })],
+          }),
+        ],
+      });
+
+      const table = screen.getByRole('table', { name: 'Total Cost Summary' });
+      const foodRow = within(table).getAllByRole('row')[2]!;
+      const cells = within(foodRow).getAllByRole('cell');
+      expect(cells[1]!.textContent).toBe('0');
+      expect(cells[2]!.textContent).toBe('0');
+      expect(cells[3]!.textContent).toBe('0');
+    });
+
+    it('renders exactly one Food Cost row for the whole table, summed across every date, shaded amber', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            id: 'engagement',
+            startDate: '2026-12-10T00:00:00.000Z',
+            venueCost: 0,
+            items: [makeMealItem({ mealName: 'Hi Tea', pax: 30, costPerPlate: 275 })],
+          }),
+          makeSession({
+            id: 'wedding',
+            startDate: '2026-12-11T00:00:00.000Z',
+            venueCost: 0,
+            items: [makeMealItem({ mealName: 'Breakfast', pax: 50, costPerPlate: 350 })],
+          }),
+        ],
+        foodGstRatePercent: 5,
+      });
+
+      const table = screen.getByRole('table', { name: 'Total Cost Summary' });
+      // Exactly one "Food Cost" cell — no per-date subtotal (this story's
+      // own explicit non-goal).
+      expect(within(table).getAllByText('Food Cost')).toHaveLength(1);
+      const foodCostRow = within(table).getByText('Food Cost').closest('tr')!;
+      const cells = within(foodCostRow).getAllByRole('cell');
+      // 30×275 + 50×350 = 8250 + 17500 = 25750; ×1.05 = 27037.5.
+      expect(cells[4]!.textContent).toBe('25750');
+      expect(cells[5]!.textContent).toBe('27037.5');
+      expect(cells[0]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
+      expect(cells[5]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
+    });
+
+    it('uses a custom foodGstRatePercent instead of the 5% default (SRS §4.9)', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            startDate: '2026-12-10T00:00:00.000Z',
+            venueCost: 0,
+            items: [makeMealItem({ mealName: 'Hi Tea', pax: 10, costPerPlate: 100 })],
+          }),
+        ],
+        foodGstRatePercent: 18,
+      });
+
+      const table = screen.getByRole('table', { name: 'Total Cost Summary' });
+      const foodCostRow = within(table).getByText('Food Cost').closest('tr')!;
+      // 10×100 = 1000; ×1.18 = 1180, not the 5%-default 1050.
+      expect(within(foodCostRow).getByText('1180')).toBeInTheDocument();
+    });
+
+    it('renders an Accommodation row with only Total Cost with GST populated', () => {
+      renderDocument({
+        accommodation: makeAccommodation({ totalCharges: 109200 }),
+      });
+
+      const table = screen.getByRole('table', { name: 'Total Cost Summary' });
+      const accommodationRow = within(table).getByText('Accommodation').closest('tr')!;
+      const cells = within(accommodationRow).getAllByRole('cell');
+      expect(cells.map((cell) => cell.textContent)).toEqual(['Accommodation', '', '', '', '', '109200']);
+    });
+
+    it('renders manual line items with name/note/amount, blank note when absent (STORY-068)', () => {
+      renderDocument({
+        extraLineItems: [
+          makeManualLineItem({
+            name: 'Decoration',
+            note: 'poolside engg sangeet + Wedding(Vidhi mandap with saptapadi)',
+            amount: 150000,
+          }),
+          makeManualLineItem({ name: 'Photographer', note: null, amount: 0 }),
+          makeManualLineItem({ name: 'Bhatji', note: 'wedding', amount: 7000 }),
+        ],
+      });
+
+      const table = screen.getByRole('table', { name: 'Total Cost Summary' });
+      const decorationRow = within(table).getByText('Decoration').closest('tr')!;
+      expect(
+        within(decorationRow).getByText('poolside engg sangeet + Wedding(Vidhi mandap with saptapadi)'),
+      ).toBeInTheDocument();
+      expect(within(decorationRow).getByText('150000')).toBeInTheDocument();
+
+      const photographerRow = within(table).getByText('Photographer').closest('tr')!;
+      const photographerCells = within(photographerRow).getAllByRole('cell');
+      expect(photographerCells[1]!.textContent).toBe('');
+
+      const bhatjiRow = within(table).getByText('Bhatji').closest('tr')!;
+      expect(within(bhatjiRow).getByText('wedding')).toBeInTheDocument();
+      expect(within(bhatjiRow).getByText('7000')).toBeInTheDocument();
+    });
+
+    it('renders "Grand Total" in the Cost Per Plate column, shaded amber, summing every category', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            startDate: '2026-12-10T00:00:00.000Z',
+            venue: 'Poolside',
+            venueCost: 60000,
+            items: [makeMealItem({ mealName: 'Hi Tea', pax: 30, costPerPlate: 275 })],
+          }),
+        ],
+        accommodation: makeAccommodation({ totalCharges: 10000 }),
+        extraLineItems: [makeManualLineItem({ name: 'Decoration', note: null, amount: 5000 })],
+        foodGstRatePercent: 5,
+      });
+
+      const table = screen.getByRole('table', { name: 'Total Cost Summary' });
+      const grandTotalRow = within(table).getByText('Grand Total').closest('tr')!;
+      const cells = within(grandTotalRow).getAllByRole('cell');
+      // "Grand Total" sits in the Cost Per Plate column (index 3), not
+      // Cost Item — this story's own literal AC instruction.
+      expect(cells[3]!.textContent).toBe('Grand Total');
+      // venueTotal 60000 + foodCostWithGst (8250×1.05=8662.5) + accommodation
+      // 10000 + manual 5000 = 83662.5, rounded to the nearest rupee for
+      // display.
+      expect(cells[5]!.textContent).toBe('Rs. 83,663 /-');
+      expect(cells[3]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
+      expect(cells[5]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
+    });
+
+    // Full end-to-end reproduction of example_quatation_1.pdf's own Total
+    // Cost Summary — every row and the final Grand Total, verified to the
+    // rupee against its printed "Rs. 10,73,208 /-".
+    it('reproduces example_quatation_1.pdf\'s exact printed Total Cost Summary figures', () => {
+      renderDocument({
+        sessions: [
+          makeSession({
+            id: 'engagement',
+            sessionType: 'Engagement',
+            venue: 'Poolside',
+            venueCost: 60000,
+            startDate: '2026-12-10T00:00:00.000Z',
+            items: [
+              makeMealItem({ id: 'hitea', mealName: 'Hi Tea', pax: 30, costPerPlate: 275 }),
+              makeMealItem({ id: 'chaat', mealName: 'Chaat Counter', pax: 30, limitedSeating: true, costPerPlate: 12000 }),
+              makeMealItem({ id: 'chai', mealName: 'Chai Tapri', pax: 30, limitedSeating: true, costPerPlate: 5000 }),
+              makeMealItem({ id: 'drinks', mealName: 'Drinks', pax: 30, costPerPlate: 80 }),
+              makeMealItem({ id: 'cake', mealName: 'Engagement Cake', pax: 30, limitedSeating: true, costPerPlate: 3000 }),
+              makeMealItem({ id: 'dinner', mealName: 'Dinner - poolside', pax: 30, costPerPlate: 900 }),
+            ],
+          }),
+          makeSession({
+            id: 'wedding',
+            sessionType: 'Wedding',
+            venue: 'Full Banquet',
+            venueCost: 120000,
+            startDate: '2026-12-11T00:00:00.000Z',
+            items: [
+              makeMealItem({ id: 'breakfast', mealName: 'Breakfast', pax: 50, costPerPlate: 350 }),
+              makeMealItem({ id: 'starter', mealName: 'Starter', pax: 300, costPerPlate: 180 }),
+              makeMealItem({ id: 'chaat2', mealName: 'Chaat Counter', pax: 300, limitedSeating: true, costPerPlate: 45000 }),
+              makeMealItem({ id: 'welcome', mealName: 'Welcome Drink', pax: 300, costPerPlate: 210 }),
+              makeMealItem({ id: 'lunch', mealName: 'Lunch', pax: 300, costPerPlate: 1200 }),
+            ],
+          }),
+        ],
+        accommodation: makeAccommodation({ totalCharges: 109200 }),
+        extraLineItems: [
+          makeManualLineItem({
+            name: 'Decoration',
+            note: 'poolside engg sangeet + Wedding(Vidhi mandap with saptapadi)',
+            amount: 150000,
+          }),
+          makeManualLineItem({ name: 'Photographer', note: null, amount: 0 }),
+          makeManualLineItem({ name: 'Bhatji', note: 'wedding', amount: 7000 }),
+        ],
+        foodGstRatePercent: 5,
+      });
+
+      const table = screen.getByRole('table', { name: 'Total Cost Summary' });
+      const foodCostRow = within(table).getByText('Food Cost').closest('tr')!;
+      // Food subtotal: 8250+12000+5000+2400+3000+27000 (poolside) = 57650;
+      // +17500+54000+45000+63000+360000 (banquet) = 539500. Combined =
+      // 597150 — example_quatation_1.pdf's own printed Food Cost figure.
+      expect(within(foodCostRow).getByText('597150')).toBeInTheDocument();
+      // 597150 × 1.05 = 627007.5, printed with its exact decimal, unrounded.
+      expect(within(foodCostRow).getByText('627007.5')).toBeInTheDocument();
+
+      const grandTotalRow = within(table).getByText('Grand Total').closest('tr')!;
+      // venueTotal 180000 + foodCostWithGst 627007.5 + accommodation 109200
+      // + manual 157000 = 1073207.5 -> Rs. 10,73,208 /- after rounding.
+      expect(within(grandTotalRow).getByText('Rs. 10,73,208 /-')).toBeInTheDocument();
     });
   });
 });
