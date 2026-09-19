@@ -208,3 +208,42 @@ export const costSummaryHighlightNumericCellStyles: SxProps<Theme> = {
   fontVariantNumeric: 'tabular-nums',
   textAlign: 'right',
 };
+
+// STORY-073 — the static footer's Terms & Conditions (bulleted) and
+// Documents Required (numbered) lists. A plain margin reset plus a fixed
+// left indent for the marker itself — MUI's own Typography/Box defaults
+// would otherwise carry the app's interactive body-copy margins into this
+// fixed-reproduction section, same "pinned, not inherited" reasoning
+// rootStyles' own DOCUMENT_FONT_FAMILY choice already documents. The
+// inter-item gap is a sibling-combinator margin, not `display: flex` +
+// `gap` on the list itself — flex blockifies every `<li>` into a flex
+// item, which suppresses its `::marker` box entirely in a real browser
+// (jsdom doesn't run layout, so this wouldn't have shown up in a test),
+// silently dropping every bullet/number despite `listStyleType` being set.
+const footerListStyles: SxProps<Theme> = {
+  fontFamily: DOCUMENT_FONT_FAMILY,
+  fontSize: '12px',
+  margin: 0,
+  paddingLeft: '20px',
+  '& li + li': {
+    marginTop: '2px',
+  },
+};
+
+export const bulletedListStyles: SxProps<Theme> = {
+  ...footerListStyles,
+  listStyleType: 'disc',
+};
+
+export const numberedListStyles: SxProps<Theme> = {
+  ...footerListStyles,
+  listStyleType: 'decimal',
+};
+
+// The Quotation's own closing "Regards / Aaradhya Banquets" lines — plain
+// text, no heading/table styling, matching the reference PDFs' own
+// unadorned final two lines.
+export const closingLineStyles: SxProps<Theme> = {
+  fontFamily: DOCUMENT_FONT_FAMILY,
+  fontSize: '12px',
+};

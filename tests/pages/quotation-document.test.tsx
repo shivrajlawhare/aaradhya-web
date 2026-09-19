@@ -877,4 +877,94 @@ describe('QuotationDocument', () => {
       expect(within(grandTotalRow).getByText('Rs. 10,73,208 /-')).toBeInTheDocument();
     });
   });
+
+  describe('static footer (STORY-073)', () => {
+    it('renders all 13 Terms & Conditions bullets, verbatim and in order, character-for-character against the reference PDFs', () => {
+      renderDocument();
+
+      const list = screen.getByRole('list', { name: 'Terms & Conditions' });
+      const items = within(list).getAllByRole('listitem');
+      expect(items).toHaveLength(13);
+      expect(items.map((item) => item.textContent)).toEqual([
+        'The venue rental charges shall be considered as the booking amount and must be paid to confirm the booking.',
+        'The remaining balance must be paid on the day of the event or prior to the commencement of the function.',
+        'Any additional services or requirements requested beyond this quotation will be charged separately.',
+        'Prices are subject to change based on customization and specific event requirements.',
+        "The cancellation policy shall apply as per the management's terms and conditions.",
+        'Any damage to the hotel property, equipment, furniture, fixtures, décor, or any other assets caused during the event by the client or guests will be chargeable.',
+        'This quotation is valid for one (1) month from the date of issue.',
+        '200 ml packaged drinking water bottles will be provided as per the confirmed guest count (Pax).',
+        'Banquet Hall Timings (with Air Conditioning): 9:00 AM to 3:00 PM. Any extension is subject to management approval and availability.',
+        'Additional hall usage beyond the approved timing will be charged at ₹15,000 per hour.',
+        'Room Check-in: 12:00 PM | Check-out: 11:00 AM. Early check-in, late check-out, or extended stay will be subject to availability and additional charges.',
+        'Ample parking is available within the hotel premises, and security will be provided for vehicles parked inside the campus. However, the management shall not be responsible for any loss, theft, or damage to vehicles parked outside the hotel premises.',
+        'The management reserves the right to modify these terms and conditions without prior notice, if required.',
+      ]);
+    });
+
+    it('reproduces the reference PDFs’ own literal "₹15,000" text, not aaradhya-api\'s pdfkit-only "Rs. 15,000" workaround', () => {
+      renderDocument();
+
+      expect(screen.getByText(/₹15,000 per hour/)).toBeInTheDocument();
+      expect(screen.queryByText(/Rs\. 15,000/)).not.toBeInTheDocument();
+    });
+
+    it('renders Documents Required from Bride and Groom as a 6-item numbered list, verbatim and in order', () => {
+      renderDocument();
+
+      const list = screen.getByRole('list', { name: 'Documents Required from Bride and Groom' });
+      const items = within(list).getAllByRole('listitem');
+      expect(items.map((item) => item.textContent)).toEqual([
+        'Aadhar Card',
+        'Pan Card',
+        'Leaving / Birth Certificate',
+        'Ration Card',
+        '2 passport size photos each',
+        'Wedding Card',
+      ]);
+    });
+
+    it('renders Bank Account Details as a 6-row table with the reference PDFs’ own exact values', () => {
+      renderDocument();
+
+      const table = screen.getByRole('table', { name: 'Bank Account Details' });
+      const rows = within(table).getAllByRole('row');
+      expect(rows).toHaveLength(6);
+      expect(rows.map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent))).toEqual([
+        ['Name', 'Aaradhya Adorer'],
+        ['Account Number', '142320110000165'],
+        ['Bank Name', 'Bank of India'],
+        ['Branch Name', 'Talawade'],
+        ['IFSC', 'BKID0001423'],
+        ['GST Number', '27ABLFA0695F1ZC'],
+      ]);
+    });
+
+    it('renders "Regards" then "Aaradhya Banquets" as the final closing lines, with no trailing comma', () => {
+      renderDocument();
+
+      expect(screen.getByText('Regards')).toBeInTheDocument();
+      expect(screen.getByText('Aaradhya Banquets')).toBeInTheDocument();
+      expect(screen.queryByText('Regards,')).not.toBeInTheDocument();
+    });
+
+    it('renders identically regardless of Event data — no props influence this section', () => {
+      const { unmount } = renderDocument({ sessions: [], accommodation: undefined, extraLineItems: [] });
+      const emptyEventTerms = within(screen.getByRole('list', { name: 'Terms & Conditions' }))
+        .getAllByRole('listitem')
+        .map((item) => item.textContent);
+      unmount();
+
+      renderDocument({
+        sessions: [makeSession({ items: [makeMealItem()] })],
+        accommodation: makeAccommodation(),
+        extraLineItems: [makeManualLineItem()],
+      });
+      const populatedEventTerms = within(screen.getByRole('list', { name: 'Terms & Conditions' }))
+        .getAllByRole('listitem')
+        .map((item) => item.textContent);
+
+      expect(populatedEventTerms).toEqual(emptyEventTerms);
+    });
+  });
 });

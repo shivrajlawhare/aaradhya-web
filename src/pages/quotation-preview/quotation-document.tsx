@@ -26,11 +26,14 @@ import {
 } from '../../utils/quotation-formatting';
 import {
   brandLockupStyles,
+  bulletedListStyles,
   ceremonyRowStyles,
+  closingLineStyles,
   costSummaryHighlightLabelCellStyles,
   costSummaryHighlightNumericCellStyles,
   headerRowStyles,
   markImageStyles,
+  numberedListStyles,
   numericCellStyles,
   orgDetailsLineStyles,
   orgDetailsStyles,
@@ -58,6 +61,52 @@ import {
 const ORG_GST_NUMBER = '27ABLFA0695F1ZC';
 const ORG_ADDRESS_LINES = ['Mumbai-Goa Highway, Akeri,', 'Maharashtra – 416510'];
 const ORG_CONTACT = '+91 9423362122';
+
+// STORY-073 — the static footer (SRS FR-QUO-10): identical on every
+// generated Quotation regardless of Event data, verified character-for-
+// character against both reference quotations (docs/example_quatations/),
+// which carry byte-identical wording for this whole section. Deliberately
+// NOT reused from aaradhya-api's own quotation-pdf.ts TERMS_AND_CONDITIONS
+// constant — that file's "Rs. 15,000" substitution for the reference's own
+// "₹15,000" is a pdfkit-only workaround (its default Helvetica font has no
+// Rupee glyph under WinAnsiEncoding); this component renders as real HTML/
+// CSS (today in-browser, later via a server-side Playwright render of this
+// same tree per Aaradhya_Quotation_PDF_Strategy.md), which has no such
+// constraint, so it reproduces the reference's own literal "₹15,000" text
+// instead of carrying that unrelated renderer's limitation forward.
+const TERMS_AND_CONDITIONS = [
+  'The venue rental charges shall be considered as the booking amount and must be paid to confirm the booking.',
+  'The remaining balance must be paid on the day of the event or prior to the commencement of the function.',
+  'Any additional services or requirements requested beyond this quotation will be charged separately.',
+  'Prices are subject to change based on customization and specific event requirements.',
+  "The cancellation policy shall apply as per the management's terms and conditions.",
+  'Any damage to the hotel property, equipment, furniture, fixtures, décor, or any other assets caused during the event by the client or guests will be chargeable.',
+  'This quotation is valid for one (1) month from the date of issue.',
+  '200 ml packaged drinking water bottles will be provided as per the confirmed guest count (Pax).',
+  'Banquet Hall Timings (with Air Conditioning): 9:00 AM to 3:00 PM. Any extension is subject to management approval and availability.',
+  'Additional hall usage beyond the approved timing will be charged at ₹15,000 per hour.',
+  'Room Check-in: 12:00 PM | Check-out: 11:00 AM. Early check-in, late check-out, or extended stay will be subject to availability and additional charges.',
+  'Ample parking is available within the hotel premises, and security will be provided for vehicles parked inside the campus. However, the management shall not be responsible for any loss, theft, or damage to vehicles parked outside the hotel premises.',
+  'The management reserves the right to modify these terms and conditions without prior notice, if required.',
+];
+
+const DOCUMENTS_REQUIRED = [
+  'Aadhar Card',
+  'Pan Card',
+  'Leaving / Birth Certificate',
+  'Ration Card',
+  '2 passport size photos each',
+  'Wedding Card',
+];
+
+const BANK_ACCOUNT_DETAILS: [label: string, value: string][] = [
+  ['Name', 'Aaradhya Adorer'],
+  ['Account Number', '142320110000165'],
+  ['Bank Name', 'Bank of India'],
+  ['Branch Name', 'Talawade'],
+  ['IFSC', 'BKID0001423'],
+  ['GST Number', '27ABLFA0695F1ZC'],
+];
 
 // "Point of Contact", not the raw enum value "POC" — the only label among
 // the four that isn't already the exact display text (SRS §5.3's default
@@ -673,6 +722,55 @@ const QuotationDocument = ({
             </TableBody>
           </Table>
         </Box>
+      </Box>
+
+      {/* STORY-073 — the static footer (SRS FR-QUO-10): not user-editable
+          from any screen in the app, compiled directly into this render
+          tree from the fixed constants above, the same way the header's own
+          ORG_GST_NUMBER/ORG_ADDRESS_LINES/ORG_CONTACT already are. */}
+      <Box sx={sectionStyles}>
+        <Typography component="h2" sx={sectionHeadingStyles}>
+          Terms & Conditions
+        </Typography>
+        <Box component="ul" sx={bulletedListStyles} aria-label="Terms & Conditions">
+          {TERMS_AND_CONDITIONS.map((term, index) => (
+            <li key={index}>{term}</li>
+          ))}
+        </Box>
+      </Box>
+
+      <Box sx={sectionStyles}>
+        <Typography component="h2" sx={sectionHeadingStyles}>
+          Documents Required from Bride and Groom
+        </Typography>
+        <Box component="ol" sx={numberedListStyles} aria-label="Documents Required from Bride and Groom">
+          {DOCUMENTS_REQUIRED.map((document, index) => (
+            <li key={index}>{document}</li>
+          ))}
+        </Box>
+      </Box>
+
+      <Box sx={sectionStyles}>
+        <Typography component="h2" sx={sectionHeadingStyles}>
+          Bank Account Details
+        </Typography>
+        <Box sx={tableScrollStyles}>
+          <Table sx={tableStyles} aria-label="Bank Account Details">
+            <TableBody>
+              {BANK_ACCOUNT_DETAILS.map(([label, value]) => (
+                <TableRow key={label}>
+                  <TableCell sx={rowLabelCellStyles}>{label}</TableCell>
+                  <TableCell>{value}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
+      </Box>
+
+      <Box sx={sectionStyles}>
+        <Typography sx={closingLineStyles}>Regards</Typography>
+        <Typography sx={closingLineStyles}>Aaradhya Banquets</Typography>
       </Box>
     </Box>
   );
