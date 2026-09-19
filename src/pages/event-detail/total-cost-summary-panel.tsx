@@ -7,6 +7,7 @@ import type { extrasResultSchema } from '../../contract';
 import { formatAmount } from './format-amount';
 import {
   extrasFieldsStyles,
+  grandTotalRowStyles,
   grandTotalValueStyles,
   lineItemsStyles,
   lineItemValueStyles,
@@ -167,20 +168,23 @@ const TotalCostSummaryPanel = ({ eventId, extras, canEdit, onEventChanged }: Tot
               Save extras
             </Button>
           )}
-          <Typography variant="bodyM" component="span">
-            Grand Total
-          </Typography>
-          <Typography variant="display" sx={grandTotalValueStyles}>
-            {/* Rounded to the nearest whole rupee — a fractional
-                foodTotalInclGst (e.g. 597150 × 1.05 = 627007.5) otherwise
-                shows through verbatim as "10,73,207.5", the same rounding
-                gap STORY-072's own formatQuotationRupees fix already closed
-                for the Quotation's own printed Grand Total. formatAmount
-                itself stays untouched — it's a shared, general-purpose
-                formatter (Payments, extras, Room costs) where a caller that
-                genuinely needs fractional precision shouldn't lose it. */}
-            {formatAmount(Math.round(summary.grandTotal))}
-          </Typography>
+          <Stack sx={grandTotalRowStyles}>
+            <Typography variant="bodyM" component="span">
+              Grand Total
+            </Typography>
+            <Typography variant="display" component="span" sx={grandTotalValueStyles}>
+              {/* Rounded to the nearest whole rupee — a fractional
+                  foodTotalInclGst (e.g. 597150 × 1.05 = 627007.5) otherwise
+                  shows through verbatim as "10,73,207.5", the same rounding
+                  gap STORY-072's own formatQuotationRupees fix already
+                  closed for the Quotation's own printed Grand Total.
+                  formatAmount itself stays untouched — it's a shared,
+                  general-purpose formatter (Payments, extras, Room costs)
+                  where a caller that genuinely needs fractional precision
+                  shouldn't lose it. */}
+              {formatAmount(Math.round(summary.grandTotal))}
+            </Typography>
+          </Stack>
         </>
       )}
     </Paper>
