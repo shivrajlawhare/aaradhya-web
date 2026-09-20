@@ -1551,6 +1551,14 @@ describe('EventDetailPage', () => {
     expect(sessionPatchRequests[0]).toMatchObject({ pax: 250 });
   });
 
+  // STORY-078 — Items editing no longer lives inside the Session edit form
+  // at all (it moves to the Sessions & Items tab, STORY-079); the exhaustive
+  // Add/search-menu-item/dedupe/remove behavior this cluster used to cover
+  // here is obsolete now that the UI to trigger it from this screen is gone
+  // — STORY-079 owns re-covering that behavior against its own new tab, not
+  // this file. What's left to verify here is only STORY-078's own two ACs:
+  // Items are absent from this trimmed form, and editing/saving a Session's
+  // own fields never loses or corrupts Items already attached to it.
   const makeSessionWithItems = (itemOverrides: (Partial<MockItem> & { id: string })[] = []): MockSession => ({
     id: 'session-1',
     sessionType: 'Wedding',
@@ -1568,7 +1576,7 @@ describe('EventDetailPage', () => {
     items: itemOverrides.map((overrides) => makeMealItem(overrides)),
   });
 
-  it('shows the Items section, listing already-attached Items, when editing an existing Session', async () => {
+  it('no longer shows an Items section, "Add Item" button, or existing Item fields on the Session edit form', async () => {
     seedSession();
     const session = makeSessionWithItems([{ id: 'item-1', mealName: 'Lunch' }]);
     mockEventDetailApi({ event: makeEvent({ sessions: [session] }) });
@@ -1577,136 +1585,31 @@ describe('EventDetailPage', () => {
     fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
 
-    expect(await screen.findByText('Items')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Lunch')).toBeInTheDocument();
+    await screen.findByRole('button', { name: 'Save session' });
+    expect(screen.queryByText('Items')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add Item' })).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Lunch')).not.toBeInTheDocument();
   });
 
-  it('adds a Meal Item via POST, reflecting the server-computed total_cost', async () => {
-    seedSession();
-    const session = makeSessionWithItems();
-    const { itemPostRequests } = mockEventDetailApi({ event: makeEvent({ sessions: [session] }) });
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Add Item' }));
-
-    fireEvent.change(screen.getByLabelText('Meal name for item 1'), { target: { value: 'Dinner' } });
-    fireEvent.change(screen.getByLabelText('Pax for item 1'), { target: { value: '100' } });
-    fireEvent.change(screen.getByLabelText('Cost per plate for item 1'), { target: { value: '500' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add item' }));
-
-    await waitFor(() => expect(itemPostRequests).toHaveLength(1));
-    expect(itemPostRequests[0]).toMatchObject({ type: 'Meal', mealName: 'Dinner', pax: 100, costPerPlate: 500 });
-    expect(await screen.findByText('Total cost: 50000')).toBeInTheDocument();
-  });
-
-  it("never shows a client-computed total_cost before save — an unsaved card reads '—'", async () => {
-    seedSession();
-    const session = makeSessionWithItems();
-    mockEventDetailApi({ event: makeEvent({ sessions: [session] }) });
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Add Item' }));
-
-    fireEvent.change(screen.getByLabelText('Pax for item 1'), { target: { value: '100' } });
-    fireEvent.change(screen.getByLabelText('Cost per plate for item 1'), { target: { value: '500' } });
-
-    expect(screen.getByText('Total cost: —')).toBeInTheDocument();
-    expect(screen.queryByText('Total cost: 50000')).not.toBeInTheDocument();
-  });
-
-  it('attaches an existing Menu Item selected from search, referencing it by id on save', async () => {
-    seedSession();
-    const session = makeSessionWithItems();
-    const { itemPostRequests } = mockEventDetailApi({
-      event: makeEvent({ sessions: [session] }),
-      menuItems: [makeMenuItem({ id: 'menu-item-1', name: 'Paneer Tikka' })],
-    });
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Add Item' }));
-
-    const searchInput = await screen.findByRole('combobox', { name: 'Menu items' });
-    // MUI's Autocomplete resets its typed inputValue back to '' on the next
-    // render if the field isn't focused yet (its multiple-mode "no selected
-    // label to show" reset effect) — a real user always focuses the field by
-    // clicking into it before typing, so this mirrors that.
-    fireEvent.focus(searchInput);
-    fireEvent.change(searchInput, { target: { value: 'Paneer' } });
-    fireEvent.click(await screen.findByRole('option', { name: 'Paneer Tikka' }));
-
-    fireEvent.change(screen.getByLabelText('Meal name for item 1'), { target: { value: 'Dinner' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add item' }));
-
-    await waitFor(() => expect(itemPostRequests).toHaveLength(1));
-    expect(itemPostRequests[0]?.menuItems).toEqual([{ id: 'menu-item-1' }]);
-  });
-
-  it("offers \"Add '<name>' as a new menu item\" for a not-found search, attaching it by name", async () => {
-    seedSession();
-    const session = makeSessionWithItems();
-    const { itemPostRequests } = mockEventDetailApi({ event: makeEvent({ sessions: [session] }), menuItems: [] });
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Add Item' }));
-
-    const searchInput = await screen.findByRole('combobox', { name: 'Menu items' });
-    fireEvent.focus(searchInput);
-    fireEvent.change(searchInput, { target: { value: 'Gulab Jamun' } });
-    fireEvent.click(await screen.findByRole('option', { name: 'Add "Gulab Jamun" as a new menu item' }));
-
-    fireEvent.change(screen.getByLabelText('Meal name for item 1'), { target: { value: 'Dessert' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add item' }));
-
-    await waitFor(() => expect(itemPostRequests).toHaveLength(1));
-    expect(itemPostRequests[0]?.menuItems).toEqual([{ name: 'Gulab Jamun' }]);
-  });
-
-  it('does not add the same Menu Item twice to one Meal Item (de-duped, this story edge case)', async () => {
-    seedSession();
-    const session = makeSessionWithItems();
-    mockEventDetailApi({
-      event: makeEvent({ sessions: [session] }),
-      menuItems: [makeMenuItem({ id: 'menu-item-1', name: 'Paneer Tikka' })],
-    });
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Add Item' }));
-
-    const searchInput = await screen.findByRole('combobox', { name: 'Menu items' });
-    fireEvent.focus(searchInput);
-    fireEvent.change(searchInput, { target: { value: 'Paneer' } });
-    fireEvent.click(await screen.findByRole('option', { name: 'Paneer Tikka' }));
-    fireEvent.focus(searchInput);
-    fireEvent.change(searchInput, { target: { value: 'Paneer' } });
-    fireEvent.click(await screen.findByRole('option', { name: 'Add "Paneer" as a new menu item' }));
-
-    expect(screen.getAllByText('Paneer Tikka')).toHaveLength(1);
-  });
-
-  it("removes an existing Item via a real DELETE — it's gone from the Event, not just hidden locally", async () => {
+  it("editing and saving a Session's own fields never loses or corrupts its existing Items (STORY-078 edge case)", async () => {
     seedSession();
     const session = makeSessionWithItems([{ id: 'item-1', mealName: 'Lunch' }]);
-    const { getCurrentEvent } = mockEventDetailApi({ event: makeEvent({ sessions: [session] }) });
+    const { sessionPatchRequests, getCurrentEvent } = mockEventDetailApi({ event: makeEvent({ sessions: [session] }) });
     renderPage();
 
     fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    fireEvent.change(await screen.findByLabelText('Pax'), { target: { value: '250' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save session' }));
 
-    expect(await screen.findByDisplayValue('Lunch')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
-
-    await waitFor(() => expect(getCurrentEvent()?.sessions[0]?.items).toHaveLength(0));
-    await waitFor(() => expect(screen.queryByDisplayValue('Lunch')).not.toBeInTheDocument());
+    await waitFor(() => expect(sessionPatchRequests).toHaveLength(1));
+    // The PATCH itself never carries an `items` field (Items have their own
+    // POST/PATCH/DELETE routes, untouched by a Session-level edit) — and the
+    // Item already stored on the Event is still there afterward, unchanged.
+    expect(sessionPatchRequests[0]).not.toHaveProperty('items');
+    const updatedSession = getCurrentEvent()?.sessions[0];
+    expect(updatedSession?.items).toHaveLength(1);
+    expect(updatedSession?.items?.[0]?.mealName).toBe('Lunch');
   });
 
   // The full per-role tab-visibility matrix (STORY-052) — Reception's own
