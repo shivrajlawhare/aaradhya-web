@@ -264,10 +264,78 @@ describe('ReviewStep', () => {
       eventManager: 'manager-1',
       clientContacts: [{ name: 'Sneha Vaidya', contactNumber: '9876543210', role: 'Bride' }],
     });
-    const body = lastCreateEventBody as { sessions: { items: unknown[] }[]; accommodation: { roomLines: unknown[] } };
+    const body = lastCreateEventBody as {
+      sessions: { items: unknown[]; setup: Record<string, unknown> }[];
+      accommodation: { roomLines: unknown[] };
+    };
     expect(body.sessions).toHaveLength(1);
     expect(body.sessions[0]!.items).toHaveLength(1);
     expect(body.accommodation.roomLines).toHaveLength(1);
+    // BASE_WIZARD_DATA's own seeded Session predates the `setup` field
+    // (STORY — wizard Setup) entirely — mapSessionsForSubmit's own
+    // `session.setup ?? emptySetup` fallback must still produce a harmless
+    // all-default object, not throw.
+    expect(body.sessions[0]!.setup).toEqual({
+      seating: undefined,
+      tableCount: 0,
+      chairCount: 0,
+      stage: false,
+      buffet: false,
+      registrationDesk: false,
+      vipSeating: false,
+      brideGroomSeating: false,
+      notes: undefined,
+    });
+  });
+
+  it('submits a filled-in Setup section as entered, serialized the same way session-form.tsx does', async () => {
+    mockCreateEventApi(201);
+    seedWizardData({
+      'event-details': {
+        sessions: [
+          {
+            id: 's1',
+            sessionType: 'Wedding',
+            venue: 'Poolside',
+            venueCost: 60000,
+            pax: 200,
+            startDate: '2026-09-12',
+            endDate: '2026-09-13',
+            startTime: '',
+            endTime: '',
+            setup: {
+              seating: 'RoundTables',
+              tableCount: 20,
+              chairCount: 200,
+              stage: true,
+              buffet: false,
+              registrationDesk: false,
+              vipSeating: false,
+              brideGroomSeating: false,
+              notes: 'Extra space near entrance',
+            },
+          },
+        ],
+      },
+    });
+    renderWizard(reviewPath);
+    await screen.findByText('Poolside');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Quotation' }));
+    expect(await screen.findByText('Quotation preview for evt-1')).toBeInTheDocument();
+
+    const body = lastCreateEventBody as { sessions: { setup: Record<string, unknown> }[] };
+    expect(body.sessions[0]!.setup).toEqual({
+      seating: 'RoundTables',
+      tableCount: 20,
+      chairCount: 200,
+      stage: true,
+      buffet: false,
+      registrationDesk: false,
+      vipSeating: false,
+      brideGroomSeating: false,
+      notes: 'Extra space near entrance',
+    });
   });
 
   it('keeps the wizard data intact and shows an error when submission fails', async () => {

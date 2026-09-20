@@ -29,7 +29,7 @@ import { enumerateDates } from '../../utils/session-dates';
 import { computeWizardTotalCostSummary, type ManualLineItem } from '../../utils/total-cost-summary';
 import type { WizardRoomLine } from './accommodation-step';
 import type { WizardContactRow } from './client-details-step';
-import type { WizardSessionRow } from './event-details-step';
+import { emptySetup, type WizardSessionRow } from './event-details-step';
 import type { WizardDateEntry } from './sessions-items-step';
 import {
   addButtonStyles,
@@ -203,6 +203,7 @@ const mapSessionItem = (entry: WizardDateEntry, venue: string): MappedSessionIte
 const mapSessionsForSubmit = (sessions: WizardSessionRow[], byDate: Record<string, WizardDateEntry[]>) => {
   const usedDates = new Set<string>();
   return sessions.map((session) => {
+    const setup = session.setup ?? emptySetup;
     const items: MappedSessionItem[] = [];
     for (const date of enumerateDates(session.startDate, session.endDate)) {
       if (usedDates.has(date)) {
@@ -222,6 +223,26 @@ const mapSessionsForSubmit = (sessions: WizardSessionRow[], byDate: Record<strin
       startTime: session.startTime.trim() || undefined,
       endTime: session.endTime.trim() || undefined,
       pax: session.pax,
+      // Serialized exactly like session-form.tsx's own handleSave — an
+      // untouched Setup section submits a harmless all-default object
+      // (every field optional server-side, sessionSetupInputSchema), the
+      // same as omitting `setup` entirely. Falls back to emptySetup for a
+      // Session already sitting in sessionStorage from before this field
+      // existed (isEventDetailsShape's own runtime guard only checks
+      // `sessions` is an array, not each row's shape) — same "own stored
+      // state may predate the current shape" defensiveness session-form.tsx
+      // already applies to a Session fetched from the server.
+      setup: {
+        seating: setup.seating || undefined,
+        tableCount: setup.tableCount,
+        chairCount: setup.chairCount,
+        stage: setup.stage,
+        buffet: setup.buffet,
+        registrationDesk: setup.registrationDesk,
+        vipSeating: setup.vipSeating,
+        brideGroomSeating: setup.brideGroomSeating,
+        notes: setup.notes.trim() || undefined,
+      },
       items,
     };
   });

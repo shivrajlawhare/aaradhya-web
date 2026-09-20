@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ItemType } from '../../src/contract';
-import type { WizardSessionRow } from '../../src/pages/event-creation/event-details-step';
+import { emptySetup, type WizardSessionRow } from '../../src/pages/event-creation/event-details-step';
 import type { WizardDateEntry } from '../../src/pages/event-creation/sessions-items-step';
 import { computeWizardTotalCostSummary } from '../../src/utils/total-cost-summary';
 
@@ -14,6 +14,7 @@ const session = (overrides: Partial<WizardSessionRow> = {}): WizardSessionRow =>
   endDate: '2026-12-10',
   startTime: '',
   endTime: '',
+  setup: emptySetup,
   ...overrides,
 });
 

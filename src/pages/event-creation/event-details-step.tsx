@@ -14,13 +14,16 @@ import {
   TableHead,
   TableRow,
   TextField,
+  ToggleButton,
   Typography,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
 import { Controller, useForm } from 'react-hook-form';
 import { tsr } from '../../api/client';
+import { SEATING_ARRANGEMENT_OPTIONS, SeatingArrangement } from '../../contract';
 import { fromPickerDate, fromPickerTime, toPickerDate, toPickerTime } from '../event-detail/date-input';
+import { SEATING_ARRANGEMENT_LABELS } from '../event-detail/session-form-options';
 import { useEventWizard } from '../../stores/event-wizard-context';
 import { formatEventDate, formatSessionDuration } from '../../utils/quotation-formatting';
 import { enumerateDates, getDistinctDates } from '../../utils/session-dates';
@@ -28,8 +31,10 @@ import {
   addButtonStyles,
   formCardStyles,
   rowStyles,
+  setupCardStyles,
   tableCardStyles,
   timeFieldStyles,
+  toggleActiveStyles,
   wrapperStyles,
 } from './event-details-step.styles';
 
@@ -45,6 +50,35 @@ const CUSTOM_EVENT_TYPE_OPTION = 'Custom…';
 // is exactly what STORY-068's eventual POST /events call needs to send;
 // nothing here is submitted yet (SRS FR-EVT-8 — held in the wizard store
 // until Step 5).
+// Optional, not required to add a Session (this story's own AC — Setup
+// details get filled in properly in a later version) — mirrors
+// session-form.tsx's own SessionFormValues['setup'] shape exactly, field for
+// field, so the two Setup cards (wizard and Event Detail's Sessions tab) stay
+// in lockstep.
+export interface WizardSessionSetup {
+  seating: SeatingArrangement | '';
+  tableCount: number;
+  chairCount: number;
+  stage: boolean;
+  buffet: boolean;
+  registrationDesk: boolean;
+  vipSeating: boolean;
+  brideGroomSeating: boolean;
+  notes: string;
+}
+
+export const emptySetup: WizardSessionSetup = {
+  seating: '',
+  tableCount: 0,
+  chairCount: 0,
+  stage: false,
+  buffet: false,
+  registrationDesk: false,
+  vipSeating: false,
+  brideGroomSeating: false,
+  notes: '',
+};
+
 export interface WizardSessionRow {
   id: string;
   sessionType: string;
@@ -55,6 +89,7 @@ export interface WizardSessionRow {
   endDate: string;
   startTime: string;
   endTime: string;
+  setup: WizardSessionSetup;
 }
 
 interface EventDetailsStepData {
@@ -85,6 +120,7 @@ interface EntryFormValues {
   endDate: string;
   startTime: string;
   endTime: string;
+  setup: WizardSessionSetup;
 }
 
 const emptyEntry: EntryFormValues = {
@@ -97,6 +133,7 @@ const emptyEntry: EntryFormValues = {
   endDate: '',
   startTime: '',
   endTime: '',
+  setup: emptySetup,
 };
 
 // Time+random, not a module-level counter — same reasoning as
@@ -168,6 +205,7 @@ const EventDetailsStep = () => {
         endDate: values.endDate,
         startTime: values.startTime,
         endTime: values.endTime,
+        setup: values.setup,
       },
     ]);
     reset(emptyEntry);
@@ -346,6 +384,72 @@ const EventDetailsStep = () => {
               )}
             />
           </Stack>
+        </Stack>
+        {/* Setup — optional, not required to add a Session (this story's own
+            AC: filled in properly in a later version). Mirrors
+            session-form.tsx's own "Setup" card field-for-field so the Event
+            Detail Sessions tab's Edit flow doesn't ask for anything new this
+            step didn't already offer. */}
+        <Stack sx={setupCardStyles}>
+          <Typography variant="titleM" component="h3">
+            Setup
+          </Typography>
+          <Controller
+            name="setup.seating"
+            control={control}
+            render={({ field }) => (
+              <TextField {...field} select label="Seating" fullWidth>
+                <MenuItem value="">Not set</MenuItem>
+                {SEATING_ARRANGEMENT_OPTIONS.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {SEATING_ARRANGEMENT_LABELS[option]}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+          />
+          <Stack direction="row" sx={rowStyles}>
+            <TextField
+              {...register('setup.tableCount', { valueAsNumber: true })}
+              label="Tables"
+              type="number"
+              slotProps={{ htmlInput: { min: 0 } }}
+            />
+            <TextField
+              {...register('setup.chairCount', { valueAsNumber: true })}
+              label="Chairs"
+              type="number"
+              slotProps={{ htmlInput: { min: 0 } }}
+            />
+          </Stack>
+          <Stack direction="row" sx={rowStyles}>
+            {(
+              [
+                ['stage', 'Stage'],
+                ['buffet', 'Buffet'],
+                ['registrationDesk', 'Registration desk'],
+                ['vipSeating', 'VIP seating'],
+                ['brideGroomSeating', 'Bride/Groom seating'],
+              ] as const
+            ).map(([key, label]) => (
+              <Controller
+                key={key}
+                name={`setup.${key}`}
+                control={control}
+                render={({ field }) => (
+                  <ToggleButton
+                    value={key}
+                    selected={field.value}
+                    onChange={() => field.onChange(!field.value)}
+                    sx={field.value ? toggleActiveStyles : undefined}
+                  >
+                    <Typography variant="labelS">{label}</Typography>
+                  </ToggleButton>
+                )}
+              />
+            ))}
+          </Stack>
+          <TextField {...register('setup.notes')} label="Notes" multiline minRows={2} fullWidth />
         </Stack>
         <Button type="submit" variant="contained" startIcon={<AddIcon />} sx={addButtonStyles}>
           Add Event

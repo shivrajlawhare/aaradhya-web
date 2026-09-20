@@ -430,6 +430,72 @@ describe('EventDetailsStep', () => {
     expect(stored['sessions-items'].byDate['2026-09-12']).toEqual([{ type: 'Ceremony' }]);
   });
 
+  it('renders the Setup section, all fields optional — adding a row untouched stores harmless defaults', async () => {
+    const user = userEvent.setup();
+    renderWizard(eventDetailsPath);
+    await screen.findByLabelText('Event Type');
+
+    expect(screen.getByText('Setup')).toBeInTheDocument();
+    expect(screen.getByLabelText('Seating')).toBeInTheDocument();
+    expect(screen.getByLabelText('Tables')).toBeInTheDocument();
+    expect(screen.getByLabelText('Chairs')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Stage' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Notes')).toBeInTheDocument();
+
+    await fillMinimalEvent(user);
+    fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
+    await screen.findByText('Wedding');
+
+    // Never blocked Next — Setup has no readiness check of its own.
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Next: Accommodation →' })).toBeEnabled());
+
+    const stored = JSON.parse(sessionStorage.getItem(WIZARD_STORAGE_KEY) ?? '{}');
+    expect(stored['event-details'].sessions[0].setup).toEqual({
+      seating: '',
+      tableCount: 0,
+      chairCount: 0,
+      stage: false,
+      buffet: false,
+      registrationDesk: false,
+      vipSeating: false,
+      brideGroomSeating: false,
+      notes: '',
+    });
+  });
+
+  it('carries entered Setup details into the stored row and resets the form for the next entry', async () => {
+    const user = userEvent.setup();
+    renderWizard(eventDetailsPath);
+    await screen.findByLabelText('Event Type');
+    await fillMinimalEvent(user);
+
+    await selectOption('Seating', 'Round Tables');
+    fireEvent.change(screen.getByLabelText('Tables'), { target: { value: '20' } });
+    fireEvent.change(screen.getByLabelText('Chairs'), { target: { value: '200' } });
+    await user.click(screen.getByRole('button', { name: 'Stage' }));
+    fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'Extra space near entrance' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
+    await screen.findByText('Wedding');
+
+    const stored = JSON.parse(sessionStorage.getItem(WIZARD_STORAGE_KEY) ?? '{}');
+    expect(stored['event-details'].sessions[0].setup).toEqual({
+      seating: 'RoundTables',
+      tableCount: 20,
+      chairCount: 200,
+      stage: true,
+      buffet: false,
+      registrationDesk: false,
+      vipSeating: false,
+      brideGroomSeating: false,
+      notes: 'Extra space near entrance',
+    });
+
+    // Form cleared for the next entry, same as every other field.
+    expect(screen.getByLabelText('Tables')).toHaveValue(0);
+    expect(screen.getByLabelText('Notes')).toHaveValue('');
+  });
+
   it('carries entered Sessions forward across Back/Next between Step 2 and Step 1', async () => {
     const user = userEvent.setup();
     renderWizard(eventDetailsPath);
