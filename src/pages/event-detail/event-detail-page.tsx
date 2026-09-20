@@ -8,18 +8,35 @@ import { Role } from '../../contract';
 import { EVENT_LIST_PATH } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
 import DocumentsTab from './documents-tab';
+import EventDetailTabPlaceholder from './event-detail-tab-placeholder';
 import OverviewTab from './overview-tab';
 import PaymentsTab from './payments-tab';
 import RoomsTab from './rooms-tab';
 import SessionsTab from './sessions-tab';
 import { headerStyles, pageStyles, tabPanelStyles } from './event-detail-page.styles';
 
-type DetailTab = 'overview' | 'rooms' | 'sessions' | 'payments' | 'documents' | 'activity';
+// STORY-076 — renamed/reordered to mirror the New Event wizard's own 5 steps
+// (Client Details, Event Details, Accommodation, Sessions & Items, Review &
+// Quotation), with Payments/Documents/Activity kept as-is per the story's own
+// explicit scope. 'client-details'/'event-details'/'accommodation' render
+// today's Overview/Sessions/Rooms components verbatim in this shell-only
+// story (STORY-077/078 split/trim them for real); 'sessions-items'/'review'
+// are brand new tabs with no existing screen to relocate, so they render
+// EventDetailTabPlaceholder until STORY-079/080 build them.
+type DetailTab =
+  | 'client-details'
+  | 'event-details'
+  | 'accommodation'
+  | 'sessions-items'
+  | 'review'
+  | 'payments'
+  | 'documents'
+  | 'activity';
 
 const EventDetailPage = () => {
   const { id } = useParams();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<DetailTab>('overview');
+  const [activeTab, setActiveTab] = useState<DetailTab>('client-details');
 
   const eventQuery = tsr.getEvent.useQuery({
     queryKey: ['event', id ?? ''],
@@ -50,18 +67,24 @@ const EventDetailPage = () => {
   // "coincide today, not one rule" reasoning.
   //
   // Rooms/Sessions/Setup/Menu (STORY-052) — every role's own SRS §3.x "Sees:"
-  // list, restated as this screen's tab-visibility matrix:
-  // EventManager: Overview, Rooms, Sessions (Setup+Menu), Payments,
-  //   Documents, Activity — unchanged (this story's own regression AC).
-  // F&B Head (§3.2): Overview (filtered) + Sessions (Menu, no Setup). No
-  //   Rooms — §3.2 never mentions accommodation/rooms.
-  // Housekeeping (§3.3): Overview (filtered) + Rooms + Sessions (Setup, no
-  //   Menu).
-  // Reception (§3.4): Overview (filtered) + Rooms. No Sessions at all —
-  //   this story's own explicit bullet ("Payments and Sessions & Menu are
-  //   absent"), even though §3.4 itself lists venue/pax/date(s) among what
-  //   Reception sees; the AC's own literal tab list wins over re-deriving
-  //   a looser rule from the field-visibility table.
+  // list, restated as this screen's tab-visibility matrix. Tab names below
+  // are STORY-076's renamed ones (Accommodation = old Rooms, Event Details/
+  // Sessions & Items = old Sessions, split across two tabs but gated
+  // identically since they're the same audience per the SRS):
+  // EventManager: Client Details, Event Details, Sessions & Items,
+  //   Accommodation, Review & Quotation, Payments, Documents, Activity —
+  //   unchanged (this story's own regression AC).
+  // F&B Head (§3.2): Client Details (filtered) + Event Details/Sessions &
+  //   Items (Menu, no Setup). No Accommodation — §3.2 never mentions
+  //   accommodation/rooms.
+  // Housekeeping (§3.3): Client Details (filtered) + Accommodation + Event
+  //   Details/Sessions & Items (Setup, no Menu).
+  // Reception (§3.4): Client Details (filtered) + Accommodation. No Event
+  //   Details/Sessions & Items at all — this story's own explicit bullet
+  //   ("Payments and Sessions & Menu are absent"), even though §3.4 itself
+  //   lists venue/pax/date(s) among what Reception sees; the AC's own
+  //   literal tab list wins over re-deriving a looser rule from the
+  //   field-visibility table.
   // Written as explicit role-equality checks (not `!== Role.X`) so an
   // unauthenticated `user` (undefined) safely defaults every flag to
   // `false`, matching canSeeActivity/canSeePayments/canSeeDocuments'
@@ -137,7 +160,7 @@ const EventDetailPage = () => {
       );
     } else if (activeTab === 'documents' && canSeeDocuments) {
       tabPanel = <DocumentsTab key={event.id} event={event} onEventChanged={() => eventQuery.refetch()} />;
-    } else if (activeTab === 'rooms' && canSeeRooms && event.accommodation) {
+    } else if (activeTab === 'accommodation' && canSeeRooms && event.accommodation) {
       tabPanel = (
         <RoomsTab
           key={event.id}
@@ -147,7 +170,11 @@ const EventDetailPage = () => {
           onEventChanged={() => eventQuery.refetch()}
         />
       );
-    } else if (activeTab === 'sessions' && canSeeSessions) {
+    } else if (activeTab === 'sessions-items' && canSeeSessions) {
+      // STORY-076 shell only — STORY-079 replaces this with the real
+      // day-tabbed Ceremony/Food Item editor.
+      tabPanel = <EventDetailTabPlaceholder label="Sessions & Items" story="STORY-079" />;
+    } else if (activeTab === 'event-details' && canSeeSessions) {
       tabPanel = (
         <SessionsTab
           key={event.id}
@@ -158,6 +185,11 @@ const EventDetailPage = () => {
           onEventChanged={() => eventQuery.refetch()}
         />
       );
+    } else if (activeTab === 'review' && canEdit) {
+      // STORY-076 shell only — STORY-080 replaces this with the Total Cost
+      // Summary/Generate PDF/Preview Quotation content extracted out of
+      // today's Overview (still reachable there, unsplit, until then).
+      tabPanel = <EventDetailTabPlaceholder label="Review & Quotation" story="STORY-080" />;
     } else {
       tabPanel = (
         <OverviewTab
@@ -180,9 +212,11 @@ const EventDetailPage = () => {
           <Typography variant="bodyM">{event.eventFamilyType}</Typography>
         </Box>
         <Tabs value={activeTab} onChange={(_changeEvent, value: DetailTab) => setActiveTab(value)}>
-          <Tab label="Overview" value="overview" />
-          {canSeeRooms && <Tab label="Rooms" value="rooms" />}
-          {canSeeSessions && <Tab label="Sessions" value="sessions" />}
+          <Tab label="Client Details" value="client-details" />
+          {canSeeSessions && <Tab label="Event Details" value="event-details" />}
+          {canSeeRooms && <Tab label="Accommodation" value="accommodation" />}
+          {canSeeSessions && <Tab label="Sessions & Items" value="sessions-items" />}
+          {canEdit && <Tab label="Review & Quotation" value="review" />}
           {canSeePayments && <Tab label="Payments" value="payments" />}
           {canSeeDocuments && <Tab label="Documents" value="documents" />}
           {canSeeActivity && <Tab label="Activity" value="activity" />}

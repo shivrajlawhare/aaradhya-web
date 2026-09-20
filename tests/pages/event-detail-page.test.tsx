@@ -1127,13 +1127,13 @@ describe('EventDetailPage', () => {
     expect(screen.queryByRole('button', { name: 'Save contacts' })).not.toBeInTheDocument();
   });
 
-  it('renders the Rooms tab for a non-EventManager session too, unlike Activity', async () => {
+  it('renders the Accommodation tab for a non-EventManager session too, unlike Activity', async () => {
     seedSession('Reception');
     mockEventDetailApi({ event: makeEvent() });
     renderPage();
 
     await screen.findByText('ARD-EVT-2026-001');
-    expect(screen.getByRole('tab', { name: 'Rooms' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Accommodation' })).toBeInTheDocument();
   });
 
   it('lets an Event Manager add a room line and save it, reflecting the new row and updated totals without a full page reload', async () => {
@@ -1141,7 +1141,7 @@ describe('EventDetailPage', () => {
     const { accommodationPatchRequests } = mockEventDetailApi({ event: makeEvent() });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Rooms' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Accommodation' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add room line' }));
 
     fireEvent.change(screen.getByLabelText('Room type for room line 1'), { target: { value: 'Double' } });
@@ -1175,7 +1175,7 @@ describe('EventDetailPage', () => {
     });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Rooms' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Accommodation' }));
     const tariffField = await screen.findByLabelText('Tariff for room line 1');
     expect(tariffField).toHaveValue(5000);
 
@@ -1193,7 +1193,7 @@ describe('EventDetailPage', () => {
     expect(screen.queryByText('99999')).not.toBeInTheDocument();
   });
 
-  it('shows Rooms read-only, with no edit controls, for a non-EventManager session', async () => {
+  it('shows Accommodation read-only, with no edit controls, for a non-EventManager session', async () => {
     seedSession('Reception');
     mockEventDetailApi({
       event: makeEvent({
@@ -1206,7 +1206,7 @@ describe('EventDetailPage', () => {
     });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Rooms' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Accommodation' }));
 
     expect(await screen.findByText(/Double.*2 occupancy.*1 rooms.*5900/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Tariff for room line/)).not.toBeInTheDocument();
@@ -1299,7 +1299,7 @@ describe('EventDetailPage', () => {
 
     // Simulate a reload: re-render against whatever the mock server now
     // holds as current state, exactly like a fresh GET /events/:id would.
-    fireEvent.click(await screen.findByRole('tab', { name: 'Overview' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Client Details' }));
     fireEvent.click(await screen.findByRole('tab', { name: 'Documents' }));
     expect(await screen.findByLabelText('Aadhar Card')).toBeChecked();
   });
@@ -1307,28 +1307,29 @@ describe('EventDetailPage', () => {
   // Housekeeping, not Reception — STORY-052's own explicit tab-visibility
   // matrix excludes Reception from Sessions entirely ("Payments and
   // Sessions & Menu are absent"), even though this test's own original
-  // intent ("a non-EventManager role still sees Sessions, unlike Payments/
-  // Documents") is still true for Housekeeping/F&B Head. Reception's own
-  // exclusion gets its own dedicated test below.
-  it('renders the Sessions tab for Housekeeping too, unlike Payments/Documents', async () => {
+  // intent ("a non-EventManager role still sees Event Details, unlike
+  // Payments/Documents") is still true for Housekeeping/F&B Head.
+  // Reception's own exclusion gets its own dedicated test below. Tab
+  // renamed Sessions -> Event Details by STORY-076.
+  it('renders the Event Details tab for Housekeeping too, unlike Payments/Documents', async () => {
     seedSession('Housekeeping');
     mockEventDetailApi({ event: makeEvent() });
     renderPage();
 
     await screen.findByText('ARD-EVT-2026-001');
-    expect(screen.getByRole('tab', { name: 'Sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Event Details' })).toBeInTheDocument();
   });
 
-  it('does not render the Sessions tab at all for Reception (STORY-052)', async () => {
+  it('does not render the Event Details tab at all for Reception (STORY-052)', async () => {
     seedSession('Reception');
     mockEventDetailApi({ event: makeEvent() });
     renderPage();
 
     await screen.findByText('ARD-EVT-2026-001');
-    expect(screen.queryByRole('tab', { name: 'Sessions' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Event Details' })).not.toBeInTheDocument();
   });
 
-  it('shows Sessions read-only, with no Add/Edit controls, and its own Setup summary, for Housekeeping', async () => {
+  it('shows Event Details read-only, with no Add/Edit controls, and its own Setup summary, for Housekeeping', async () => {
     seedSession('Housekeeping');
     mockEventDetailApi({
       event: makeEvent({
@@ -1354,7 +1355,7 @@ describe('EventDetailPage', () => {
     });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
 
     expect(await screen.findByText('Wedding — Lawn')).toBeInTheDocument();
     expect(screen.getByText('Setup: Theatre')).toBeInTheDocument();
@@ -1368,7 +1369,7 @@ describe('EventDetailPage', () => {
     mockEventDetailApi({ event: makeEvent() });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
 
     expect(await screen.findByRole('group', { name: 'Start date' })).toBeInTheDocument();
@@ -1393,7 +1394,7 @@ describe('EventDetailPage', () => {
     mockEventDetailApi({ event: makeEvent() });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
 
     const startDateGroup = await screen.findByRole('group', { name: 'Start date' });
@@ -1413,7 +1414,7 @@ describe('EventDetailPage', () => {
     mockEventDetailApi({ event: makeEvent() });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
 
     const amButtons = await screen.findAllByRole('button', { name: 'AM' });
@@ -1431,7 +1432,7 @@ describe('EventDetailPage', () => {
     mockEventDetailApi({ event: makeEvent() });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
 
     const venueSelect = await screen.findByRole('combobox', { name: 'Venue' });
@@ -1451,7 +1452,7 @@ describe('EventDetailPage', () => {
     mockEventDetailApi({ event: makeEvent() });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
 
     await screen.findByRole('group', { name: 'Start date' });
@@ -1468,7 +1469,7 @@ describe('EventDetailPage', () => {
     const { sessionPostRequests } = mockEventDetailApi({ event: makeEvent() });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
 
     await screen.findByRole('group', { name: 'Start date' });
@@ -1491,7 +1492,7 @@ describe('EventDetailPage', () => {
     const { sessionPostRequests } = mockEventDetailApi({ event: makeEvent() });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
 
     await screen.findByRole('group', { name: 'Start date' });
@@ -1528,7 +1529,7 @@ describe('EventDetailPage', () => {
     });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
 
     expect(await screen.findByDisplayValue('200')).toBeInTheDocument();
@@ -1564,7 +1565,7 @@ describe('EventDetailPage', () => {
     mockEventDetailApi({ event: makeEvent({ sessions: [session] }) });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
 
     expect(await screen.findByText('Items')).toBeInTheDocument();
@@ -1577,7 +1578,7 @@ describe('EventDetailPage', () => {
     const { itemPostRequests } = mockEventDetailApi({ event: makeEvent({ sessions: [session] }) });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Item' }));
 
@@ -1597,7 +1598,7 @@ describe('EventDetailPage', () => {
     mockEventDetailApi({ event: makeEvent({ sessions: [session] }) });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Item' }));
 
@@ -1617,7 +1618,7 @@ describe('EventDetailPage', () => {
     });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Item' }));
 
@@ -1643,7 +1644,7 @@ describe('EventDetailPage', () => {
     const { itemPostRequests } = mockEventDetailApi({ event: makeEvent({ sessions: [session] }), menuItems: [] });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Item' }));
 
@@ -1668,7 +1669,7 @@ describe('EventDetailPage', () => {
     });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add Item' }));
 
@@ -1689,7 +1690,7 @@ describe('EventDetailPage', () => {
     const { getCurrentEvent } = mockEventDetailApi({ event: makeEvent({ sessions: [session] }) });
     renderPage();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
 
     expect(await screen.findByDisplayValue('Lunch')).toBeInTheDocument();
@@ -1700,10 +1701,14 @@ describe('EventDetailPage', () => {
   });
 
   // The full per-role tab-visibility matrix (STORY-052) — Reception's own
-  // Rooms-visible/Sessions-absent cases are already covered above, next to
-  // the tabs they concern; this block covers F&B Head (untested by any
-  // earlier story) and Housekeeping's own tab strip, plus the Menu summary
-  // F&B Head sees on the Sessions tab.
+  // Accommodation-visible/Event-Details-absent cases are already covered
+  // above, next to the tabs they concern; this block covers F&B Head
+  // (untested by any earlier story) and Housekeeping's own tab strip, plus
+  // the Menu summary F&B Head sees on the Event Details tab. Tab names
+  // updated by STORY-076 (Overview -> Client Details, Rooms ->
+  // Accommodation, Sessions -> Event Details, plus two new tabs gated the
+  // same way: Sessions & Items alongside Event Details, Review & Quotation
+  // alongside canEdit).
   describe('Role-based tab visibility (STORY-052)', () => {
     const sessionWithSetupAndMenu = {
       id: 'session-1',
@@ -1736,15 +1741,17 @@ describe('EventDetailPage', () => {
       ],
     };
 
-    it('shows only Overview and Sessions for F&B Head — no Rooms, Payments, Documents, or Activity', async () => {
+    it('shows only Client Details, Event Details, and Sessions & Items for F&B Head — no Accommodation, Review & Quotation, Payments, Documents, or Activity', async () => {
       seedSession('FnBHead');
       mockEventDetailApi({ event: makeEvent() });
       renderPage();
 
       await screen.findByText('ARD-EVT-2026-001');
-      expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: 'Sessions' })).toBeInTheDocument();
-      expect(screen.queryByRole('tab', { name: 'Rooms' })).not.toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Client Details' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Event Details' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Sessions & Items' })).toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Accommodation' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Review & Quotation' })).not.toBeInTheDocument();
       expect(screen.queryByRole('tab', { name: 'Payments' })).not.toBeInTheDocument();
       expect(screen.queryByRole('tab', { name: 'Documents' })).not.toBeInTheDocument();
       expect(screen.queryByRole('tab', { name: 'Activity' })).not.toBeInTheDocument();
@@ -1755,13 +1762,13 @@ describe('EventDetailPage', () => {
       mockEventDetailApi({ event: makeEvent({ sessions: [sessionWithSetupAndMenu] }) });
       renderPage();
 
-      fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+      fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
 
       expect(await screen.findByText('Menu: Lunch (12:00-14:00)')).toBeInTheDocument();
       expect(screen.queryByText(/^Setup:/)).not.toBeInTheDocument();
     });
 
-    it('shows Client Contacts on F&B Head\'s own Overview, but no Total Cost Summary panel', async () => {
+    it('shows Client Contacts on F&B Head\'s own Client Details tab, but no Total Cost Summary panel', async () => {
       seedSession('FnBHead');
       mockEventDetailApi({ event: makeEvent() });
       renderPage();
@@ -1772,21 +1779,23 @@ describe('EventDetailPage', () => {
       expect(screen.queryByRole('button', { name: 'Generate Quotation PDF' })).not.toBeInTheDocument();
     });
 
-    it('shows only Overview, Rooms, and Sessions for Housekeeping — no Payments, Documents, or Activity', async () => {
+    it('shows only Client Details, Accommodation, Event Details, and Sessions & Items for Housekeeping — no Review & Quotation, Payments, Documents, or Activity', async () => {
       seedSession('Housekeeping');
       mockEventDetailApi({ event: makeEvent() });
       renderPage();
 
       await screen.findByText('ARD-EVT-2026-001');
-      expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: 'Rooms' })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: 'Sessions' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Client Details' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Accommodation' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Event Details' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Sessions & Items' })).toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Review & Quotation' })).not.toBeInTheDocument();
       expect(screen.queryByRole('tab', { name: 'Payments' })).not.toBeInTheDocument();
       expect(screen.queryByRole('tab', { name: 'Documents' })).not.toBeInTheDocument();
       expect(screen.queryByRole('tab', { name: 'Activity' })).not.toBeInTheDocument();
     });
 
-    it('does not render Client Contacts on Overview for Housekeeping (genuinely absent, STORY-046)', async () => {
+    it('does not render Client Contacts on Client Details for Housekeeping (genuinely absent, STORY-046)', async () => {
       seedSession('Housekeeping');
       mockEventDetailApi({ event: makeEvent() });
       renderPage();
@@ -1795,26 +1804,28 @@ describe('EventDetailPage', () => {
       expect(screen.queryByText('Client contacts')).not.toBeInTheDocument();
     });
 
-    it('shows only Overview, Rooms, and Payments/Documents/Activity for Event Manager — unchanged (regression)', async () => {
+    it('shows every tab for Event Manager — unchanged (regression)', async () => {
       seedSession();
       mockEventDetailApi({ event: makeEvent() });
       renderPage();
 
       await screen.findByText('ARD-EVT-2026-001');
-      expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: 'Rooms' })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: 'Sessions' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Client Details' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Event Details' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Accommodation' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Sessions & Items' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Review & Quotation' })).toBeInTheDocument();
       expect(screen.getByRole('tab', { name: 'Payments' })).toBeInTheDocument();
       expect(screen.getByRole('tab', { name: 'Documents' })).toBeInTheDocument();
       expect(screen.getByRole('tab', { name: 'Activity' })).toBeInTheDocument();
     });
 
-    it("does not add a Setup/Menu summary to the Event Manager's own Sessions list — unchanged (regression)", async () => {
+    it("does not add a Setup/Menu summary to the Event Manager's own Event Details list — unchanged (regression)", async () => {
       seedSession();
       mockEventDetailApi({ event: makeEvent({ sessions: [sessionWithSetupAndMenu] }) });
       renderPage();
 
-      fireEvent.click(await screen.findByRole('tab', { name: 'Sessions' }));
+      fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
 
       await screen.findByText('Wedding — Lawn');
       expect(screen.queryByText(/^Setup:/)).not.toBeInTheDocument();
