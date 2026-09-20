@@ -7,6 +7,7 @@ import {
   InputLabel,
   Link,
   MenuItem,
+  Paper,
   Select,
   Stack,
   Typography,
@@ -18,7 +19,7 @@ import ClientContactRows, { type ClientContactFormValue } from '../../components
 import { ClientContactRole, EventStatus, type filteredEventResultSchema } from '../../contract';
 import { quotationPreviewPath } from '../../routes';
 import GenerateQuotationPdfButton from './generate-quotation-pdf-button';
-import { contactsReadOnlyStyles, sectionStyles, statusFieldStyles } from './overview-tab.styles';
+import { cardStyles, contactsReadOnlyStyles, sectionStyles, statusFieldStyles } from './overview-tab.styles';
 import TotalCostSummaryPanel from './total-cost-summary-panel';
 
 type PublicEvent = z.infer<typeof filteredEventResultSchema>;
@@ -193,31 +194,40 @@ const OverviewTab = ({ event, canEdit, canSeeClientContacts, onEventChanged }: O
   return (
     <Stack sx={sectionStyles}>
       {canEdit && (
-        <FormControl sx={statusFieldStyles}>
-          <InputLabel id="event-status-label">Status</InputLabel>
-          {/* Select<EventStatus>, not TextField's select prop — types
-              event.target.value as EventStatus natively, no `as` cast. */}
-          <Select<EventStatus>
-            labelId="event-status-label"
-            label="Status"
-            value={event.status}
-            disabled={updateStatusMutation.isPending}
-            onChange={(changeEvent) => handleStatusChange(changeEvent.target.value)}
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <MenuItem key={option} value={option}>
-                {option}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <Paper elevation={0} sx={cardStyles}>
+          <Typography variant="titleM" component="h2">
+            Event Status
+          </Typography>
+          <FormControl sx={statusFieldStyles}>
+            <InputLabel id="event-status-label">Status</InputLabel>
+            {/* Select<EventStatus>, not TextField's select prop — types
+                event.target.value as EventStatus natively, no `as` cast. */}
+            <Select<EventStatus>
+              labelId="event-status-label"
+              label="Status"
+              value={event.status}
+              disabled={updateStatusMutation.isPending}
+              onChange={(changeEvent) => handleStatusChange(changeEvent.target.value)}
+            >
+              {STATUS_OPTIONS.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          {statusError && (
+            <Alert severity="error">
+              <Typography variant="bodyM">{statusError}</Typography>
+            </Alert>
+          )}
+        </Paper>
       )}
-      {statusError && (
-        <Alert severity="error">
-          <Typography variant="bodyM">{statusError}</Typography>
-        </Alert>
+      {contactsSection && (
+        <Paper elevation={0} sx={cardStyles}>
+          {contactsSection}
+        </Paper>
       )}
-      {contactsSection}
       {/* STORY-052's own re-check: this panel shows Grand Total/extras — the
           same class of financial data STORY-046 already strips end-to-end
           for every non-EventManager role (`extras` is undefined for them).
