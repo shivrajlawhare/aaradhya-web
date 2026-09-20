@@ -1691,7 +1691,7 @@ describe('EventDetailPage', () => {
       expect(screen.queryByRole('button', { name: 'Generate Quotation PDF' })).not.toBeInTheDocument();
     });
 
-    it('shows only Client Details, Accommodation, Event Details, and Sessions & Items for Housekeeping — no Review & Quotation, Payments, Documents, or Activity', async () => {
+    it('shows only Client Details, Event Details, and Accommodation for Housekeeping — no Sessions & Items, Review & Quotation, Payments, Documents, or Activity', async () => {
       seedSession('Housekeeping');
       mockEventDetailApi({ event: makeEvent() });
       renderPage();
@@ -1700,7 +1700,10 @@ describe('EventDetailPage', () => {
       expect(screen.getByRole('tab', { name: 'Client Details' })).toBeInTheDocument();
       expect(screen.getByRole('tab', { name: 'Accommodation' })).toBeInTheDocument();
       expect(screen.getByRole('tab', { name: 'Event Details' })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: 'Sessions & Items' })).toBeInTheDocument();
+      // STORY-079's own investigation: the backend sends Housekeeping no
+      // `items` at all (event-visibility.ts), so this tab would have
+      // nothing to show them — narrower than the original STORY-076 gate.
+      expect(screen.queryByRole('tab', { name: 'Sessions & Items' })).not.toBeInTheDocument();
       expect(screen.queryByRole('tab', { name: 'Review & Quotation' })).not.toBeInTheDocument();
       expect(screen.queryByRole('tab', { name: 'Payments' })).not.toBeInTheDocument();
       expect(screen.queryByRole('tab', { name: 'Documents' })).not.toBeInTheDocument();

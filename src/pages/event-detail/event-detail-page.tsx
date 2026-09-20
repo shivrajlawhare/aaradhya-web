@@ -9,10 +9,10 @@ import { EVENT_LIST_PATH } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
 import ClientDetailsTab from './client-details-tab';
 import DocumentsTab from './documents-tab';
-import EventDetailTabPlaceholder from './event-detail-tab-placeholder';
 import PaymentsTab from './payments-tab';
 import ReviewTab from './review-tab';
 import RoomsTab from './rooms-tab';
+import SessionsItemsTab from './sessions-items-tab';
 import SessionsTab from './sessions-tab';
 import { headerStyles, pageStyles, tabPanelStyles } from './event-detail-page.styles';
 
@@ -21,11 +21,8 @@ import { headerStyles, pageStyles, tabPanelStyles } from './event-detail-page.st
 // Quotation), with Payments/Documents/Activity kept as-is per the story's own
 // explicit scope. STORY-077 split the old OverviewTab into ClientDetailsTab
 // (Status + Client Contacts) and ReviewTab (Total Cost Summary/PDF/Preview
-// Quotation) — 'accommodation'/'event-details' still render today's
-// Rooms/Sessions components verbatim (STORY-078 trims Items out of the
-// latter); 'sessions-items' is a brand new tab with no existing screen to
-// relocate, so it renders EventDetailTabPlaceholder until STORY-079 builds
-// it for real.
+// Quotation); STORY-078 trimmed Items out of the Sessions component behind
+// 'event-details'; STORY-079 built the real 'sessions-items' tab.
 type DetailTab =
   | 'client-details'
   | 'event-details'
@@ -71,17 +68,22 @@ const EventDetailPage = () => {
   //
   // Rooms/Sessions/Setup/Menu (STORY-052) — every role's own SRS §3.x "Sees:"
   // list, restated as this screen's tab-visibility matrix. Tab names below
-  // are STORY-076's renamed ones (Accommodation = old Rooms, Event Details/
-  // Sessions & Items = old Sessions, split across two tabs but gated
-  // identically since they're the same audience per the SRS):
+  // are STORY-076's renamed ones (Accommodation = old Rooms, Event Details =
+  // old Sessions' own session-level fields):
   // EventManager: Client Details, Event Details, Sessions & Items,
   //   Accommodation, Review & Quotation, Payments, Documents, Activity —
   //   unchanged (this story's own regression AC).
-  // F&B Head (§3.2): Client Details (filtered) + Event Details/Sessions &
-  //   Items (Menu, no Setup). No Accommodation — §3.2 never mentions
+  // F&B Head (§3.2): Client Details (filtered) + Event Details (Menu
+  //   summary line, no Setup) + Sessions & Items (Food/Dining rows only —
+  //   see canSeeItems below). No Accommodation — §3.2 never mentions
   //   accommodation/rooms.
   // Housekeeping (§3.3): Client Details (filtered) + Accommodation + Event
-  //   Details/Sessions & Items (Setup, no Menu).
+  //   Details (Setup summary line, no Menu). NOT Sessions & Items — STORY-
+  //   079's own investigation found the backend's filterEventForRole sends
+  //   Housekeeping no `items` at all (event-visibility.ts: "Housekeeping and
+  //   Reception get no items at all"), so a tab with literally nothing to
+  //   show them would be pointless; narrower than STORY-076's original
+  //   canSeeSessions-for-everything gate, corrected once this was found.
   // Reception (§3.4): Client Details (filtered) + Accommodation. No Event
   //   Details/Sessions & Items at all — this story's own explicit bullet
   //   ("Payments and Sessions & Menu are absent"), even though §3.4 itself
@@ -99,6 +101,9 @@ const EventDetailPage = () => {
     user?.role === Role.EventManager || user?.role === Role.Housekeeping || user?.role === Role.Reception;
   const canSeeSessions =
     user?.role === Role.EventManager || user?.role === Role.FnBHead || user?.role === Role.Housekeeping;
+  // Sessions & Items tab only — narrower than canSeeSessions above (see the
+  // comment block above for why Housekeeping is excluded here specifically).
+  const canSeeItems = user?.role === Role.EventManager || user?.role === Role.FnBHead;
   // Housekeeping/F&B-Head-only, not also Event Manager — this is the
   // Sessions list's own read-only Setup/Menu *summary* (SessionsTab's own
   // prop comment explains why), and Event Manager's view must stay
@@ -173,10 +178,10 @@ const EventDetailPage = () => {
           onEventChanged={() => eventQuery.refetch()}
         />
       );
-    } else if (activeTab === 'sessions-items' && canSeeSessions) {
-      // STORY-076 shell only — STORY-079 replaces this with the real
-      // day-tabbed Ceremony/Food Item editor.
-      tabPanel = <EventDetailTabPlaceholder label="Sessions & Items" story="STORY-079" />;
+    } else if (activeTab === 'sessions-items' && canSeeItems) {
+      tabPanel = (
+        <SessionsItemsTab key={event.id} event={event} canEdit={canEdit} onEventChanged={() => eventQuery.refetch()} />
+      );
     } else if (activeTab === 'event-details' && canSeeSessions) {
       tabPanel = (
         <SessionsTab
@@ -215,7 +220,7 @@ const EventDetailPage = () => {
           <Tab label="Client Details" value="client-details" />
           {canSeeSessions && <Tab label="Event Details" value="event-details" />}
           {canSeeRooms && <Tab label="Accommodation" value="accommodation" />}
-          {canSeeSessions && <Tab label="Sessions & Items" value="sessions-items" />}
+          {canSeeItems && <Tab label="Sessions & Items" value="sessions-items" />}
           {canEdit && <Tab label="Review & Quotation" value="review" />}
           {canSeePayments && <Tab label="Payments" value="payments" />}
           {canSeeDocuments && <Tab label="Documents" value="documents" />}
