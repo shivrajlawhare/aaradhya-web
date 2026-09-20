@@ -5,7 +5,7 @@ import { type CalendarFilters, type StatusFilterValue } from './calendar-filters
 // Every real EventStatus member keyed to itself — turns an unchecked
 // string from the URL into a validated StatusFilterValue with a graceful
 // 'All' fallback, no `as` cast and no hand-rolled `is` type guard
-// (typescript-rules.md rule 1), same reasoning overview-tab.tsx's own
+// (typescript-rules.md rule 1), same reasoning client-details-tab.tsx's own
 // Select-driven EventStatus narrowing avoids a cast, just applied to an
 // actually-unchecked source (a URL, not a fully-typed form control).
 const STATUS_LOOKUP: Record<string, EventStatus> = Object.fromEntries(

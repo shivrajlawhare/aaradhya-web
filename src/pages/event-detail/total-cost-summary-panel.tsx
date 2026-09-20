@@ -32,7 +32,7 @@ interface TotalCostSummaryPanelProps {
   eventId: string;
   // Required, not `PublicEvent['extras']` (`.optional()` since STORY-052) —
   // this panel is only ever mounted from a call site that has already
-  // narrowed `event.extras` to present (overview-tab.tsx's own
+  // narrowed `event.extras` to present (review-tab.tsx's own
   // `canEdit && event.extras &&` gate; quotation-preview-page.tsx's own
   // equivalent), so its own prop type states the real precondition
   // directly rather than re-deriving "optional, but never actually

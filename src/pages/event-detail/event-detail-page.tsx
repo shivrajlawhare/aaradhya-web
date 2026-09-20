@@ -7,10 +7,11 @@ import StatusChip from '../../components/ui/status-chip';
 import { Role } from '../../contract';
 import { EVENT_LIST_PATH } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
+import ClientDetailsTab from './client-details-tab';
 import DocumentsTab from './documents-tab';
 import EventDetailTabPlaceholder from './event-detail-tab-placeholder';
-import OverviewTab from './overview-tab';
 import PaymentsTab from './payments-tab';
+import ReviewTab from './review-tab';
 import RoomsTab from './rooms-tab';
 import SessionsTab from './sessions-tab';
 import { headerStyles, pageStyles, tabPanelStyles } from './event-detail-page.styles';
@@ -18,11 +19,13 @@ import { headerStyles, pageStyles, tabPanelStyles } from './event-detail-page.st
 // STORY-076 — renamed/reordered to mirror the New Event wizard's own 5 steps
 // (Client Details, Event Details, Accommodation, Sessions & Items, Review &
 // Quotation), with Payments/Documents/Activity kept as-is per the story's own
-// explicit scope. 'client-details'/'event-details'/'accommodation' render
-// today's Overview/Sessions/Rooms components verbatim in this shell-only
-// story (STORY-077/078 split/trim them for real); 'sessions-items'/'review'
-// are brand new tabs with no existing screen to relocate, so they render
-// EventDetailTabPlaceholder until STORY-079/080 build them.
+// explicit scope. STORY-077 split the old OverviewTab into ClientDetailsTab
+// (Status + Client Contacts) and ReviewTab (Total Cost Summary/PDF/Preview
+// Quotation) — 'accommodation'/'event-details' still render today's
+// Rooms/Sessions components verbatim (STORY-078 trims Items out of the
+// latter); 'sessions-items' is a brand new tab with no existing screen to
+// relocate, so it renders EventDetailTabPlaceholder until STORY-079 builds
+// it for real.
 type DetailTab =
   | 'client-details'
   | 'event-details'
@@ -186,13 +189,10 @@ const EventDetailPage = () => {
         />
       );
     } else if (activeTab === 'review' && canEdit) {
-      // STORY-076 shell only — STORY-080 replaces this with the Total Cost
-      // Summary/Generate PDF/Preview Quotation content extracted out of
-      // today's Overview (still reachable there, unsplit, until then).
-      tabPanel = <EventDetailTabPlaceholder label="Review & Quotation" story="STORY-080" />;
+      tabPanel = <ReviewTab key={event.id} event={event} canEdit={canEdit} onEventChanged={() => eventQuery.refetch()} />;
     } else {
       tabPanel = (
-        <OverviewTab
+        <ClientDetailsTab
           key={event.id}
           event={event}
           canEdit={canEdit}

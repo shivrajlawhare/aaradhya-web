@@ -5,10 +5,10 @@ export const sectionStyles: SxProps<Theme> = {
   gap: `${spaceTokens.space24}px`, // space-24 — matches the wizard's own wrapperStyles between cards
 };
 
-// The Status and Client Details sections each get their own card — same
-// recipe as client-details-step.styles.ts's own cardStyles (and every other
-// wizard step's formCardStyles) — so Overview reads as a sequence of cards
-// the way every wizard step already does, not bare unstyled sections.
+// Status and Client Contacts each get their own card — same recipe as
+// client-details-step.styles.ts's own cardStyles (and every other wizard
+// step's formCardStyles) — so this tab reads as a sequence of cards the way
+// every wizard step already does, not bare unstyled sections.
 export const cardStyles: SxProps<Theme> = {
   bgcolor: colorTokens.surface,
   border: `1px solid ${colorTokens.line}`,

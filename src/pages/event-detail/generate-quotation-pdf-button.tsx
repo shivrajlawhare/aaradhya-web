@@ -15,7 +15,7 @@ interface GenerateQuotationPdfButtonProps {
   label?: string;
 }
 
-// Rendered only from inside overview-tab.tsx's own canEdit branch (this
+// Rendered only from inside review-tab.tsx's own canEdit branch (this
 // story's own AC: "visible only on the Event Manager's view of the
 // Overview tab") — no canEdit prop needed here, the parent decides whether
 // to mount this component at all. STORY-052 will later re-check the

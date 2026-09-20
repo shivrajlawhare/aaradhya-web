@@ -858,6 +858,7 @@ describe('EventDetailPage', () => {
       }),
     });
     renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
 
     // venueTotal 5000, foodSubtotal 2000, foodTotalInclGst 2000 × 1.18 =
     // 2360, accommodationTotal 11800, extrasTotal 3000, grandTotal =
@@ -878,6 +879,7 @@ describe('EventDetailPage', () => {
     seedSession();
     const { extrasPatchRequests } = mockEventDetailApi({ event: makeEvent() });
     renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
 
     expect(await screen.findByText('Venue total: 0')).toBeInTheDocument();
 
@@ -926,6 +928,7 @@ describe('EventDetailPage', () => {
       }),
     );
     renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
 
     expect(await screen.findByText('Something went wrong. Please try again.')).toBeInTheDocument();
     expect(screen.queryByLabelText('Loading Total Cost Summary')).not.toBeInTheDocument();
@@ -937,6 +940,7 @@ describe('EventDetailPage', () => {
       event: makeEvent({ extras: makeExtras({ decoration: 1234567 }) }),
     });
     renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
 
     expect(await screen.findByText('12,34,567')).toBeInTheDocument();
   });
@@ -954,6 +958,7 @@ describe('EventDetailPage', () => {
     seedSession();
     mockEventDetailApi({ event: makeEvent() });
     renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
 
     const link = await screen.findByRole('link', { name: 'Preview Quotation' });
     expect(link).toHaveAttribute('href', '/events/event-1/quotation-preview');
@@ -975,6 +980,7 @@ describe('EventDetailPage', () => {
     const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
     const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
 
     const button = await screen.findByRole('button', { name: 'Generate Quotation PDF' });
     fireEvent.click(button);
@@ -1016,6 +1022,7 @@ describe('EventDetailPage', () => {
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
 
     const button = await screen.findByRole('button', { name: 'Generate Quotation PDF' });
     fireEvent.click(button);
@@ -1035,6 +1042,7 @@ describe('EventDetailPage', () => {
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
 
     const button = await screen.findByRole('button', { name: 'Generate Quotation PDF' });
     fireEvent.click(button);
@@ -1060,6 +1068,7 @@ describe('EventDetailPage', () => {
       }),
     );
     renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
 
     const button = await screen.findByRole('button', { name: 'Generate Quotation PDF' });
     fireEvent.click(button);
