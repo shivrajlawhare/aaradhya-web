@@ -24,7 +24,7 @@ interface RoomLineRowsProps {
 // ClientContactRows (STORY-015).
 const RoomLineRows = ({ fields, savedRoomLines, register, onAddRow, onRemoveRow }: RoomLineRowsProps) => {
   return (
-    <Paper sx={tableCardStyles}>
+    <Paper elevation={0} sx={tableCardStyles}>
       <Table>
         <TableHead>
           <TableRow>

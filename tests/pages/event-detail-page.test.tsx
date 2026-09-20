@@ -1156,7 +1156,7 @@ describe('EventDetailPage', () => {
     ]);
     // 5000 × 1 × 1.18 = 5900 — same render tree throughout, no full reload.
     expect(await screen.findByText('5900')).toBeInTheDocument();
-    expect(await screen.findByText('Total charges: 5900')).toBeInTheDocument();
+    expect(await screen.findByText('Total Charges: 5,900')).toBeInTheDocument();
   });
 
   it("renders total_days/total_occupancy/total_charges/total_incl_gst read-only, never independently calculated from an unsaved edit", async () => {
@@ -1185,9 +1185,11 @@ describe('EventDetailPage', () => {
     fireEvent.change(tariffField, { target: { value: '99999' } });
 
     expect(screen.getByText('5900')).toBeInTheDocument();
-    expect(screen.getByText('Total charges: 5900')).toBeInTheDocument();
-    expect(screen.getByText('Total occupancy: 2')).toBeInTheDocument();
-    expect(screen.getByText('Total days: 2')).toBeInTheDocument();
+    expect(screen.getByText('Total Charges: 5,900')).toBeInTheDocument();
+    expect(screen.getByText('Total Occupancy: 2')).toBeInTheDocument();
+    // Total days now lives in the Check-in/Check-out summary line, matching
+    // accommodation-step.tsx's own "<check-in> to <check-out> · Total days: N".
+    expect(screen.getByText('15/06/2026 to 16/06/2026 · Total days: 2')).toBeInTheDocument();
     expect(screen.queryByText('99999')).not.toBeInTheDocument();
   });
 

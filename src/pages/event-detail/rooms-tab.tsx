@@ -1,18 +1,22 @@
 import { useState, type ReactNode } from 'react';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
-import { Alert, Button, Stack, Typography } from '@mui/material';
+import { Alert, Button, Paper, Stack, Typography } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import { roomLineSchema, type filteredAccommodationResultSchema } from '../../contract';
+import { formatAmount } from './format-amount';
 import { fromPickerDate, toDateInputValue, toPickerDate } from './date-input';
+import { formatEventDate } from '../../utils/quotation-formatting';
 import RoomLineRows from './room-line-rows';
 import {
   dateFieldsStyles,
+  footerCellStyles,
   footerStyles,
-  footerValueStyles,
+  formCardStyles,
   readOnlyRoomLineStyles,
   sectionStyles,
+  summaryLineStyles,
 } from './rooms-tab.styles';
 
 // The role-filtered shape (STORY-052) — this tab is now reached by
@@ -122,36 +126,56 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
     });
   });
 
+  // "<check-in> to <check-out> · Total days: N" — matches
+  // accommodation-step.tsx's own summary line exactly, right down to the
+  // '—' fallback for an unset date/undetermined total, so the Rooms tab and
+  // the wizard's Accommodation step read the same way.
+  const summaryLine = (
+    <Typography variant="bodyM" sx={summaryLineStyles}>
+      {toDateInputValue(savedAccommodation.checkIn) ? formatEventDate(toDateInputValue(savedAccommodation.checkIn)) : '—'}
+      {' to '}
+      {toDateInputValue(savedAccommodation.checkOut) ? formatEventDate(toDateInputValue(savedAccommodation.checkOut)) : '—'}
+      {' · Total days: '}
+      {savedAccommodation.totalDays ?? '—'}
+    </Typography>
+  );
+
   let content: ReactNode;
   if (canEdit) {
     content = (
       <>
-        <Stack direction="row" sx={dateFieldsStyles}>
-          <Controller
-            name="checkIn"
-            control={control}
-            render={({ field }) => (
-              <DatePicker
-                label="Check-in"
-                value={toPickerDate(field.value)}
-                onChange={(date) => field.onChange(fromPickerDate(date))}
-                slotProps={{ textField: { onBlur: field.onBlur } }}
-              />
-            )}
-          />
-          <Controller
-            name="checkOut"
-            control={control}
-            render={({ field }) => (
-              <DatePicker
-                label="Check-out"
-                value={toPickerDate(field.value)}
-                onChange={(date) => field.onChange(fromPickerDate(date))}
-                slotProps={{ textField: { onBlur: field.onBlur } }}
-              />
-            )}
-          />
-        </Stack>
+        <Paper elevation={0} sx={formCardStyles}>
+          <Typography variant="titleM" component="h2">
+            Accommodation
+          </Typography>
+          <Stack direction="row" sx={dateFieldsStyles}>
+            <Controller
+              name="checkIn"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  label="Check-in"
+                  value={toPickerDate(field.value)}
+                  onChange={(date) => field.onChange(fromPickerDate(date))}
+                  slotProps={{ textField: { onBlur: field.onBlur } }}
+                />
+              )}
+            />
+            <Controller
+              name="checkOut"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  label="Check-out"
+                  value={toPickerDate(field.value)}
+                  onChange={(date) => field.onChange(fromPickerDate(date))}
+                  slotProps={{ textField: { onBlur: field.onBlur } }}
+                />
+              )}
+            />
+          </Stack>
+          {summaryLine}
+        </Paper>
         <RoomLineRows
           fields={fields}
           // Only reached in the canEdit (Event Manager) branch, whose own
@@ -180,19 +204,21 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
     );
   } else {
     content = (
-      <Stack sx={readOnlyRoomLineStyles}>
-        <Typography variant="bodyM">
-          Check-in: {toDateInputValue(savedAccommodation.checkIn) || '—'} · Check-out:{' '}
-          {toDateInputValue(savedAccommodation.checkOut) || '—'}
+      <Paper elevation={0} sx={formCardStyles}>
+        <Typography variant="titleM" component="h2">
+          Accommodation
         </Typography>
-        {savedAccommodation.roomLines.map((line, index) => (
-          <Typography key={index} variant="bodyM">
-            {/* totalInclGst is money — stripped for Housekeeping/Reception
-                (STORY-046), so "—" here, not the literal text "undefined". */}
-            {line.roomType}: {line.occupancy} occupancy × {line.noOfRooms} rooms — {line.totalInclGst ?? '—'}
-          </Typography>
-        ))}
-      </Stack>
+        {summaryLine}
+        <Stack sx={readOnlyRoomLineStyles}>
+          {savedAccommodation.roomLines.map((line, index) => (
+            <Typography key={index} variant="bodyM">
+              {/* totalInclGst is money — stripped for Housekeeping/Reception
+                  (STORY-046), so "—" here, not the literal text "undefined". */}
+              {line.roomType}: {line.occupancy} occupancy × {line.noOfRooms} rooms — {line.totalInclGst ?? '—'}
+            </Typography>
+          ))}
+        </Stack>
+      </Paper>
     );
   }
 
@@ -200,14 +226,11 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
     <Stack sx={sectionStyles}>
       {content}
       <Stack direction="row" sx={footerStyles}>
-        <Typography variant="bodyM" sx={footerValueStyles}>
-          Total days: {savedAccommodation.totalDays ?? '—'}
+        <Typography variant="bodyM" sx={footerCellStyles('occupancy')}>
+          Total Occupancy: {savedAccommodation.totalOccupancy}
         </Typography>
-        <Typography variant="bodyM" sx={footerValueStyles}>
-          Total occupancy: {savedAccommodation.totalOccupancy}
-        </Typography>
-        <Typography variant="bodyM" sx={footerValueStyles}>
-          Total charges: {savedAccommodation.totalCharges ?? '—'}
+        <Typography variant="bodyM" sx={footerCellStyles('charges')}>
+          Total Charges: {savedAccommodation.totalCharges !== undefined ? formatAmount(savedAccommodation.totalCharges) : '—'}
         </Typography>
       </Stack>
     </Stack>

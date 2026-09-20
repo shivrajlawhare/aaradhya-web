@@ -1,8 +1,14 @@
 import type { SxProps, Theme } from '@mui/material';
-import { spaceTokens } from '../../theme/tokens';
+import { colorTokens, radiusTokens, spaceTokens } from '../../theme/tokens';
 
+// Matches accommodation-step.styles.ts's own tableCardStyles — a real
+// bordered/rounded card, not just a bare full-width Table (this component's
+// own Paper wrapper had no border/radius/overflow of its own before).
 export const tableCardStyles: SxProps<Theme> = {
   width: '100%',
+  border: `1px solid ${colorTokens.line}`,
+  borderRadius: `${radiusTokens.radiusMd}px`,
+  overflow: 'hidden',
 };
 
 // tabular-nums so digits in the numeric columns stay a fixed width — this
