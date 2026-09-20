@@ -441,6 +441,15 @@ const mockEventDetailApi = ({
           : currentMenuItems;
         return jsonResponse(200, results);
       }
+      // STORY-081 — ActivityTab resolves changedBy to a name via this route;
+      // 'manager-1' matches seedSession's own default EventManager id/name,
+      // so a Change Log Entry logged by the session under test round-trips
+      // through a real name instead of falling back to the raw id.
+      if (method === 'GET' && url.endsWith('/users')) {
+        return jsonResponse(200, [
+          { id: 'manager-1', name: 'Priya Nair', username: 'priya', role: 'EventManager', active: true, createdAt: '', updatedAt: '' },
+        ]);
+      }
       // Checked ahead of the session POST/PATCH handlers below — a plain
       // `url.includes('/sessions/')` (the session PATCH handler's own
       // check) would otherwise also match these deeper Item URLs, since
@@ -1112,7 +1121,11 @@ describe('EventDetailPage', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Activity' }));
 
-    expect(await screen.findByText('status: Tentative → Confirmed')).toBeInTheDocument();
+    // STORY-081 — humanized label ("Status", not raw "status") and
+    // changedBy resolved to a real name via GET /users, not the raw
+    // 'manager-1' id.
+    expect(await screen.findByText('Status: Tentative → Confirmed')).toBeInTheDocument();
+    expect(screen.getByText('Priya Nair')).toBeInTheDocument();
   });
 
   it('does not render the Activity tab for a non-EventManager session', async () => {
