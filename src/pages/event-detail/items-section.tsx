@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Divider, Stack, Typography } from '@mui/material';
+import { Button, Stack, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import type { filteredEventResultSchema } from '../../contract';
@@ -46,39 +46,34 @@ const ItemsSection = ({ eventId, session, onItemsChanged }: ItemsSectionProps) =
         Items
       </Typography>
       {items.map((item, index) => (
-        <Stack key={item.id}>
-          {index > 0 && <Divider />}
-          <ItemCard
-            eventId={eventId}
-            sessionId={session.id}
-            index={index + 1}
-            item={item}
-            menuItemOptions={menuItemOptions}
-            menuItemsById={menuItemsById}
-            onChanged={onItemsChanged}
-            onDiscardNew={() => {
-              // Unreachable for an existing item — ItemCard only calls
-              // onDiscardNew when its own `item` prop is absent.
-            }}
-          />
-        </Stack>
+        <ItemCard
+          key={item.id}
+          eventId={eventId}
+          sessionId={session.id}
+          index={index + 1}
+          item={item}
+          menuItemOptions={menuItemOptions}
+          menuItemsById={menuItemsById}
+          onChanged={onItemsChanged}
+          onDiscardNew={() => {
+            // Unreachable for an existing item — ItemCard only calls
+            // onDiscardNew when its own `item` prop is absent.
+          }}
+        />
       ))}
       {isAddingNew && (
-        <Stack>
-          {items.length > 0 && <Divider />}
-          <ItemCard
-            eventId={eventId}
-            sessionId={session.id}
-            index={items.length + 1}
-            menuItemOptions={menuItemOptions}
-            menuItemsById={menuItemsById}
-            onChanged={() => {
-              setIsAddingNew(false);
-              onItemsChanged();
-            }}
-            onDiscardNew={() => setIsAddingNew(false)}
-          />
-        </Stack>
+        <ItemCard
+          eventId={eventId}
+          sessionId={session.id}
+          index={items.length + 1}
+          menuItemOptions={menuItemOptions}
+          menuItemsById={menuItemsById}
+          onChanged={() => {
+            setIsAddingNew(false);
+            onItemsChanged();
+          }}
+          onDiscardNew={() => setIsAddingNew(false)}
+        />
       )}
       {!isAddingNew && (
         <Button variant="contained" onClick={() => setIsAddingNew(true)}>

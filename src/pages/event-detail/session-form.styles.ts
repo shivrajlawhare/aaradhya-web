@@ -1,8 +1,18 @@
 import type { SxProps, Theme } from '@mui/material';
-import { colorTokens, spaceTokens } from '../../theme/tokens';
+import { colorTokens, radiusTokens, spaceTokens } from '../../theme/tokens';
 
+// The form's own outer card — same recipe as event-details-step.styles.ts's
+// own formCardStyles (and every other wizard step's), so the Sessions tab's
+// Add/Edit form reads as one of the same cards the wizard's own Session-entry
+// form already is, not a bare unstyled Stack.
 export const formStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space16}px`, // space-16
+  bgcolor: colorTokens.surface,
+  border: `1px solid ${colorTokens.line}`,
+  borderRadius: `${radiusTokens.radiusMd}px`,
+  p: `${spaceTokens.space24}px`,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: `${spaceTokens.space16}px`,
 };
 
 // Shared by every field row on this form (dates, times, table/chair counts)
@@ -13,14 +23,16 @@ export const rowStyles: SxProps<Theme> = {
   flexWrap: 'wrap',
 };
 
-// surface + line tokens, per this story's Tokens line — the Setup section
-// reads as its own card, distinct from the main session fields above it.
+// Identical recipe to event-details-step.styles.ts's own setupCardStyles —
+// this is the exact same Setup card conceptually, just reachable from two
+// different screens, so it renders pixel-identical in both.
 export const setupCardStyles: SxProps<Theme> = {
-  bgcolor: colorTokens.surface,
-  border: `1px solid ${colorTokens.line}`,
-  borderRadius: 1, // radius-sm, via theme.shape.borderRadius
-  p: `${spaceTokens.space12}px`, // space-12
-  gap: `${spaceTokens.space12}px`, // space-12
+  bgcolor: colorTokens.surface2,
+  borderRadius: `${radiusTokens.radiusMd}px`,
+  p: `${spaceTokens.space16}px`,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: `${spaceTokens.space12}px`,
 };
 
 // accent-tint for the active toggle state, per this story's Tokens line.

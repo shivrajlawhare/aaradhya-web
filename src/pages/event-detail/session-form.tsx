@@ -238,44 +238,62 @@ const SessionForm = ({ eventId, session, onSaved, onCancel, onItemsChanged }: Se
       <Typography variant="titleM" component="h2">
         {session ? 'Edit Session' : 'Add Session'}
       </Typography>
-      <Controller
-        name="sessionTypeOption"
-        control={control}
-        render={({ field }) => (
-          <TextField {...field} select label="Session type" fullWidth>
-            {SESSION_TYPE_PRESETS.map((preset) => (
-              <MenuItem key={preset} value={preset}>
-                {preset}
-              </MenuItem>
-            ))}
-            <MenuItem value={CUSTOM_SESSION_TYPE_OPTION}>{CUSTOM_SESSION_TYPE_OPTION}</MenuItem>
-          </TextField>
-        )}
-      />
-      <Controller
-        name="venueOption"
-        control={control}
-        render={({ field }) => (
-          <TextField
-            {...field}
-            select
-            label="Venue"
-            fullWidth
-            onChange={(changeEvent) => {
-              field.onChange(changeEvent);
-              handleVenueOptionChange(changeEvent);
-            }}
-          >
-            {VENUE_PRESETS.map((preset) => (
-              <MenuItem key={preset} value={preset}>
-                {preset}
-              </MenuItem>
-            ))}
-            <MenuItem value={CUSTOM_VENUE_OPTION}>{CUSTOM_VENUE_OPTION}</MenuItem>
-          </TextField>
-        )}
-      />
-      <TextField {...register('venueCost', { valueAsNumber: true })} label="Venue cost" type="number" fullWidth />
+      {/* Session type/Venue/Venue cost/Pax grouped in one wrapped row —
+          matches event-details-step.tsx's own entry-form grouping, so the
+          Sessions tab's Add/Edit form lays out fields the same way the
+          wizard's own Session-entry form already does. */}
+      <Stack direction="row" sx={rowStyles}>
+        <Controller
+          name="sessionTypeOption"
+          control={control}
+          render={({ field }) => (
+            <TextField {...field} select label="Session type" sx={{ minWidth: 200 }}>
+              {SESSION_TYPE_PRESETS.map((preset) => (
+                <MenuItem key={preset} value={preset}>
+                  {preset}
+                </MenuItem>
+              ))}
+              <MenuItem value={CUSTOM_SESSION_TYPE_OPTION}>{CUSTOM_SESSION_TYPE_OPTION}</MenuItem>
+            </TextField>
+          )}
+        />
+        <Controller
+          name="venueOption"
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              select
+              label="Venue"
+              sx={{ minWidth: 200 }}
+              onChange={(changeEvent) => {
+                field.onChange(changeEvent);
+                handleVenueOptionChange(changeEvent);
+              }}
+            >
+              {VENUE_PRESETS.map((preset) => (
+                <MenuItem key={preset} value={preset}>
+                  {preset}
+                </MenuItem>
+              ))}
+              <MenuItem value={CUSTOM_VENUE_OPTION}>{CUSTOM_VENUE_OPTION}</MenuItem>
+            </TextField>
+          )}
+        />
+        <TextField
+          {...register('venueCost', { valueAsNumber: true })}
+          label="Venue cost"
+          type="number"
+          sx={{ minWidth: 140 }}
+        />
+        <TextField
+          {...register('pax', { valueAsNumber: true })}
+          label="Pax"
+          type="number"
+          slotProps={{ htmlInput: { min: 0 } }}
+          sx={{ minWidth: 120 }}
+        />
+      </Stack>
       <Stack direction="row" sx={rowStyles}>
         <Controller
           name="startDate"
@@ -346,13 +364,6 @@ const SessionForm = ({ eventId, session, onSaved, onCancel, onItemsChanged }: Se
           />
         </Stack>
       </Stack>
-      <TextField
-        {...register('pax', { valueAsNumber: true })}
-        label="Pax"
-        type="number"
-        slotProps={{ htmlInput: { min: 0 } }}
-        fullWidth
-      />
       <Stack sx={setupCardStyles}>
         <Typography variant="titleM" component="h3">
           Setup
