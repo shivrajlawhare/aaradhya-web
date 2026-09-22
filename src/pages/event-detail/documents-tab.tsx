@@ -2,6 +2,7 @@ import { useState, type ChangeEvent } from 'react';
 import { Alert, List, ListItem, Stack, Switch, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
+import { useToast } from '../../components/ui/toast-provider';
 import { DOCUMENT_CHECKLIST_ITEM_KEYS, type filteredEventResultSchema } from '../../contract';
 import { listStyles, rowStyles, sectionStyles } from './documents-tab.styles';
 
@@ -41,6 +42,7 @@ interface MutationContext {
 // "Sees:" lists (§3.2-3.4) — the same "not listed for any other role"
 // pattern that made Payment Record Event-Manager-only visibility explicit.
 const DocumentsTab = ({ event, onEventChanged }: DocumentsTabProps) => {
+  const { showSuccess, showError } = useToast();
   const [saveError, setSaveError] = useState<string | null>(null);
   // Drives every switch's checked state. Flipped optimistically the instant
   // a switch is clicked (toggling should feel immediate, not wait on a round
@@ -57,6 +59,7 @@ const DocumentsTab = ({ event, onEventChanged }: DocumentsTabProps) => {
     },
     onSuccess: (response) => {
       setChecklist(response.body);
+      showSuccess('Checklist updated.');
       onEventChanged();
     },
     // updateDocumentsChecklist only declares a 404 response (matching the
@@ -65,6 +68,7 @@ const DocumentsTab = ({ event, onEventChanged }: DocumentsTabProps) => {
     // their own mutations.
     onError: (_error, _variables, context) => {
       setSaveError('Something went wrong. Please try again.');
+      showError('Something went wrong. Please try again.');
       if (context) {
         setChecklist(context.previousChecklist);
       }

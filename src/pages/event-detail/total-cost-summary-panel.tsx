@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Alert, Button, CircularProgress, Paper, Stack, TextField, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
+import { useToast } from '../../components/ui/toast-provider';
 import type { extrasResultSchema } from '../../contract';
 import { formatAmount } from './format-amount';
 import {
@@ -48,6 +49,7 @@ interface TotalCostSummaryPanelProps {
 }
 
 const TotalCostSummaryPanel = ({ eventId, extras, canEdit, onEventChanged }: TotalCostSummaryPanelProps) => {
+  const { showSuccess, showError } = useToast();
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Owns its own live rollup query rather than deriving totals from
@@ -78,6 +80,7 @@ const TotalCostSummaryPanel = ({ eventId, extras, canEdit, onEventChanged }: Tot
       // Re-fetches the summary rather than recomputing the Grand Total from
       // this response — the same "sourced from a fresh call" requirement.
       quotationSummaryQuery.refetch();
+      showSuccess('Extras saved.');
       onEventChanged();
     },
     // updateEventExtras only declares a 404 response (matching the backend
@@ -88,6 +91,7 @@ const TotalCostSummaryPanel = ({ eventId, extras, canEdit, onEventChanged }: Tot
     // PaymentsTab/RoomsTab already document for their own saves.
     onError: () => {
       setSaveError('Something went wrong. Please try again.');
+      showError('Something went wrong. Please try again.');
     },
   });
 

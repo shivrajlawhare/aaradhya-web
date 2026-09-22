@@ -4,6 +4,7 @@ import { Alert, Button, Paper, Stack, Typography } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
+import { useToast } from '../../components/ui/toast-provider';
 import { roomLineSchema, type filteredAccommodationResultSchema } from '../../contract';
 import { formatAmount } from './format-amount';
 import { fromPickerDate, toDateInputValue, toPickerDate } from './date-input';
@@ -66,6 +67,7 @@ interface RoomsTabProps {
 }
 
 const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabProps) => {
+  const { showSuccess, showError } = useToast();
   const [saveError, setSaveError] = useState<string | null>(null);
   // The last-saved server response drives every read-only computed display
   // (per-line total_incl_gst, the footer totals) — "totals shown are exactly
@@ -99,6 +101,7 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
         checkOut: toDateInputValue(response.body.checkOut),
         roomLines: toFormRoomLines(response.body.roomLines),
       });
+      showSuccess('Accommodation saved.');
       onEventChanged();
     },
     // updateEventAccommodation only declares a 404 response (matching the
@@ -108,6 +111,7 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
     // message to surface here; the fallback covers it honestly.
     onError: () => {
       setSaveError('Something went wrong. Please try again.');
+      showError('Something went wrong. Please try again.');
     },
   });
 

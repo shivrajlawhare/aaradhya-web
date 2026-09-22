@@ -7,6 +7,7 @@ import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@ta
 import { BrowserRouter } from 'react-router-dom';
 import App from './app';
 import { handleAuthError } from './api/handle-auth-error';
+import { ToastProvider } from './components/ui/toast-provider';
 import { AuthProvider } from './stores/auth-context';
 import { theme } from './theme/theme';
 import { tsr } from './api/client';
@@ -34,11 +35,13 @@ createRoot(rootElement).render(
               locale also changes week-start/month names as a side effect,
               which this fix isn't about. */}
           <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <AuthProvider>
-              <BrowserRouter>
-                <App />
-              </BrowserRouter>
-            </AuthProvider>
+            <ToastProvider>
+              <AuthProvider>
+                <BrowserRouter>
+                  <App />
+                </BrowserRouter>
+              </AuthProvider>
+            </ToastProvider>
           </LocalizationProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>

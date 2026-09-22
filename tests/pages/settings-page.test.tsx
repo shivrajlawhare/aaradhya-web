@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { tsr } from '../../src/api/client';
+import { ToastProvider } from '../../src/components/ui/toast-provider';
 import SettingsPage from '../../src/pages/settings/settings-page';
 import { AuthProvider } from '../../src/stores/auth-context';
 import { theme } from '../../src/theme/theme';
@@ -181,11 +182,13 @@ const renderPage = () => {
     <QueryClientProvider client={queryClient}>
       <tsr.ReactQueryProvider>
         <ThemeProvider theme={theme}>
-          <AuthProvider>
-            <MemoryRouter>
-              <SettingsPage />
-            </MemoryRouter>
-          </AuthProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <MemoryRouter>
+                <SettingsPage />
+              </MemoryRouter>
+            </AuthProvider>
+          </ToastProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
     </QueryClientProvider>,

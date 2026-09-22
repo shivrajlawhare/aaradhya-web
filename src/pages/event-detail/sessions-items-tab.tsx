@@ -6,6 +6,7 @@ import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
 import { Controller, useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
+import { useToast } from '../../components/ui/toast-provider';
 import { ItemType, type filteredEventResultSchema } from '../../contract';
 import { fromPickerTime, toDateInputValue, toPickerTime } from './date-input';
 import { formatAmount } from './format-amount';
@@ -157,6 +158,7 @@ interface SessionsItemsTabProps {
 // its own and no entry form (there's no Session to attach a new Item to on
 // that date), just an informational note.
 const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabProps) => {
+  const { showSuccess, showError } = useToast();
   const distinctDates = useMemo(() => getDistinctDates(event.sessions), [event.sessions]);
   const [activeDateState, setActiveDateState] = useState<string>(distinctDates[0] ?? '');
   // Falls back to the first date rather than calling setState mid-render if
@@ -250,10 +252,14 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
     const callbacks = {
       onSuccess: () => {
         ceremonyForm.reset(emptyCeremonyEntry);
+        showSuccess(editingCeremony ? 'Ceremony event saved.' : 'Ceremony event added.');
         setEditingCeremony(null);
         onEventChanged();
       },
-      onError: () => setCeremonySubmitError('Something went wrong. Please try again.'),
+      onError: () => {
+        setCeremonySubmitError('Something went wrong. Please try again.');
+        showError('Something went wrong. Please try again.');
+      },
     };
     if (editingCeremony) {
       updateItemMutation.mutate({ params: { id: event.id, sid: editingCeremony.sessionId, iid: editingCeremony.itemId }, body }, callbacks);
@@ -284,9 +290,13 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
           if (editingCeremony?.itemId === entry.item.id) {
             handleCancelCeremonyEdit();
           }
+          showSuccess('Ceremony event removed.');
           onEventChanged();
         },
-        onError: () => setCeremonySubmitError('Something went wrong. Please try again.'),
+        onError: () => {
+          setCeremonySubmitError('Something went wrong. Please try again.');
+          showError('Something went wrong. Please try again.');
+        },
       },
     );
   };
@@ -329,13 +339,17 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
     const callbacks = {
       onSuccess: () => {
         foodForm.reset(emptyFoodEntry);
+        showSuccess(editingFood ? 'Food/dining event saved.' : 'Food/dining event added.');
         setEditingFood(null);
         if (hasUnresolvedChip) {
           menuItemsQuery.refetch();
         }
         onEventChanged();
       },
-      onError: () => setFoodSubmitError('Something went wrong. Please try again.'),
+      onError: () => {
+        setFoodSubmitError('Something went wrong. Please try again.');
+        showError('Something went wrong. Please try again.');
+      },
     };
     if (editingFood) {
       updateItemMutation.mutate({ params: { id: event.id, sid: editingFood.sessionId, iid: editingFood.itemId }, body }, callbacks);
@@ -366,9 +380,13 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
           if (editingFood?.itemId === entry.item.id) {
             handleCancelFoodEdit();
           }
+          showSuccess('Food/dining event removed.');
           onEventChanged();
         },
-        onError: () => setFoodSubmitError('Something went wrong. Please try again.'),
+        onError: () => {
+          setFoodSubmitError('Something went wrong. Please try again.');
+          showError('Something went wrong. Please try again.');
+        },
       },
     );
   };

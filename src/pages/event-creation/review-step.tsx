@@ -19,6 +19,7 @@ import {
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { tsr } from '../../api/client';
+import { useToast } from '../../components/ui/toast-provider';
 import { ClientContactRole, ItemType } from '../../contract';
 import { quotationPreviewPath } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
@@ -296,6 +297,7 @@ const ReviewStep = ({ registerSubmit }: ReviewStepProps) => {
   const { data, setStepData, clearWizard } = useEventWizard();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { showSuccess, showError } = useToast();
 
   const clientDetailsData = data['client-details'];
   const contactRows = isClientDetailsShape(clientDetailsData) ? clientDetailsData.contacts : [];
@@ -376,12 +378,14 @@ const ReviewStep = ({ registerSubmit }: ReviewStepProps) => {
 
   const createEventMutation = tsr.createEvent.useMutation({
     onSuccess: (response) => {
+      showSuccess('Event created.');
       clearWizard();
       navigate(quotationPreviewPath(response.body.id));
     },
     onError: () => {
       isSubmittingRef.current = false;
       setSubmitError('Something went wrong creating the Event. Please try again.');
+      showError('Something went wrong creating the Event. Please try again.');
       setIsSubmitting(false);
     },
   });

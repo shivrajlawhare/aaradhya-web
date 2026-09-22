@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { tsr } from '../../src/api/client';
+import { ToastProvider } from '../../src/components/ui/toast-provider';
 import QuotationPreviewPage from '../../src/pages/quotation-preview/quotation-preview-page';
 import { QUOTATION_PREVIEW_PATH_PATTERN, quotationPreviewPath } from '../../src/routes';
 import { AuthProvider, SESSION_STORAGE_KEY } from '../../src/stores/auth-context';
@@ -193,13 +194,15 @@ const renderPage = (id = 'event-1') => {
     <QueryClientProvider client={queryClient}>
       <tsr.ReactQueryProvider>
         <ThemeProvider theme={theme}>
-          <AuthProvider>
-            <MemoryRouter initialEntries={[quotationPreviewPath(id)]}>
-              <Routes>
-                <Route path={QUOTATION_PREVIEW_PATH_PATTERN} element={<QuotationPreviewPage />} />
-              </Routes>
-            </MemoryRouter>
-          </AuthProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <MemoryRouter initialEntries={[quotationPreviewPath(id)]}>
+                <Routes>
+                  <Route path={QUOTATION_PREVIEW_PATH_PATTERN} element={<QuotationPreviewPage />} />
+                </Routes>
+              </MemoryRouter>
+            </AuthProvider>
+          </ToastProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
     </QueryClientProvider>,

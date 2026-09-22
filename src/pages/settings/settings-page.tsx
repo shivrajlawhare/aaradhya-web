@@ -3,6 +3,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { Box, Button, CircularProgress, Typography, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { tsr } from '../../api/client';
+import { useToast } from '../../components/ui/toast-provider';
 import AddItemForm, { type AddItemFormSubmitValues } from './add-item-form';
 import EditItemDialog, { type EditItemSubmitValues } from './edit-item-dialog';
 import MasterListCardList from './master-list-card-list';
@@ -34,6 +35,7 @@ const errorMessageFrom = (error: unknown): string => {
 };
 
 const SettingsPage = () => {
+  const { showSuccess, showError } = useToast();
   const theme = useTheme();
   // 900px — MUI's own `md` breakpoint, matching AppShell's (STORY-053) and
   // every other responsive screen in this app.
@@ -76,37 +78,93 @@ const SettingsPage = () => {
   };
 
   const createVenueMutation = tsr.createVenue.useMutation({
-    onSuccess: () => handleCreateSuccess('venues'),
-    onError: (error) => setAddError(errorMessageFrom(error)),
+    onSuccess: () => {
+      showSuccess('Venue added.');
+      handleCreateSuccess('venues');
+    },
+    onError: (error) => {
+      const message = errorMessageFrom(error);
+      setAddError(message);
+      showError(message);
+    },
   });
   const createEventTypeMutation = tsr.createEventType.useMutation({
-    onSuccess: () => handleCreateSuccess('eventTypes'),
-    onError: (error) => setAddError(errorMessageFrom(error)),
+    onSuccess: () => {
+      showSuccess('Event type added.');
+      handleCreateSuccess('eventTypes');
+    },
+    onError: (error) => {
+      const message = errorMessageFrom(error);
+      setAddError(message);
+      showError(message);
+    },
   });
   const createRoomTypeMutation = tsr.createRoomType.useMutation({
-    onSuccess: () => handleCreateSuccess('roomTypes'),
-    onError: (error) => setAddError(errorMessageFrom(error)),
+    onSuccess: () => {
+      showSuccess('Room type added.');
+      handleCreateSuccess('roomTypes');
+    },
+    onError: (error) => {
+      const message = errorMessageFrom(error);
+      setAddError(message);
+      showError(message);
+    },
   });
   const createMenuItemMutation = tsr.createMenuItem.useMutation({
-    onSuccess: () => handleCreateSuccess('menuItems'),
-    onError: (error) => setAddError(errorMessageFrom(error)),
+    onSuccess: () => {
+      showSuccess('Menu item added.');
+      handleCreateSuccess('menuItems');
+    },
+    onError: (error) => {
+      const message = errorMessageFrom(error);
+      setAddError(message);
+      showError(message);
+    },
   });
 
   const updateVenueMutation = tsr.updateVenue.useMutation({
-    onSuccess: () => refetchSection('venues'),
-    onError: (error) => setEditError(errorMessageFrom(error)),
+    onSuccess: () => {
+      showSuccess('Venue updated.');
+      refetchSection('venues');
+    },
+    onError: (error) => {
+      const message = errorMessageFrom(error);
+      setEditError(message);
+      showError(message);
+    },
   });
   const updateEventTypeMutation = tsr.updateEventType.useMutation({
-    onSuccess: () => refetchSection('eventTypes'),
-    onError: (error) => setEditError(errorMessageFrom(error)),
+    onSuccess: () => {
+      showSuccess('Event type updated.');
+      refetchSection('eventTypes');
+    },
+    onError: (error) => {
+      const message = errorMessageFrom(error);
+      setEditError(message);
+      showError(message);
+    },
   });
   const updateRoomTypeMutation = tsr.updateRoomType.useMutation({
-    onSuccess: () => refetchSection('roomTypes'),
-    onError: (error) => setEditError(errorMessageFrom(error)),
+    onSuccess: () => {
+      showSuccess('Room type updated.');
+      refetchSection('roomTypes');
+    },
+    onError: (error) => {
+      const message = errorMessageFrom(error);
+      setEditError(message);
+      showError(message);
+    },
   });
   const updateMenuItemMutation = tsr.updateMenuItem.useMutation({
-    onSuccess: () => refetchSection('menuItems'),
-    onError: (error) => setEditError(errorMessageFrom(error)),
+    onSuccess: () => {
+      showSuccess('Menu item updated.');
+      refetchSection('menuItems');
+    },
+    onError: (error) => {
+      const message = errorMessageFrom(error);
+      setEditError(message);
+      showError(message);
+    },
   });
 
   const isInitialLoading =

@@ -5,6 +5,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
+import { useToast } from '../../components/ui/toast-provider';
 import { SEATING_ARRANGEMENT_OPTIONS, SeatingArrangement, type filteredEventResultSchema } from '../../contract';
 import { fromPickerDate, fromPickerTime, toDateInputValue, toPickerDate, toPickerTime } from './date-input';
 import {
@@ -129,6 +130,7 @@ interface SessionFormProps {
 }
 
 const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) => {
+  const { showSuccess, showError } = useToast();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const {
     control,
@@ -153,23 +155,34 @@ const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) 
   // narrowed by ts-rest from its own contract responses, which a shared
   // `unknown` parameter would lose (forcing a cast, typescript-rules rule 1).
   const createMutation = tsr.createSession.useMutation({
-    onSuccess: (response) => onSaved(response.body),
+    onSuccess: (response) => {
+      showSuccess('Session added.');
+      onSaved(response.body);
+    },
     onError: (error) => {
       if (!(error instanceof Error) && error.status === 400) {
+        // Field-level (end-date-before-start-date) — stays inline-only, not
+        // also toasted (this story's own AC: a more specific inline error
+        // isn't replaced/duplicated by a generic toast).
         setError('endDate', { message: error.body.error.message });
         return;
       }
       setSubmitError('Something went wrong. Please try again.');
+      showError('Something went wrong. Please try again.');
     },
   });
   const updateMutation = tsr.updateSession.useMutation({
-    onSuccess: (response) => onSaved(response.body),
+    onSuccess: (response) => {
+      showSuccess('Session saved.');
+      onSaved(response.body);
+    },
     onError: (error) => {
       if (!(error instanceof Error) && error.status === 400) {
         setError('endDate', { message: error.body.error.message });
         return;
       }
       setSubmitError('Something went wrong. Please try again.');
+      showError('Something went wrong. Please try again.');
     },
   });
   const isPending = createMutation.isPending || updateMutation.isPending;

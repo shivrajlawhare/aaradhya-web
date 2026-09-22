@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { tsr } from '../../src/api/client';
+import { ToastProvider } from '../../src/components/ui/toast-provider';
 import EventWizardShell from '../../src/pages/event-creation/event-wizard-shell';
 import ReviewStep from '../../src/pages/event-creation/review-step';
 import WizardStepPlaceholder from '../../src/pages/event-creation/wizard-step-placeholder';
@@ -83,25 +84,27 @@ const renderWizard = (initialPath: string) => {
     <QueryClientProvider client={queryClient}>
       <tsr.ReactQueryProvider>
         <ThemeProvider theme={theme}>
-          <AuthProvider>
-            <MemoryRouter initialEntries={[initialPath]}>
-              <Routes>
-                {WIZARD_STEPS.filter((step) => step.id !== 'review').map((step) => (
-                  <Route
-                    key={step.id}
-                    path={step.path}
-                    element={
-                      <EventWizardShell step={step.id}>
-                        <WizardStepPlaceholder step={step.id} />
-                      </EventWizardShell>
-                    }
-                  />
-                ))}
-                <Route path={WIZARD_STEPS[4]!.path} element={<ReviewStepRoute />} />
-                <Route path={QUOTATION_PREVIEW_PATH_PATTERN} element={<div>Quotation preview for evt-1</div>} />
-              </Routes>
-            </MemoryRouter>
-          </AuthProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <MemoryRouter initialEntries={[initialPath]}>
+                <Routes>
+                  {WIZARD_STEPS.filter((step) => step.id !== 'review').map((step) => (
+                    <Route
+                      key={step.id}
+                      path={step.path}
+                      element={
+                        <EventWizardShell step={step.id}>
+                          <WizardStepPlaceholder step={step.id} />
+                        </EventWizardShell>
+                      }
+                    />
+                  ))}
+                  <Route path={WIZARD_STEPS[4]!.path} element={<ReviewStepRoute />} />
+                  <Route path={QUOTATION_PREVIEW_PATH_PATTERN} element={<div>Quotation preview for evt-1</div>} />
+                </Routes>
+              </MemoryRouter>
+            </AuthProvider>
+          </ToastProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
     </QueryClientProvider>,
@@ -346,7 +349,11 @@ describe('ReviewStep', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Generate Quotation' }));
 
-    expect(await screen.findByText('Something went wrong creating the Event. Please try again.')).toBeInTheDocument();
+    // STORY-083 — the same message now also surfaces as a toast in addition
+    // to the existing inline banner (a toast is additive, not a
+    // replacement, per that story's own AC), so both instances are expected.
+    const errorMessages = await screen.findAllByText('Something went wrong creating the Event. Please try again.');
+    expect(errorMessages).toHaveLength(2);
     expect(sessionStorage.getItem(WIZARD_STORAGE_KEY)).not.toBeNull();
     expect(screen.getByText('Poolside')).toBeInTheDocument();
   });

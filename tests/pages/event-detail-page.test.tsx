@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { tsr } from '../../src/api/client';
+import { ToastProvider } from '../../src/components/ui/toast-provider';
 import EventDetailPage from '../../src/pages/event-detail/event-detail-page';
 import { EVENT_DETAIL_PATH_PATTERN, eventDetailPath } from '../../src/routes';
 import { AuthProvider, SESSION_STORAGE_KEY } from '../../src/stores/auth-context';
@@ -694,13 +695,15 @@ const renderPage = (id = 'event-1') => {
       <tsr.ReactQueryProvider>
         <ThemeProvider theme={theme}>
           <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <AuthProvider>
-              <MemoryRouter initialEntries={[eventDetailPath(id)]}>
-                <Routes>
-                  <Route path={EVENT_DETAIL_PATH_PATTERN} element={<EventDetailPage />} />
-                </Routes>
-              </MemoryRouter>
-            </AuthProvider>
+            <ToastProvider>
+              <AuthProvider>
+                <MemoryRouter initialEntries={[eventDetailPath(id)]}>
+                  <Routes>
+                    <Route path={EVENT_DETAIL_PATH_PATTERN} element={<EventDetailPage />} />
+                  </Routes>
+                </MemoryRouter>
+              </AuthProvider>
+            </ToastProvider>
           </LocalizationProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>

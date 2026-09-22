@@ -4,6 +4,7 @@ import { Alert, Button, Paper, Stack, TextField, Typography } from '@mui/materia
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
+import { useToast } from '../../components/ui/toast-provider';
 import type { paymentResultSchema } from '../../contract';
 import { fromPickerDate, toDateInputValue, toPickerDate } from './date-input';
 import {
@@ -47,6 +48,7 @@ interface PaymentsTabProps {
 // rendered for an Event Manager (EventDetailPage doesn't even mount it for
 // anyone else), so there's no read-only fallback branch to build here.
 const PaymentsTab = ({ eventId, payment, onEventChanged }: PaymentsTabProps) => {
+  const { showSuccess, showError } = useToast();
   const [saveError, setSaveError] = useState<string | null>(null);
   // Drives the read-only balance display — updated directly from the
   // mutation's own response so it refreshes the instant a save succeeds,
@@ -69,6 +71,7 @@ const PaymentsTab = ({ eventId, payment, onEventChanged }: PaymentsTabProps) => 
       setSaveError(null);
       setSavedPayment(response.body);
       reset(toFormValues(response.body));
+      showSuccess('Payment saved.');
       onEventChanged();
     },
     // updateEventPayment only declares a 404 response (matching the backend
@@ -79,6 +82,7 @@ const PaymentsTab = ({ eventId, payment, onEventChanged }: PaymentsTabProps) => 
     // RoomsTab (STORY-020) already documents for its own accommodation save.
     onError: () => {
       setSaveError('Something went wrong. Please try again.');
+      showError('Something went wrong. Please try again.');
     },
   });
 

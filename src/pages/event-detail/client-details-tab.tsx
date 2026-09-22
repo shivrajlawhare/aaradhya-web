@@ -4,6 +4,7 @@ import { Alert, Button, FormControl, InputLabel, MenuItem, Paper, Select, Stack,
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import ClientContactRows, { type ClientContactFormValue } from '../../components/ui/client-contact-rows';
+import { useToast } from '../../components/ui/toast-provider';
 import { ClientContactRole, EventStatus, type filteredEventResultSchema } from '../../contract';
 import { cardStyles, contactsReadOnlyStyles, sectionStyles, statusFieldStyles } from './client-details-tab.styles';
 
@@ -37,6 +38,7 @@ interface ClientDetailsTabProps {
 // fully editable, so nothing here branches on event.status to disable
 // anything.
 const ClientDetailsTab = ({ event, canEdit, canSeeClientContacts, onEventChanged }: ClientDetailsTabProps) => {
+  const { showSuccess, showError } = useToast();
   const [statusError, setStatusError] = useState<string | null>(null);
   const [contactsError, setContactsError] = useState<string | null>(null);
 
@@ -61,14 +63,17 @@ const ClientDetailsTab = ({ event, canEdit, canSeeClientContacts, onEventChanged
   const updateStatusMutation = tsr.updateEvent.useMutation({
     onSuccess: () => {
       setStatusError(null);
+      showSuccess('Status updated.');
       onEventChanged();
     },
     onError: (error) => {
       if (!(error instanceof Error) && error.status === 400) {
         setStatusError(error.body.error.message);
+        showError(error.body.error.message);
         return;
       }
       setStatusError('Something went wrong. Please try again.');
+      showError('Something went wrong. Please try again.');
     },
   });
 
@@ -76,14 +81,17 @@ const ClientDetailsTab = ({ event, canEdit, canSeeClientContacts, onEventChanged
     onSuccess: (response) => {
       setContactsError(null);
       reset({ clientContacts: response.body.clientContacts });
+      showSuccess('Contacts saved.');
       onEventChanged();
     },
     onError: (error) => {
       if (!(error instanceof Error) && error.status === 400) {
         setContactsError(error.body.error.message);
+        showError(error.body.error.message);
         return;
       }
       setContactsError('Something went wrong. Please try again.');
+      showError('Something went wrong. Please try again.');
     },
   });
 
