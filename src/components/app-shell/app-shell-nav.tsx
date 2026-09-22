@@ -1,6 +1,7 @@
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import { Box, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
+import aaradhyaHeaderText from '../../assets/header-text.svg';
 import type { NavItem } from './nav-items';
 import {
   logoutRowWrapperStyles,
@@ -9,7 +10,8 @@ import {
   navRowLabelStyles,
   navRowStyles,
   navRowsStyles,
-  wordmarkStyles,
+  wordmarkChipStyles,
+  wordmarkImageStyles,
 } from './app-shell-nav.styles';
 
 interface AppShellNavProps {
@@ -27,9 +29,14 @@ interface AppShellNavProps {
 const AppShellNav = ({ items, currentPath, onLogout, onNavigate }: AppShellNavProps) => {
   return (
     <Stack sx={navContentStyles}>
-      <Typography variant="display" sx={wordmarkStyles}>
-        Aaradhya
-      </Typography>
+      <Box sx={wordmarkChipStyles}>
+        <Box
+          component="img"
+          src={aaradhyaHeaderText}
+          alt="Aaradhya — A Complete Destination"
+          sx={wordmarkImageStyles}
+        />
+      </Box>
       <Stack component="nav" sx={navRowsStyles} aria-label="Main">
         {items.map((item) => {
           const selected = item.isActive(currentPath);
