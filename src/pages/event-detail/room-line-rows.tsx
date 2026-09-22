@@ -4,7 +4,13 @@ import CloseIcon from '@mui/icons-material/Close';
 import type { z } from 'zod';
 import type { roomLineSchema } from '../../contract';
 import type { AccommodationFormValues } from './rooms-tab';
-import { addButtonStyles, numericCellStyles, tableCardStyles } from './room-line-rows.styles';
+import {
+  addButtonStyles,
+  numericCellStyles,
+  numericFieldStyles,
+  roomTypeFieldStyles,
+  tableCardStyles,
+} from './room-line-rows.styles';
 
 type RoomLineResult = z.infer<typeof roomLineSchema> & { totalInclGst: number };
 
@@ -56,6 +62,7 @@ const RoomLineRows = ({ fields, savedRoomLines, register, onAddRow, onRemoveRow 
                   <TextField
                     {...register(`roomLines.${index}.roomType`)}
                     size="small"
+                    sx={roomTypeFieldStyles}
                     slotProps={{ htmlInput: { 'aria-label': `Room type for room line ${index + 1}` } }}
                   />
                 </TableCell>
@@ -64,6 +71,7 @@ const RoomLineRows = ({ fields, savedRoomLines, register, onAddRow, onRemoveRow 
                     {...register(`roomLines.${index}.occupancy`, { valueAsNumber: true })}
                     type="number"
                     size="small"
+                    sx={numericFieldStyles}
                     slotProps={{ htmlInput: { min: 0, 'aria-label': `Occupancy for room line ${index + 1}` } }}
                   />
                 </TableCell>
@@ -72,6 +80,7 @@ const RoomLineRows = ({ fields, savedRoomLines, register, onAddRow, onRemoveRow 
                     {...register(`roomLines.${index}.tariff`, { valueAsNumber: true })}
                     type="number"
                     size="small"
+                    sx={numericFieldStyles}
                     slotProps={{ htmlInput: { min: 0, 'aria-label': `Tariff for room line ${index + 1}` } }}
                   />
                 </TableCell>
@@ -80,6 +89,7 @@ const RoomLineRows = ({ fields, savedRoomLines, register, onAddRow, onRemoveRow 
                     {...register(`roomLines.${index}.noOfRooms`, { valueAsNumber: true })}
                     type="number"
                     size="small"
+                    sx={numericFieldStyles}
                     slotProps={{
                       htmlInput: { min: 0, 'aria-label': `Number of rooms for room line ${index + 1}` },
                     }}

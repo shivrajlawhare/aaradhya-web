@@ -41,3 +41,14 @@ export const inactiveStatusStyles: SxProps<Theme> = {
 export const roleStyles: SxProps<Theme> = {
   color: colorTokens.textSoft,
 };
+
+export const actionsRowStyles: SxProps<Theme> = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: `${spaceTokens.space8}px`,
+};
+
+export const roleSelectStyles: SxProps<Theme> = {
+  minWidth: 140,
+};

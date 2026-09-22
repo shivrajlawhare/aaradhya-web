@@ -55,7 +55,7 @@ const UserManagementPage = () => {
           Add User
         </Button>
         {mobileFormOpen && <NewUserForm onCreated={handleMobileUserCreated} />}
-        <UsersCardList users={users} />
+        <UsersCardList users={users} onChanged={refetchUsers} />
       </Box>
     );
   }

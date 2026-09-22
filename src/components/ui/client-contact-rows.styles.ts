@@ -5,16 +5,20 @@ export const rowStackStyles: SxProps<Theme> = {
   gap: `${spaceTokens.space12}px`, // space-12
 };
 
+// column below `md` — Name/Contact number/Role crammed into one row was
+// congested on a phone, same fix client-details-step.styles.ts's own
+// rowStyles already applies for the wizard's identical-shaped row.
 export const rowStyles: SxProps<Theme> = {
   gap: `${spaceTokens.space12}px`, // space-12
-  alignItems: 'center',
+  flexDirection: { xs: 'column', md: 'row' },
+  alignItems: { xs: 'stretch', md: 'center' },
   borderBottom: '1px solid', // line token, via border color below
   borderColor: 'divider', // line token — wired in theme.ts
   pb: `${spaceTokens.space12}px`, // space-12
 };
 
 export const roleFieldStyles: SxProps<Theme> = {
-  minWidth: 140,
+  minWidth: { xs: '100%', md: 140 },
 };
 
 export const addButtonStyles: SxProps<Theme> = {

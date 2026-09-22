@@ -22,6 +22,22 @@ export const numericCellStyles: SxProps<Theme> = {
   fontVariantNumeric: 'tabular-nums',
 };
 
+// None of these fields declared their own width before, so the Table's own
+// auto-layout squeezed every column down to a near-unreadable sliver on a
+// narrow screen (the horizontal-scroll fix above only helps once a column
+// has a real width to scroll past). Matches accommodation-step.tsx's own
+// Room type field (`sx={{ minWidth: 160 }}`) — the wizard's equivalent
+// table never had this problem since that field alone already forces
+// enough width for the whole row to need (and get) the same horizontal
+// scroll.
+export const roomTypeFieldStyles: SxProps<Theme> = {
+  minWidth: 160,
+};
+
+export const numericFieldStyles: SxProps<Theme> = {
+  minWidth: 100,
+};
+
 export const addButtonStyles: SxProps<Theme> = {
   mt: `${spaceTokens.space12}px`, // space-12
 };
