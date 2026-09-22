@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import MenuIcon from '@mui/icons-material/Menu';
-import { Box, IconButton, Typography, useMediaQuery } from '@mui/material';
+import { Box, IconButton, Slide, Typography, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { LOGIN_PATH } from '../../routes';
@@ -11,6 +11,7 @@ import {
   closeButtonStyles,
   desktopContentStyles,
   desktopTitleStyles,
+  menuButtonStyles,
   mobileOverlayHeaderStyles,
   mobileOverlayStyles,
   mobileRootStyles,
@@ -75,7 +76,7 @@ const AppShell = ({ title, children }: AppShellProps) => {
     <Box sx={rootStyles}>
       <Box sx={mobileRootStyles}>
         <Box component="header" sx={topBarStyles}>
-          <IconButton aria-label="Open navigation" onClick={() => setMobileNavOpen(true)}>
+          <IconButton aria-label="Open navigation" onClick={() => setMobileNavOpen(true)} sx={menuButtonStyles}>
             <MenuIcon />
           </IconButton>
           {title && (
@@ -86,11 +87,13 @@ const AppShell = ({ title, children }: AppShellProps) => {
         </Box>
         <Box component="main">{children}</Box>
       </Box>
-      {mobileNavOpen && (
-        // A same-mounted overlay, not a route push — the page underneath
-        // never unmounts, so closing it (below) trivially "returns to
-        // whatever screen opened it", wizard state included, without a
-        // hardcoded destination (this story's own edge case).
+      {/* Slide, not plain conditional JSX — mounts/unmounts with a slide
+          transition from the left edge instead of an instant appear/
+          disappear. mountOnEnter/unmountOnExit keep the same "not in the DOM
+          until opened" behavior the old `{mobileNavOpen && ...}` guard gave,
+          so the "same-mounted overlay, not a route push" reasoning below
+          still holds. */}
+      <Slide direction="right" in={mobileNavOpen} mountOnEnter unmountOnExit>
         <Box role="dialog" aria-modal="true" aria-label="Navigation" sx={mobileOverlayStyles}>
           <Box sx={mobileOverlayHeaderStyles}>
             <IconButton
@@ -108,7 +111,7 @@ const AppShell = ({ title, children }: AppShellProps) => {
             onNavigate={() => setMobileNavOpen(false)}
           />
         </Box>
-      )}
+      </Slide>
     </Box>
   );
 };

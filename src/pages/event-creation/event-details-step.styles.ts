@@ -4,17 +4,17 @@ import { colorTokens, radiusTokens, spaceTokens } from '../../theme/tokens';
 export const wrapperStyles: SxProps<Theme> = {
   display: 'flex',
   flexDirection: 'column',
-  gap: `${spaceTokens.space24}px`,
+  gap: { xs: `${spaceTokens.space16}px`, md: `${spaceTokens.space24}px` },
 };
 
 export const formCardStyles: SxProps<Theme> = {
   bgcolor: colorTokens.surface,
   border: `1px solid ${colorTokens.line}`,
   borderRadius: `${radiusTokens.radiusMd}px`, // radius-md (cards)
-  p: `${spaceTokens.space24}px`,
+  p: { xs: `${spaceTokens.space16}px`, md: `${spaceTokens.space24}px` },
   display: 'flex',
   flexDirection: 'column',
-  gap: `${spaceTokens.space16}px`,
+  gap: { xs: `${spaceTokens.space12}px`, md: `${spaceTokens.space16}px` },
 };
 
 export const rowStyles: SxProps<Theme> = {
@@ -30,10 +30,15 @@ export const addButtonStyles: SxProps<Theme> = {
   alignSelf: 'flex-start',
 };
 
+// overflowX: 'auto' (its previous value was 'hidden', which clipped
+// whatever columns didn't fit instead of letting them be reached by
+// horizontal scroll) — same fix upcoming-events-table.styles.ts's own
+// tableCardStyles already applies, for the identical reason.
 export const tableCardStyles: SxProps<Theme> = {
   border: `1px solid ${colorTokens.line}`,
   borderRadius: `${radiusTokens.radiusMd}px`,
-  overflow: 'hidden',
+  overflowX: 'auto',
+  overflowY: 'hidden',
 };
 
 // The Setup sub-card nested inside formCardStyles above — surface2 (not

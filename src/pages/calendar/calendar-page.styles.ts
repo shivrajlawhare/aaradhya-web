@@ -3,10 +3,10 @@ import { TOP_BAR_HEIGHT } from '../../components/app-shell/app-shell.styles';
 import { colorTokens, spaceTokens } from '../../theme/tokens';
 
 export const pageStyles: SxProps<Theme> = {
-  p: `${spaceTokens.space24}px`,
+  p: { xs: `${spaceTokens.space16}px`, md: `${spaceTokens.space24}px` },
   display: 'flex',
   flexDirection: 'column',
-  gap: `${spaceTokens.space16}px`,
+  gap: { xs: `${spaceTokens.space8}px`, md: `${spaceTokens.space16}px` },
   // Below `md` (STORY-059): fills the viewport under AppShell's own mobile
   // top bar, so the grid gets "as much height as the viewport allows"
   // while the chevrons/filter row above it stay reachable without
@@ -16,9 +16,13 @@ export const pageStyles: SxProps<Theme> = {
   overflow: { xs: 'hidden', md: 'visible' },
 };
 
+// space-between so the two chevrons reach the row's actual edges instead
+// of bunching together next to the month label on the left.
 export const monthNavStyles: SxProps<Theme> = {
   display: 'flex',
   alignItems: 'center',
+  justifyContent: 'space-between',
+  width: '100%',
   gap: `${spaceTokens.space8}px`,
 };
 
@@ -36,15 +40,20 @@ export const gridStyles: SxProps<Theme> = {
 // renders the three-letter form with no prop to shorten it. Seven equal
 // columns spanning the same full width as the grid below it, so the
 // letters land over their own actual day columns.
+// Dark, matching the drawer — previously colorTokens.surface2 (light
+// cream), the one strip on this screen that didn't match the shell's own
+// dark-drawer branding.
 export const mobileWeekdayHeaderStyles: SxProps<Theme> = {
   display: { xs: 'grid', md: 'none' },
   gridTemplateColumns: 'repeat(7, 1fr)',
-  bgcolor: colorTokens.surface2,
-  borderBottom: `1px solid ${colorTokens.line}`,
+  bgcolor: colorTokens.drawerBg,
 };
 
 export const mobileWeekdayHeaderCellStyles: SxProps<Theme> = {
   textAlign: 'center',
   py: `${spaceTokens.space8}px`,
-  color: colorTokens.textSoft,
+  // Was textSoft (dark) — illegible against the now-dark strip above;
+  // drawerTextMuted is the same muted-light tone the drawer nav's own
+  // inactive rows already use.
+  color: colorTokens.drawerTextMuted,
 };

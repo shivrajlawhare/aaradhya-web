@@ -60,6 +60,12 @@ export const theme = createTheme({
   },
   typography: {
     fontFamily: fontFamilyTokens.body,
+    // Desktop/base sizes — theme.typography.<variant>.fontSize only accepts
+    // a plain CSS value, not a breakpoint object (MUI merges these directly
+    // into Typography's style, unlike the `sx` prop's responsive-value
+    // resolver), so the below-`md` shrink is applied via the MuiTypography
+    // styleOverrides.root callback further down instead.
+    //
     // Not sized in docs/design/theme-tokens.md (wordmark-only, no spec value
     // yet) — 28px is a placeholder until the Figma build settles it.
     display: { fontFamily: fontFamilyTokens.display, fontWeight: 600, fontSize: 28 },
@@ -82,6 +88,36 @@ export const theme = createTheme({
     MuiDatePicker: {
       defaultProps: {
         format: 'DD/MM/YYYY',
+      },
+    },
+    // One step smaller below `md` for every one of the six custom variants
+    // above, so the whole app's type scales down on a phone without each
+    // individual screen needing its own font-size override — the same
+    // `({theme}) => ({[theme.breakpoints.down('md')]: {...}})` callback
+    // shape MuiEventCalendar's own overrides below already use, since a
+    // plain breakpoint-object fontSize isn't valid inside `typography.*`
+    // itself (see the comment there).
+    MuiTypography: {
+      styleOverrides: {
+        root: ({ ownerState, theme }) => {
+          const mobileFontSize: Partial<Record<string, number>> = {
+            display: 22,
+            titleL: 18,
+            titleM: 15,
+            bodyL: 14,
+            bodyM: 12,
+            labelS: 10,
+          };
+          const size = ownerState.variant ? mobileFontSize[ownerState.variant] : undefined;
+          if (size === undefined) {
+            return {};
+          }
+          return {
+            [theme.breakpoints.down('md')]: {
+              fontSize: size,
+            },
+          };
+        },
       },
     },
     MuiEventCalendar: {

@@ -1,7 +1,9 @@
-import { Box, CircularProgress } from '@mui/material';
+import { Box, CircularProgress, useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { tsr } from '../../api/client';
 import CountTiles from './count-tiles';
 import { pageStyles } from './dashboard-page.styles';
+import UpcomingEventsCardList from './upcoming-events-card-list';
 import UpcomingEventsTable from './upcoming-events-table';
 
 const DASHBOARD_QUERY_KEY = ['dashboard'];
@@ -14,6 +16,10 @@ const DASHBOARD_QUERY_KEY = ['dashboard'];
 // fields the API actually returned for them (e.g. clientContacts absent
 // for Housekeeping). STORY-049/050/051 reuse this component as-is.
 const DashboardPage = () => {
+  const theme = useTheme();
+  // 900px — MUI's own `md` breakpoint, matching AppShell's/EventListPage's
+  // own table-vs-card-list split.
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const dashboardQuery = tsr.getDashboard.useQuery({ queryKey: DASHBOARD_QUERY_KEY });
 
   if (dashboardQuery.isPending) {
@@ -32,7 +38,7 @@ const DashboardPage = () => {
   return (
     <Box sx={pageStyles}>
       <CountTiles counts={counts} />
-      <UpcomingEventsTable events={upcomingEvents} />
+      {isDesktop ? <UpcomingEventsTable events={upcomingEvents} /> : <UpcomingEventsCardList events={upcomingEvents} />}
     </Box>
   );
 };

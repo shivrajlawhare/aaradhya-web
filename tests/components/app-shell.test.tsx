@@ -1,5 +1,5 @@
 import { ThemeProvider } from '@mui/material';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 import AppShell from '../../src/components/app-shell/app-shell';
@@ -199,7 +199,7 @@ describe('AppShell', () => {
       expect(within(overlay).queryByRole('link', { name: 'User Management' })).not.toBeInTheDocument();
     });
 
-    it('closing the nav returns to the exact screen it was opened from, not Dashboard', () => {
+    it('closing the nav returns to the exact screen it was opened from, not Dashboard', async () => {
       mockMatchMedia(false);
       seedSession('EventManager');
       renderShell(EVENT_CREATE_PATH);
@@ -211,13 +211,16 @@ describe('AppShell', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Close navigation' }));
 
-      expect(screen.queryByRole('dialog', { name: 'Navigation' })).not.toBeInTheDocument();
+      // The mobile nav is now a Slide transition (a real opening/closing
+      // animation), not plain conditional JSX — it unmounts once its exit
+      // transition finishes, not synchronously on click.
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Navigation' })).not.toBeInTheDocument());
       // Never unmounted, wizard state included — the overlay was drawn over
       // it, not routed over it.
       expect(screen.getByText('new event content')).toBeInTheDocument();
     });
 
-    it('closes the nav and navigates when a row is tapped', () => {
+    it('closes the nav and navigates when a row is tapped', async () => {
       mockMatchMedia(false);
       seedSession('EventManager');
       renderShell(DASHBOARD_PATH);
@@ -225,7 +228,8 @@ describe('AppShell', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
       fireEvent.click(screen.getByRole('link', { name: 'Calendar' }));
 
-      expect(screen.queryByRole('dialog', { name: 'Navigation' })).not.toBeInTheDocument();
+      // Same Slide-driven async unmount as above.
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Navigation' })).not.toBeInTheDocument());
       expect(screen.getByText('calendar content')).toBeInTheDocument();
     });
   });

@@ -3,7 +3,8 @@ import { colorTokens, spaceTokens } from '../../theme/tokens';
 
 // AC: "a persistent, non-collapsible left rail, 280px wide".
 export const DRAWER_WIDTH = 280;
-// AC: "a top bar (56px, surface background, line bottom border)".
+// AC: "a top bar (56px)" — dark drawer-bg background, not the original
+// surface/line recipe (see topBarStyles below).
 export const TOP_BAR_HEIGHT = 56;
 
 export const rootStyles: SxProps<Theme> = {
@@ -38,6 +39,9 @@ export const mobileRootStyles: SxProps<Theme> = {
   minWidth: 0,
 };
 
+// Dark, matching the rail/overlay — previously colorTokens.surface (white),
+// the one place in the mobile layout that didn't match the rest of the
+// shell's own dark-drawer branding.
 export const topBarStyles: SxProps<Theme> = {
   position: 'sticky',
   top: 0,
@@ -45,9 +49,15 @@ export const topBarStyles: SxProps<Theme> = {
   height: TOP_BAR_HEIGHT,
   display: 'flex',
   alignItems: 'center',
-  bgcolor: colorTokens.surface,
-  borderBottom: `1px solid ${colorTokens.line}`,
+  bgcolor: colorTokens.drawerBg,
   px: `${spaceTokens.space8}px`,
+};
+
+// Same reasoning as topBarTitleStyles above — the hamburger icon's own
+// inherited dark color would be invisible against the now-dark topBarStyles
+// background.
+export const menuButtonStyles: SxProps<Theme> = {
+  color: colorTokens.drawerText,
 };
 
 export const topBarTitleStyles: SxProps<Theme> = {
@@ -56,6 +66,10 @@ export const topBarTitleStyles: SxProps<Theme> = {
   // Balances the hamburger IconButton's own width so the title sits
   // centered in the bar instead of shifted right by it.
   mr: '40px',
+  // Inherited dark text.primary is unreadable against the now-dark
+  // topBarStyles background — set explicitly, same fix closeButtonStyles
+  // below already applies to the overlay's own icon.
+  color: colorTokens.drawerText,
 };
 
 export const mobileOverlayStyles: SxProps<Theme> = {

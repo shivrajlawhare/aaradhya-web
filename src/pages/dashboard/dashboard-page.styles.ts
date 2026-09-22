@@ -4,6 +4,6 @@ import { spaceTokens } from '../../theme/tokens';
 export const pageStyles: SxProps<Theme> = {
   display: 'flex',
   flexDirection: 'column',
-  gap: `${spaceTokens.space24}px`,
-  p: `${spaceTokens.space24}px`,
+  gap: { xs: `${spaceTokens.space16}px`, md: `${spaceTokens.space24}px` },
+  p: { xs: `${spaceTokens.space16}px`, md: `${spaceTokens.space24}px` },
 };

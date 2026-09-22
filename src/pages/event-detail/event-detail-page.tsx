@@ -232,7 +232,16 @@ const EventDetailPage = () => {
             </Button>
           )}
         </Box>
-        <Tabs value={activeTab} onChange={(_changeEvent, value: DetailTab) => setActiveTab(value)}>
+        {/* scrollable — up to 8 Tabs render for an Event Manager, which
+            overflowed un-reachably past the viewport edge on a phone with
+            the default non-scrollable Tabs. */}
+        <Tabs
+          value={activeTab}
+          onChange={(_changeEvent, value: DetailTab) => setActiveTab(value)}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+        >
           <Tab label="Client Details" value="client-details" />
           {canSeeSessions && <Tab label="Event Details" value="event-details" />}
           {canSeeRooms && <Tab label="Accommodation" value="accommodation" />}

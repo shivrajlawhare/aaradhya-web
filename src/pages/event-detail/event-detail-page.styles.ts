@@ -2,15 +2,21 @@ import type { SxProps, Theme } from '@mui/material';
 import { spaceTokens } from '../../theme/tokens';
 
 export const pageStyles: SxProps<Theme> = {
-  p: `${spaceTokens.space24}px`, // space-24
+  p: { xs: `${spaceTokens.space16}px`, md: `${spaceTokens.space24}px` },
   display: 'flex',
   flexDirection: 'column',
-  gap: `${spaceTokens.space16}px`, // space-16
+  gap: { xs: `${spaceTokens.space12}px`, md: `${spaceTokens.space16}px` },
 };
 
+// flexWrap (previously a strict nowrap row) — the eventId/status/type/
+// Delete-button cluster has no minWidth:0/shrink allowance on any of its
+// children, so at narrow widths it would force the eventId text to break
+// mid-word instead of the row just flowing onto a second line.
 export const headerStyles: SxProps<Theme> = {
   display: 'flex',
   alignItems: 'center',
+  flexWrap: 'wrap',
+  rowGap: `${spaceTokens.space8}px`,
   gap: `${spaceTokens.space12}px`, // space-12
 };
 
@@ -22,5 +28,5 @@ export const deleteButtonStyles: SxProps<Theme> = {
 };
 
 export const tabPanelStyles: SxProps<Theme> = {
-  pt: `${spaceTokens.space16}px`, // space-16
+  pt: { xs: `${spaceTokens.space12}px`, md: `${spaceTokens.space16}px` },
 };

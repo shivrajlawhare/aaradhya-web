@@ -18,7 +18,9 @@ interface UpcomingEventsTableProps {
 // grant client visibility to, e.g. Housekeeping) — not an empty array, an
 // undefined key, per that story's own "genuinely absent, not null"
 // convention; this is the one column whose presence is role-dependent.
-const formatClientNames = (clientContacts: UpcomingEvent['clientContacts']): string => {
+// Exported — upcoming-events-card-list.tsx's mobile card view reuses this
+// exact same formatting rather than duplicating it.
+export const formatClientNames = (clientContacts: UpcomingEvent['clientContacts']): string => {
   if (!clientContacts || clientContacts.length === 0) {
     return '—';
   }

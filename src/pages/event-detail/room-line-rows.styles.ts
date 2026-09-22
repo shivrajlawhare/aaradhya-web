@@ -4,11 +4,16 @@ import { colorTokens, radiusTokens, spaceTokens } from '../../theme/tokens';
 // Matches accommodation-step.styles.ts's own tableCardStyles — a real
 // bordered/rounded card, not just a bare full-width Table (this component's
 // own Paper wrapper had no border/radius/overflow of its own before).
+// overflowX: 'auto' (not 'hidden', which clipped whatever columns didn't
+// fit instead of letting them be reached by horizontal scroll) — same fix
+// upcoming-events-table.styles.ts's own tableCardStyles already applies,
+// for the identical reason; this table had the same latent bug.
 export const tableCardStyles: SxProps<Theme> = {
   width: '100%',
   border: `1px solid ${colorTokens.line}`,
   borderRadius: `${radiusTokens.radiusMd}px`,
-  overflow: 'hidden',
+  overflowX: 'auto',
+  overflowY: 'hidden',
 };
 
 // tabular-nums so digits in the numeric columns stay a fixed width — this

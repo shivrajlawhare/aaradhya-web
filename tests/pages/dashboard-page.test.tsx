@@ -16,6 +16,7 @@ import {
 } from '../../src/routes';
 import { AuthProvider, SESSION_STORAGE_KEY } from '../../src/stores/auth-context';
 import { theme } from '../../src/theme/theme';
+import { mockMatchMedia } from '../support/match-media';
 
 interface MockDashboardCounts {
   todaysEvents: number;
@@ -114,6 +115,12 @@ const seedSession = (role = 'EventManager') => {
 
 const renderPage = () => {
   const queryClient = new QueryClient();
+  // Every existing test in this file asserts on the desktop Table's own
+  // structure (UpcomingEventsTable) — DashboardPage now also has a
+  // below-`md` UpcomingEventsCardList branch (mobile responsiveness pass),
+  // so tests need an explicit "desktop" media-query answer to keep
+  // exercising the branch they were actually written for.
+  mockMatchMedia(true);
 
   return render(
     <QueryClientProvider client={queryClient}>
