@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
-import { Box, CircularProgress, Link, Tab, Tabs, Typography } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { Box, Button, CircularProgress, Link, Tab, Tabs, Typography } from '@mui/material';
 import { tsr } from '../../api/client';
 import ActivityTab from '../../components/ui/activity-tab';
 import StatusChip from '../../components/ui/status-chip';
@@ -8,13 +9,14 @@ import { Role } from '../../contract';
 import { EVENT_LIST_PATH } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
 import ClientDetailsTab from './client-details-tab';
+import DeleteEventDialog from './delete-event-dialog';
 import DocumentsTab from './documents-tab';
 import PaymentsTab from './payments-tab';
 import ReviewTab from './review-tab';
 import RoomsTab from './rooms-tab';
 import SessionsItemsTab from './sessions-items-tab';
 import SessionsTab from './sessions-tab';
-import { headerStyles, pageStyles, tabPanelStyles } from './event-detail-page.styles';
+import { deleteButtonStyles, headerStyles, pageStyles, tabPanelStyles } from './event-detail-page.styles';
 
 // STORY-076 — renamed/reordered to mirror the New Event wizard's own 5 steps
 // (Client Details, Event Details, Accommodation, Sessions & Items, Review &
@@ -37,6 +39,7 @@ const EventDetailPage = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<DetailTab>('client-details');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const eventQuery = tsr.getEvent.useQuery({
     queryKey: ['event', id ?? ''],
@@ -215,6 +218,19 @@ const EventDetailPage = () => {
           </Typography>
           <StatusChip status={event.status} />
           <Typography variant="bodyM">{event.eventFamilyType}</Typography>
+          {/* Not scoped to any one tab (this story's own AC) — deleting an
+              Event isn't a tab's content, it's the whole record, so it lives
+              on the page's own header/shell instead. */}
+          {canEdit && (
+            <Button
+              startIcon={<DeleteIcon />}
+              color="error"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              sx={deleteButtonStyles}
+            >
+              Delete Event
+            </Button>
+          )}
         </Box>
         <Tabs value={activeTab} onChange={(_changeEvent, value: DetailTab) => setActiveTab(value)}>
           <Tab label="Client Details" value="client-details" />
@@ -227,6 +243,14 @@ const EventDetailPage = () => {
           {canSeeActivity && <Tab label="Activity" value="activity" />}
         </Tabs>
         <Box sx={tabPanelStyles}>{tabPanel}</Box>
+        {canEdit && (
+          <DeleteEventDialog
+            eventId={event.id}
+            eventDisplayId={event.eventId}
+            open={isDeleteDialogOpen}
+            onClose={() => setIsDeleteDialogOpen(false)}
+          />
+        )}
       </>
     );
   }
