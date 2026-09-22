@@ -46,7 +46,14 @@ const ClientDetailsTab = ({ event, canEdit, canSeeClientContacts, onEventChanged
   // never reaches the editable UI at all, so an empty starting array here
   // is purely to satisfy the now-`.optional()` type, not a real state this
   // form is ever used from.
-  const { control, handleSubmit, reset, watch, setValue } = useForm<{ clientContacts: ClientContactFormValue[] }>({
+  const {
+    control,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { isDirty: isContactsDirty },
+  } = useForm<{ clientContacts: ClientContactFormValue[] }>({
     defaultValues: { clientContacts: event.clientContacts ?? [] },
   });
   const { fields, append, remove } = useFieldArray({ control, name: 'clientContacts' });
@@ -91,10 +98,14 @@ const ClientDetailsTab = ({ event, canEdit, canSeeClientContacts, onEventChanged
   // remounting its TextField — which is what actually lost focus, not
   // anything about the TextField itself. `setValue` on the nested path
   // changes the value React Hook Form holds without touching `field.id` at
-  // all.
+  // all. `shouldDirty: true` (STORY-082) — `setValue`'s own default is
+  // `false`; without it, editing a contact's own text fields would never
+  // flip `formState.isDirty`, leaving "Save contacts" permanently disabled
+  // for the single most common edit this form has (add/remove rows already
+  // dirty the form for free, via useFieldArray's own append/remove).
   const handleContactRowChange = (index: number, patch: Partial<ClientContactFormValue>) => {
     for (const [key, value] of Object.entries(patch) as [keyof ClientContactFormValue, string][]) {
-      setValue(`clientContacts.${index}.${key}`, value);
+      setValue(`clientContacts.${index}.${key}`, value, { shouldDirty: true });
     }
   };
 
@@ -160,7 +171,7 @@ const ClientDetailsTab = ({ event, canEdit, canSeeClientContacts, onEventChanged
         <Button
           variant="contained"
           onClick={handleSaveContacts}
-          disabled={!canSaveContacts || updateContactsMutation.isPending}
+          disabled={!isContactsDirty || !canSaveContacts || updateContactsMutation.isPending}
         >
           Save contacts
         </Button>

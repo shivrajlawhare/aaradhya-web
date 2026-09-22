@@ -469,7 +469,13 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
               </Alert>
             )}
             <Stack direction="row" sx={rowStyles}>
-              <Button type="submit" variant="contained" startIcon={<AddIcon />} sx={addButtonStyles} disabled={isMutating}>
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={<AddIcon />}
+                sx={addButtonStyles}
+                disabled={!ceremonyForm.formState.isDirty || isMutating}
+              >
                 {ceremonySubmitLabel}
               </Button>
               {editingCeremony && (
@@ -605,7 +611,13 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
             </Alert>
           )}
           <Stack direction="row" sx={rowStyles}>
-            <Button type="submit" variant="contained" startIcon={<AddIcon />} sx={addButtonStyles} disabled={isMutating}>
+            <Button
+              type="submit"
+              variant="contained"
+              startIcon={<AddIcon />}
+              sx={addButtonStyles}
+              disabled={!foodForm.formState.isDirty || isMutating}
+            >
               {foodSubmitLabel}
             </Button>
             {editingFood && (

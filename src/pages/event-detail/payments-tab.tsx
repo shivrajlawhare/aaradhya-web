@@ -54,7 +54,13 @@ const PaymentsTab = ({ eventId, payment, onEventChanged }: PaymentsTabProps) => 
   // approach RoomsTab (STORY-020) already uses for its own totals.
   const [savedPayment, setSavedPayment] = useState<PaymentResult>(payment);
 
-  const { control, register, handleSubmit, reset } = useForm<PaymentFormValues>({
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    formState: { isDirty },
+  } = useForm<PaymentFormValues>({
     defaultValues: toFormValues(payment),
   });
 
@@ -150,7 +156,7 @@ const PaymentsTab = ({ eventId, payment, onEventChanged }: PaymentsTabProps) => 
           {savedPayment.balance}
         </Typography>
       </Paper>
-      <Button variant="contained" onClick={handleSave} disabled={updatePaymentMutation.isPending}>
+      <Button variant="contained" onClick={handleSave} disabled={!isDirty || updatePaymentMutation.isPending}>
         Save payment
       </Button>
     </Stack>

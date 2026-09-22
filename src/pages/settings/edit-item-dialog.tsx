@@ -28,12 +28,17 @@ interface EditItemDialogProps {
 // immediate, separate action, matching UsersTable's existing split between
 // its role Select and its active Switch.
 const EditItemDialog = ({ section, row, isPending, errorMessage, onClose, onSave }: EditItemDialogProps) => {
-  const { register, handleSubmit, watch } = useForm<EditItemFormValues>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { isDirty },
+  } = useForm<EditItemFormValues>({
     defaultValues: { name: row.name, cost: row.cost === null ? '' : String(row.cost) },
   });
 
   const name = watch('name');
-  const canSubmit = name.trim().length > 0;
+  const canSubmit = isDirty && name.trim().length > 0;
 
   const handleEdit = (values: EditItemFormValues) => {
     if (isPending || !canSubmit) {

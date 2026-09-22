@@ -75,7 +75,13 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
   // so totals refresh immediately on save.
   const [savedAccommodation, setSavedAccommodation] = useState<AccommodationResult>(accommodation);
 
-  const { control, handleSubmit, register, reset } = useForm<AccommodationFormValues>({
+  const {
+    control,
+    handleSubmit,
+    register,
+    reset,
+    formState: { isDirty },
+  } = useForm<AccommodationFormValues>({
     defaultValues: {
       checkIn: toDateInputValue(accommodation.checkIn),
       checkOut: toDateInputValue(accommodation.checkOut),
@@ -197,7 +203,7 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
             <Typography variant="bodyM">{saveError}</Typography>
           </Alert>
         )}
-        <Button variant="contained" onClick={handleSave} disabled={updateAccommodationMutation.isPending}>
+        <Button variant="contained" onClick={handleSave} disabled={!isDirty || updateAccommodationMutation.isPending}>
           Save accommodation
         </Button>
       </>

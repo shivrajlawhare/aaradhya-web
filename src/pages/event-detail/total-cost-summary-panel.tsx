@@ -62,7 +62,12 @@ const TotalCostSummaryPanel = ({ eventId, extras, canEdit, onEventChanged }: Tot
     retry: false,
   });
 
-  const { register, handleSubmit, reset } = useForm<ExtrasFormValues>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { isDirty },
+  } = useForm<ExtrasFormValues>({
     defaultValues: toFormValues(extras),
   });
 
@@ -164,7 +169,7 @@ const TotalCostSummaryPanel = ({ eventId, extras, canEdit, onEventChanged }: Tot
             </Alert>
           )}
           {canEdit && (
-            <Button variant="contained" onClick={handleSave} disabled={updateExtrasMutation.isPending}>
+            <Button variant="contained" onClick={handleSave} disabled={!isDirty || updateExtrasMutation.isPending}>
               Save extras
             </Button>
           )}

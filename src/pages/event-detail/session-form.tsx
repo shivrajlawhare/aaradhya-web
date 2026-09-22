@@ -130,7 +130,15 @@ interface SessionFormProps {
 
 const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) => {
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const { control, register, handleSubmit, setValue, setError, clearErrors } = useForm<SessionFormValues>({
+  const {
+    control,
+    register,
+    handleSubmit,
+    setValue,
+    setError,
+    clearErrors,
+    formState: { isDirty },
+  } = useForm<SessionFormValues>({
     defaultValues: toFormValues(session),
   });
 
@@ -424,7 +432,7 @@ const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) 
         </Alert>
       )}
       <Stack direction="row" sx={rowStyles}>
-        <Button type="submit" variant="contained" disabled={isPending}>
+        <Button type="submit" variant="contained" disabled={!isDirty || isPending}>
           {session ? 'Save session' : 'Add session'}
         </Button>
         <Button onClick={onCancel} disabled={isPending}>
