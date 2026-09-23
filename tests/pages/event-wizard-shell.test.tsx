@@ -35,7 +35,7 @@ const renderWizard = (initialPath: string) =>
           <Route path={EVENT_LIST_PATH} element={<div>events list placeholder</div>} />
         </Routes>
       </MemoryRouter>
-    </ThemeProvider>,
+    </ThemeProvider>
   );
 
 const clientDetailsPath = WIZARD_STEPS[0]!.path;
@@ -159,7 +159,7 @@ describe('EventWizardShell — footer Back/Next', () => {
     expect(screen.queryByText(/^Next:/)).not.toBeInTheDocument();
   });
 
-  it('clicking Next advances to the next step\'s route', () => {
+  it("clicking Next advances to the next step's route", () => {
     mockMatchMedia(true);
     renderWizard(clientDetailsPath);
 

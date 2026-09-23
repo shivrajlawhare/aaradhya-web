@@ -1,7 +1,18 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import { Chip, IconButton, Paper, Switch, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
-import type { SectionConfig, MasterListRow } from './settings-sections';
+import {
+  Chip,
+  IconButton,
+  Paper,
+  Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Typography,
+} from '@mui/material';
 import { activeChipStyles, inactiveChipStyles, tableCardStyles } from './master-list-table.styles';
+import type { MasterListRow, SectionConfig } from './settings-sections';
 
 interface MasterListTableProps {
   section: SectionConfig;

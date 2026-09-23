@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
 import { Alert, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Controller, useForm } from 'react-hook-form';
 import { tsr } from '../../api/client';
-import { ROLE_OPTIONS, Role } from '../../contract';
+import { Role, ROLE_OPTIONS } from '../../contract';
 import { fieldStackStyles, formStyles } from './new-user-form.styles';
 
 // role stays '' until the operator actually picks one, so the AC's "role
@@ -30,8 +30,7 @@ const NewUserForm = ({ onCreated }: NewUserFormProps) => {
   const username = watch('username');
   const password = watch('password');
   const role = watch('role');
-  const canSubmit =
-    name.trim().length > 0 && username.trim().length > 0 && password.length > 0 && role !== '';
+  const canSubmit = name.trim().length > 0 && username.trim().length > 0 && password.length > 0 && role !== '';
 
   const createUserMutation = tsr.createUser.useMutation({
     onSuccess: () => {
@@ -70,12 +69,7 @@ const NewUserForm = ({ onCreated }: NewUserFormProps) => {
         </Typography>
         <TextField label="Name" fullWidth {...register('name')} />
         <TextField label="Username" fullWidth {...register('username')} />
-        <TextField
-          label="Password"
-          type="password"
-          fullWidth
-          {...register('password')}
-        />
+        <TextField label="Password" type="password" fullWidth {...register('password')} />
         <Controller
           name="role"
           control={control}

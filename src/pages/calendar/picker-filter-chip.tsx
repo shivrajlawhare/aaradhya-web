@@ -45,7 +45,11 @@ const PickerFilterChip = ({ label, options, selectedValue, onSelect, allLabel }:
           {allLabel ?? `All ${label}s`}
         </MenuItem>
         {options.map((option) => (
-          <MenuItem key={option.value} selected={option.value === selectedValue} onClick={() => handleSelect(option.value)}>
+          <MenuItem
+            key={option.value}
+            selected={option.value === selectedValue}
+            onClick={() => handleSelect(option.value)}
+          >
             {option.label}
           </MenuItem>
         ))}

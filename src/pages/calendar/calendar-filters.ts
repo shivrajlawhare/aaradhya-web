@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import { EventStatus, type calendarSessionResultSchema } from '../../contract';
+import { type calendarSessionResultSchema, EventStatus } from '../../contract';
 
 type CalendarSession = z.infer<typeof calendarSessionResultSchema>;
 // Only the fields this module actually reads — narrower than the full
@@ -67,9 +67,8 @@ export const filterCalendarSessions = <T extends FilterableSession>(sessions: T[
 export const getDistinctVenues = (sessions: Pick<CalendarSession, 'venue'>[]): string[] =>
   [...new Set(sessions.map((session) => session.venue))].sort();
 
-export const getDistinctEventFamilyTypes = (
-  sessions: Pick<CalendarSession, 'event'>[],
-): string[] => [...new Set(sessions.map((session) => session.event.eventFamilyType))].sort();
+export const getDistinctEventFamilyTypes = (sessions: Pick<CalendarSession, 'event'>[]): string[] =>
+  [...new Set(sessions.map((session) => session.event.eventFamilyType))].sort();
 
 // Whether any filter dimension is actually narrowing the grid — used to
 // decide whether a zero-result grid means "no filter combination could

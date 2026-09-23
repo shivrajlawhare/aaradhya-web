@@ -1,5 +1,5 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -31,9 +31,7 @@ const makeUser = (overrides: Partial<MockUser> = {}): MockUser => ({
 });
 
 const jsonResponse = (status: number, body: unknown) =>
-  Promise.resolve(
-    new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }),
-  );
+  Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
 
 // A tiny fetch router: GET/POST /users and PATCH /users/:id, backed by an
 // in-memory list the test controls, so a refetch after a mutation reflects
@@ -64,7 +62,7 @@ const mockUsersApi = (initialUsers: MockUser[]) => {
         return jsonResponse(200, updated);
       }
       throw new Error(`Unhandled request: ${method} ${url}`);
-    }),
+    })
   );
 
   return {
@@ -86,7 +84,7 @@ const renderPage = () => {
           </AuthProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 };
 

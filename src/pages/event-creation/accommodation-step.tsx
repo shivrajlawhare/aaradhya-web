@@ -20,16 +20,16 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
 import { tsr } from '../../api/client';
-import { formatAmount } from '../event-detail/format-amount';
-import { fromPickerDate, fromPickerTime, toPickerDate, toPickerTime } from '../event-detail/date-input';
 import { useEventWizard } from '../../stores/event-wizard-context';
-import { formatEventDate, formatTimeOfDay } from '../../utils/quotation-formatting';
 import {
   computeRoomLineTotalInclGst,
   computeTotalCharges,
   computeTotalDays,
   computeTotalOccupancy,
 } from '../../utils/accommodation-calculations';
+import { formatEventDate, formatTimeOfDay } from '../../utils/quotation-formatting';
+import { fromPickerDate, fromPickerTime, toPickerDate, toPickerTime } from '../event-detail/date-input';
+import { formatAmount } from '../event-detail/format-amount';
 import {
   addButtonStyles,
   dateTimeRowStyles,
@@ -92,7 +92,14 @@ const buildDefaultRoomLines = (activeRoomTypes: { name: string; defaultTariff: n
     locked: roomType.name === EXTRA_BEDS_ROOM_TYPE,
   }));
   if (!rows.some((row) => row.locked)) {
-    rows.push({ id: createRowId(), roomType: EXTRA_BEDS_ROOM_TYPE, occupancy: 0, tariff: 0, noOfRooms: 0, locked: true });
+    rows.push({
+      id: createRowId(),
+      roomType: EXTRA_BEDS_ROOM_TYPE,
+      occupancy: 0,
+      tariff: 0,
+      noOfRooms: 0,
+      locked: true,
+    });
   }
   return rows;
 };
@@ -157,7 +164,10 @@ const AccommodationStep = () => {
   const totalDaysForMath = totalDays ?? 1;
 
   const handleAddRoomLine = () => {
-    setRows((current) => [...current, { id: createRowId(), roomType: '', occupancy: 0, tariff: 0, noOfRooms: 0, locked: false }]);
+    setRows((current) => [
+      ...current,
+      { id: createRowId(), roomType: '', occupancy: 0, tariff: 0, noOfRooms: 0, locked: false },
+    ]);
   };
 
   const handleRemoveRoomLine = (id: string) => {
@@ -168,8 +178,8 @@ const AccommodationStep = () => {
     const selected = activeRoomTypes.find((roomType) => roomType.name === roomTypeName);
     setRows((current) =>
       current.map((row) =>
-        row.id === id ? { ...row, roomType: roomTypeName, tariff: selected ? selected.defaultTariff : row.tariff } : row,
-      ),
+        row.id === id ? { ...row, roomType: roomTypeName, tariff: selected ? selected.defaultTariff : row.tariff } : row
+      )
     );
   };
 
@@ -204,7 +214,11 @@ const AccommodationStep = () => {
             <Typography variant="titleM" component="h3">
               Check-in
             </Typography>
-            <DatePicker label="Check-in date" value={toPickerDate(checkInDate)} onChange={(date) => setCheckInDate(fromPickerDate(date))} />
+            <DatePicker
+              label="Check-in date"
+              value={toPickerDate(checkInDate)}
+              onChange={(date) => setCheckInDate(fromPickerDate(date))}
+            />
             <StaticTimePicker
               ampm
               value={toPickerTime(checkInTime)}
@@ -230,9 +244,13 @@ const AccommodationStep = () => {
         </Stack>
         {isRangeInvalid && <Alert severity="error">Check-out must be on or after check-in.</Alert>}
         <Typography variant="bodyM" sx={summaryLineStyles}>
-          {checkInDate ? `${formatEventDate(checkInDate)}${checkInTime ? ` · ${formatTimeOfDay(checkInTime)}` : ''}` : '—'}
+          {checkInDate
+            ? `${formatEventDate(checkInDate)}${checkInTime ? ` · ${formatTimeOfDay(checkInTime)}` : ''}`
+            : '—'}
           {' to '}
-          {checkOutDate ? `${formatEventDate(checkOutDate)}${checkOutTime ? ` · ${formatTimeOfDay(checkOutTime)}` : ''}` : '—'}
+          {checkOutDate
+            ? `${formatEventDate(checkOutDate)}${checkOutTime ? ` · ${formatTimeOfDay(checkOutTime)}` : ''}`
+            : '—'}
           {' · Total days: '}
           {/* Never manually entered — always derived, this story's own AC. */}
           {totalDays ?? '—'}
@@ -309,7 +327,9 @@ const AccommodationStep = () => {
                   />
                 </TableCell>
                 <TableCell sx={numericCellStyles}>
-                  <Typography variant="bodyM">{formatAmount(computeRoomLineTotalInclGst(row, totalDaysForMath))}</Typography>
+                  <Typography variant="bodyM">
+                    {formatAmount(computeRoomLineTotalInclGst(row, totalDaysForMath))}
+                  </Typography>
                 </TableCell>
                 <TableCell>
                   {!row.locked && (

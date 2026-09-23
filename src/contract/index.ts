@@ -148,7 +148,10 @@ export const eventIdParamsSchema = z.object({
 export const updateEventBodySchema = z.object({
   eventFamilyType: z.string().trim().min(1).optional(),
   status: z.nativeEnum(EventStatus).optional(),
-  eventManager: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid event_manager id.').optional(),
+  eventManager: z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, 'Invalid event_manager id.')
+    .optional(),
   clientContacts: z.array(clientContactSchema).min(1).optional(),
   // STORY-072 — mirrors aaradhya-api's own updateEventBodySchema.
   foodGstRatePercent: z.number().min(0).optional(),
@@ -535,10 +538,7 @@ export const roomTypeIdParamsSchema = z.object({
 // mirrors aaradhya-api's own menuItemRefInputSchema exactly; STORY-032's
 // endpoint resolves either shape server-side, so this UI never has to
 // call POST /menu-items itself.
-export const menuItemRefSchema = z.union([
-  z.object({ id: z.string() }),
-  z.object({ name: z.string().trim().min(1) }),
-]);
+export const menuItemRefSchema = z.union([z.object({ id: z.string() }), z.object({ name: z.string().trim().min(1) })]);
 
 const mealItemBodySchema = z.object({
   type: z.literal(ItemType.Meal),

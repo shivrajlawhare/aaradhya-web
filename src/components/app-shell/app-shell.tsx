@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import MenuIcon from '@mui/icons-material/Menu';
 import { Box, IconButton, Slide, Typography, useMediaQuery } from '@mui/material';
@@ -96,11 +96,7 @@ const AppShell = ({ title, children }: AppShellProps) => {
       <Slide direction="right" in={mobileNavOpen} mountOnEnter unmountOnExit>
         <Box role="dialog" aria-modal="true" aria-label="Navigation" sx={mobileOverlayStyles}>
           <Box sx={mobileOverlayHeaderStyles}>
-            <IconButton
-              aria-label="Close navigation"
-              onClick={() => setMobileNavOpen(false)}
-              sx={closeButtonStyles}
-            >
+            <IconButton aria-label="Close navigation" onClick={() => setMobileNavOpen(false)} sx={closeButtonStyles}>
               <CloseIcon />
             </IconButton>
           </Box>

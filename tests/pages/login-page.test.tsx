@@ -1,5 +1,5 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,7 +14,7 @@ const jsonResponse = (status: number, body: unknown) =>
     new Response(JSON.stringify(body), {
       status,
       headers: { 'content-type': 'application/json' },
-    }),
+    })
   );
 
 const renderLoginPage = () => {
@@ -34,7 +34,7 @@ const renderLoginPage = () => {
           </AuthProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 };
 
@@ -75,7 +75,7 @@ describe('LoginPage', () => {
     vi.mocked(fetch).mockReturnValue(
       jsonResponse(401, {
         error: { code: 'INVALID_CREDENTIALS', message: 'Incorrect username or password.' },
-      }),
+      })
     );
     renderLoginPage();
     fillForm('priya', 'wrong-password');
@@ -92,7 +92,7 @@ describe('LoginPage', () => {
       jsonResponse(200, {
         token: 'signed-jwt',
         user: { id: 'user-1', name: 'Priya Nair', role: 'EventManager' },
-      }),
+      })
     );
     renderLoginPage();
     fillForm('priya', 'correct-password');
@@ -109,7 +109,7 @@ describe('LoginPage', () => {
       jsonResponse(200, {
         token: 'signed-jwt',
         user: { id: 'user-1', name: 'Priya Nair', role: 'EventManager' },
-      }),
+      })
     );
     renderLoginPage();
     fillForm('priya', 'correct-password');
@@ -128,7 +128,7 @@ describe('LoginPage', () => {
     vi.mocked(fetch).mockReturnValue(
       new Promise((resolve) => {
         resolveFetch = resolve;
-      }),
+      })
     );
     renderLoginPage();
     fillForm('priya', 'correct-password');
@@ -142,7 +142,7 @@ describe('LoginPage', () => {
       await jsonResponse(200, {
         token: 'signed-jwt',
         user: { id: 'user-1', name: 'Priya Nair', role: 'EventManager' },
-      }),
+      })
     );
   });
 
@@ -151,7 +151,7 @@ describe('LoginPage', () => {
     vi.mocked(fetch).mockReturnValue(
       jsonResponse(401, {
         error: { code: 'INVALID_CREDENTIALS', message: 'Incorrect username or password.' },
-      }),
+      })
     );
 
     renderLoginPage();

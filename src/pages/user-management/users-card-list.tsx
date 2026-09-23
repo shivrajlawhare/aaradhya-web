@@ -1,7 +1,7 @@
 import { Box, MenuItem, Paper, Select, type SelectChangeEvent, Switch, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
-import { ROLE_OPTIONS, Role, type userResultSchema } from '../../contract';
+import { Role, ROLE_OPTIONS, type userResultSchema } from '../../contract';
 import {
   actionsRowStyles,
   activeStatusStyles,

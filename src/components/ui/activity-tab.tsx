@@ -1,9 +1,8 @@
 import { Box, CircularProgress, Paper, Stack, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
-import { SeatingArrangement, type changeLogEntryResultSchema } from '../../contract';
+import { type changeLogEntryResultSchema, SeatingArrangement } from '../../contract';
 import { SEATING_ARRANGEMENT_LABELS } from '../../pages/event-detail/session-form-options';
-import { formatRelativeTime } from './format-relative-time';
 import {
   changeListStyles,
   emptyStateStyles,
@@ -12,6 +11,7 @@ import {
   rowStyles,
   timestampStyles,
 } from './activity-tab.styles';
+import { formatRelativeTime } from './format-relative-time';
 
 interface ActivityTabProps {
   entityType: string;
@@ -148,7 +148,7 @@ const formatSetupDiff = (oldValue: unknown, newValue: unknown): string => {
     .filter((key) => JSON.stringify(oldSetup[key] ?? null) !== JSON.stringify(newSetup[key] ?? null))
     .map(
       (key) =>
-        `${SETUP_SUBFIELD_LABELS[key]}: ${formatSetupFieldValue(key, oldSetup[key])} → ${formatSetupFieldValue(key, newSetup[key])}`,
+        `${SETUP_SUBFIELD_LABELS[key]}: ${formatSetupFieldValue(key, oldSetup[key])} → ${formatSetupFieldValue(key, newSetup[key])}`
     );
   return changedParts.length > 0 ? changedParts.join(', ') : 'No sub-fields changed';
 };

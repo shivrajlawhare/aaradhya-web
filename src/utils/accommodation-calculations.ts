@@ -36,7 +36,7 @@ export interface WizardRoomLineInput {
 // backend's own version decided.
 export const computeRoomLineTotalInclGst = (
   { tariff, noOfRooms }: Pick<WizardRoomLineInput, 'tariff' | 'noOfRooms'>,
-  totalDays: number,
+  totalDays: number
 ): number => roundToCurrency(tariff * noOfRooms * totalDays * (1 + GST_RATE_PERCENT / 100));
 
 // occupancy is a room type's per-room capacity, so a line contributes

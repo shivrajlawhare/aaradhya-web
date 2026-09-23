@@ -1,5 +1,5 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { tsr } from '../../src/api/client';
@@ -7,9 +7,7 @@ import ActivityTab from '../../src/components/ui/activity-tab';
 import { theme } from '../../src/theme/theme';
 
 const jsonResponse = (status: number, body: unknown) =>
-  Promise.resolve(
-    new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }),
-  );
+  Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
 
 // STORY-081 — ActivityTab now also calls GET /users (changedBy resolution)
 // and GET /menu-items (menuItems diff resolution) alongside GET /change-log,
@@ -40,7 +38,7 @@ const mockActivityApi = ({
         return jsonResponse(200, menuItems);
       }
       throw new Error(`Unhandled request: ${url}`);
-    }),
+    })
   );
 };
 
@@ -54,7 +52,7 @@ const renderActivityTab = (entityType = 'Event', entityId = 'event-1') => {
           <ActivityTab entityType={entityType} entityId={entityId} />
         </ThemeProvider>
       </tsr.ReactQueryProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 };
 
@@ -112,7 +110,15 @@ describe('ActivityTab', () => {
         },
       ],
       users: [
-        { id: 'user-1', name: 'Priya Nair', username: 'priya', role: 'EventManager', active: true, createdAt: '', updatedAt: '' },
+        {
+          id: 'user-1',
+          name: 'Priya Nair',
+          username: 'priya',
+          role: 'EventManager',
+          active: true,
+          createdAt: '',
+          updatedAt: '',
+        },
       ],
     });
 
@@ -158,8 +164,28 @@ describe('ActivityTab', () => {
           entityType: 'Event',
           entityId: 'event-1',
           field: 'sessions[Wedding].setup',
-          oldValue: { seating: null, tableCount: 0, chairCount: 0, stage: false, buffet: false, registrationDesk: false, vipSeating: false, brideGroomSeating: false, notes: null },
-          newValue: { seating: 'RoundTables', tableCount: 20, chairCount: 0, stage: false, buffet: false, registrationDesk: false, vipSeating: false, brideGroomSeating: false, notes: null },
+          oldValue: {
+            seating: null,
+            tableCount: 0,
+            chairCount: 0,
+            stage: false,
+            buffet: false,
+            registrationDesk: false,
+            vipSeating: false,
+            brideGroomSeating: false,
+            notes: null,
+          },
+          newValue: {
+            seating: 'RoundTables',
+            tableCount: 20,
+            chairCount: 0,
+            stage: false,
+            buffet: false,
+            registrationDesk: false,
+            vipSeating: false,
+            brideGroomSeating: false,
+            notes: null,
+          },
           changedBy: 'user-1',
           timestamp: new Date().toISOString(),
         },
@@ -195,9 +221,11 @@ describe('ActivityTab', () => {
 
     renderActivityTab();
 
-    expect(await screen.findByText('Wedding session — Setup: Seating: — → Round Tables, Tables: 0 → 20')).toBeInTheDocument();
     expect(
-      screen.getByText('Wedding session — Hi Tea — Menu items: Paneer Tikka → Paneer Tikka, Gulab Jamun'),
+      await screen.findByText('Wedding session — Setup: Seating: — → Round Tables, Tables: 0 → 20')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Wedding session — Hi Tea — Menu items: Paneer Tikka → Paneer Tikka, Gulab Jamun')
     ).toBeInTheDocument();
     expect(screen.getByText('Room Lines: 1 → 2 room lines (1 added)')).toBeInTheDocument();
   });

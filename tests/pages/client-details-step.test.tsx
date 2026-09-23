@@ -39,13 +39,19 @@ const renderWizard = (initialPath: string) =>
           ))}
         </Routes>
       </MemoryRouter>
-    </ThemeProvider>,
+    </ThemeProvider>
   );
 
 const clientDetailsPath = WIZARD_STEPS[0]!.path;
 const eventDetailsPath = WIZARD_STEPS[1]!.path;
 
-const readStoredContacts = (): Array<{ id: string; roleLabel: string; isDefault: boolean; name: string; contactNumber: string }> => {
+const readStoredContacts = (): Array<{
+  id: string;
+  roleLabel: string;
+  isDefault: boolean;
+  name: string;
+  contactNumber: string;
+}> => {
   const raw = sessionStorage.getItem(WIZARD_STORAGE_KEY);
   const parsed = raw ? JSON.parse(raw) : {};
   return parsed['client-details']?.contacts ?? [];

@@ -1,12 +1,12 @@
 import { createTheme } from '@mui/material/styles';
+// Same reasoning — registers MuiDatePicker (and friends) as a valid
+// `components` key for the MuiDatePicker override below.
+import '@mui/x-date-pickers/themeAugmentation';
 // Side-effecting only — registers MuiEventCalendar (StandaloneMonthView's
 // own component family) as a valid `components` key/class-key set, so the
 // override below type-checks. No named import: this module exists purely
 // to run its own `declare module '@mui/material/styles'` augmentation.
 import '@mui/x-scheduler/theme-augmentation';
-// Same reasoning — registers MuiDatePicker (and friends) as a valid
-// `components` key for the MuiDatePicker override below.
-import '@mui/x-date-pickers/themeAugmentation';
 import { colorTokens, fontFamilyTokens, radiusTokens } from './tokens';
 
 // The story backlog's Tokens line names these six type-* variants directly on

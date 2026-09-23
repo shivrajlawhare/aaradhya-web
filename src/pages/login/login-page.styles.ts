@@ -1,7 +1,6 @@
 import type { SxProps, Theme } from '@mui/material';
 import { colorTokens, radiusTokens, spaceTokens } from '../../theme/tokens';
 
-
 export const pageStyles: SxProps<Theme> = {
   minHeight: '100vh',
   display: 'flex',

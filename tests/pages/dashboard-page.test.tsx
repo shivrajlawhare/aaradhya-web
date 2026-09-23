@@ -1,5 +1,5 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -56,9 +56,9 @@ interface MockUpcomingEvent {
   };
 }
 
-const makeSetup = (overrides: Partial<NonNullable<MockUpcomingEvent['setup']>> = {}): NonNullable<
-  MockUpcomingEvent['setup']
-> => ({
+const makeSetup = (
+  overrides: Partial<NonNullable<MockUpcomingEvent['setup']>> = {}
+): NonNullable<MockUpcomingEvent['setup']> => ({
   seating: null,
   tableCount: 0,
   chairCount: 0,
@@ -72,7 +72,7 @@ const makeSetup = (overrides: Partial<NonNullable<MockUpcomingEvent['setup']>> =
 });
 
 const makeAccommodation = (
-  overrides: Partial<NonNullable<MockUpcomingEvent['accommodation']>> = {},
+  overrides: Partial<NonNullable<MockUpcomingEvent['accommodation']>> = {}
 ): NonNullable<MockUpcomingEvent['accommodation']> => ({
   checkIn: null,
   checkOut: null,
@@ -102,14 +102,14 @@ const mockDashboardApi = (counts: MockDashboardCounts, upcomingEvents: MockUpcom
         return jsonResponse(200, { counts, upcomingEvents });
       }
       throw new Error(`Unhandled request: ${url}`);
-    }),
+    })
   );
 };
 
 const seedSession = (role = 'EventManager') => {
   localStorage.setItem(
     SESSION_STORAGE_KEY,
-    JSON.stringify({ token: 'signed-jwt', user: { id: 'manager-1', name: 'Priya Nair', role } }),
+    JSON.stringify({ token: 'signed-jwt', user: { id: 'manager-1', name: 'Priya Nair', role } })
   );
 };
 
@@ -141,7 +141,7 @@ const renderPage = () => {
           </AuthProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 };
 
@@ -333,7 +333,7 @@ describe('DashboardPage', () => {
   });
 
   describe('Housekeeping dashboard (STORY-050)', () => {
-    it('renders Setup and Rooms columns with the row\'s setup/accommodation detail for Housekeeping', async () => {
+    it("renders Setup and Rooms columns with the row's setup/accommodation detail for Housekeeping", async () => {
       seedSession('Housekeeping');
       mockDashboardApi(makeCounts({ upcoming: 1 }), [
         {
@@ -533,7 +533,7 @@ describe('DashboardPage', () => {
       expect(tile).toHaveStyle({ display: 'flex', flexDirection: 'column' });
     });
 
-    it('keeps the upcoming-events table horizontally scrollable instead of clipping columns that don\'t fit', async () => {
+    it("keeps the upcoming-events table horizontally scrollable instead of clipping columns that don't fit", async () => {
       seedSession();
       mockDashboardApi(makeCounts({ upcoming: 1 }), [
         {

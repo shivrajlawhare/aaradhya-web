@@ -1,13 +1,14 @@
 import type { ComponentType } from 'react';
-import type { SvgIconProps } from '@mui/material';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
 import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import type { SvgIconProps } from '@mui/material';
 import { matchPath } from 'react-router-dom';
 import { Role } from '../../contract';
+import { WIZARD_STEPS } from '../../pages/event-creation/wizard-steps';
 import {
   CALENDAR_PATH,
   DASHBOARD_PATH,
@@ -18,7 +19,6 @@ import {
   SETTINGS_PATH,
   USER_MANAGEMENT_PATH,
 } from '../../routes';
-import { WIZARD_STEPS } from '../../pages/event-creation/wizard-steps';
 
 export interface NavItem {
   id: string;

@@ -1,7 +1,7 @@
-import { useState, type ReactNode } from 'react';
-import { Link as RouterLink, useParams } from 'react-router-dom';
+import { type ReactNode, useState } from 'react';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { Box, Button, CircularProgress, Link, Tab, Tabs, Typography } from '@mui/material';
+import { Link as RouterLink, useParams } from 'react-router-dom';
 import { tsr } from '../../api/client';
 import ActivityTab from '../../components/ui/activity-tab';
 import StatusChip from '../../components/ui/status-chip';
@@ -11,12 +11,12 @@ import { useAuth } from '../../stores/auth-context';
 import ClientDetailsTab from './client-details-tab';
 import DeleteEventDialog from './delete-event-dialog';
 import DocumentsTab from './documents-tab';
+import { deleteButtonStyles, headerStyles, pageStyles, tabPanelStyles } from './event-detail-page.styles';
 import PaymentsTab from './payments-tab';
 import ReviewTab from './review-tab';
 import RoomsTab from './rooms-tab';
 import SessionsItemsTab from './sessions-items-tab';
 import SessionsTab from './sessions-tab';
-import { deleteButtonStyles, headerStyles, pageStyles, tabPanelStyles } from './event-detail-page.styles';
 
 // STORY-076 — renamed/reordered to mirror the New Event wizard's own 5 steps
 // (Client Details, Event Details, Accommodation, Sessions & Items, Review &
@@ -197,7 +197,9 @@ const EventDetailPage = () => {
         />
       );
     } else if (activeTab === 'review' && canEdit) {
-      tabPanel = <ReviewTab key={event.id} event={event} canEdit={canEdit} onEventChanged={() => eventQuery.refetch()} />;
+      tabPanel = (
+        <ReviewTab key={event.id} event={event} canEdit={canEdit} onEventChanged={() => eventQuery.refetch()} />
+      );
     } else {
       tabPanel = (
         <ClientDetailsTab

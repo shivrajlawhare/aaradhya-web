@@ -1,5 +1,5 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -7,8 +7,8 @@ import { tsr } from '../../src/api/client';
 import EventListPage from '../../src/pages/event-list/event-list-page';
 import { EVENT_DETAIL_PATH_PATTERN, EVENT_LIST_PATH } from '../../src/routes';
 import { AuthProvider, SESSION_STORAGE_KEY } from '../../src/stores/auth-context';
-import { colorTokens } from '../../src/theme/tokens';
 import { theme } from '../../src/theme/theme';
+import { colorTokens } from '../../src/theme/tokens';
 import { mockMatchMedia } from '../support/match-media';
 
 interface MockClientContact {
@@ -46,9 +46,7 @@ const makeEvent = (overrides: Partial<MockEvent> = {}): MockEvent => ({
 });
 
 const jsonResponse = (status: number, body: unknown) =>
-  Promise.resolve(
-    new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }),
-  );
+  Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
 
 const mockEventsApi = (events: MockEvent[]) => {
   vi.stubGlobal(
@@ -59,14 +57,14 @@ const mockEventsApi = (events: MockEvent[]) => {
         return jsonResponse(200, events);
       }
       throw new Error(`Unhandled request: ${url}`);
-    }),
+    })
   );
 };
 
 const seedSession = (role = 'EventManager') => {
   localStorage.setItem(
     SESSION_STORAGE_KEY,
-    JSON.stringify({ token: 'signed-jwt', user: { id: 'manager-1', name: 'Priya Nair', role } }),
+    JSON.stringify({ token: 'signed-jwt', user: { id: 'manager-1', name: 'Priya Nair', role } })
   );
 };
 
@@ -87,7 +85,7 @@ const renderPage = () => {
           </AuthProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 };
 
@@ -235,9 +233,7 @@ describe('EventListPage', () => {
     it('wraps a very long Bride/Groom name instead of overflowing the card', async () => {
       const longName = 'A'.repeat(300);
       mockMatchMedia(false);
-      mockEventsApi([
-        makeEvent({ clientContacts: [{ name: longName, contactNumber: '9000000000', role: 'Bride' }] }),
-      ]);
+      mockEventsApi([makeEvent({ clientContacts: [{ name: longName, contactNumber: '9000000000', role: 'Bride' }] })]);
       renderPage();
 
       const line = await screen.findByText(`${longName} · manager-1`);

@@ -3,7 +3,14 @@ import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import { Button, IconButton, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useEventWizard } from '../../stores/event-wizard-context';
-import { addButtonStyles, cardStyles, roleFieldStyles, roleLabelStyles, rowStackStyles, rowStyles } from './client-details-step.styles';
+import {
+  addButtonStyles,
+  cardStyles,
+  roleFieldStyles,
+  roleLabelStyles,
+  rowStackStyles,
+  rowStyles,
+} from './client-details-step.styles';
 
 // A row held in the wizard store — deliberately not aaradhya-web's own
 // clientContactSchema/ClientContactRole (contract/index.ts): that shape's
@@ -53,7 +60,7 @@ const ClientDetailsStep = () => {
   const stored = data['client-details'];
 
   const [rows, setRows] = useState<WizardContactRow[]>(() =>
-    isClientDetailsStepData(stored) ? stored.contacts : DEFAULT_CONTACT_ROWS,
+    isClientDetailsStepData(stored) ? stored.contacts : DEFAULT_CONTACT_ROWS
   );
 
   // Mirrors every change (including the very first render's defaults) into
@@ -63,12 +70,18 @@ const ClientDetailsStep = () => {
     setStepData('client-details', { contacts: rows });
   }, [rows, setStepData]);
 
-  const handleFieldChange = (id: string, patch: Partial<Pick<WizardContactRow, 'name' | 'contactNumber' | 'roleLabel'>>) => {
+  const handleFieldChange = (
+    id: string,
+    patch: Partial<Pick<WizardContactRow, 'name' | 'contactNumber' | 'roleLabel'>>
+  ) => {
     setRows((current) => current.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   };
 
   const handleAddRow = () => {
-    setRows((current) => [...current, { id: createRowId(), roleLabel: '', isDefault: false, name: '', contactNumber: '' }]);
+    setRows((current) => [
+      ...current,
+      { id: createRowId(), roleLabel: '', isDefault: false, name: '', contactNumber: '' },
+    ]);
   };
 
   // Filters the row out of state entirely, not just a `removed` flag — this

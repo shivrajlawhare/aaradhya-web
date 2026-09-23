@@ -24,14 +24,13 @@ import { ClientContactRole, ItemType } from '../../contract';
 import { quotationPreviewPath } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
 import { useEventWizard } from '../../stores/event-wizard-context';
-import { formatAmount } from '../event-detail/format-amount';
 import { computeTotalDays } from '../../utils/accommodation-calculations';
 import { enumerateDates } from '../../utils/session-dates';
 import { computeWizardTotalCostSummary, type ManualLineItem } from '../../utils/total-cost-summary';
+import { formatAmount } from '../event-detail/format-amount';
 import type { WizardRoomLine } from './accommodation-step';
 import type { WizardContactRow } from './client-details-step';
 import { emptySetup, type WizardSessionRow } from './event-details-step';
-import type { WizardDateEntry } from './sessions-items-step';
 import {
   addButtonStyles,
   amountFieldStyles,
@@ -53,6 +52,7 @@ import {
   summaryCardStyles,
   wrapperStyles,
 } from './review-step.styles';
+import type { WizardDateEntry } from './sessions-items-step';
 
 // No master list backs this, and no earlier wizard step collects it — the
 // old (STORY-063-deleted) single-page form had its own Event Family Type
@@ -163,7 +163,13 @@ type MappedSessionItem =
       startTime: string | undefined;
       endTime: string | undefined;
     }
-  | { type: ItemType.Event; eventName: string; venue: string; startTime: string | undefined; endTime: string | undefined };
+  | {
+      type: ItemType.Event;
+      eventName: string;
+      venue: string;
+      startTime: string | undefined;
+      endTime: string | undefined;
+    };
 
 const mapSessionItem = (entry: WizardDateEntry, venue: string): MappedSessionItem => {
   if (entry.type === ItemType.Meal) {
@@ -318,7 +324,10 @@ const ReviewStep = ({ registerSubmit }: ReviewStepProps) => {
   // straight to Review (this story's own AC: "deep-linking works") can
   // reach here with a stale invalid range never corrected.
   const isAccommodationRangeInvalid = Boolean(
-    accommodation && accommodation.checkInDate && accommodation.checkOutDate && accommodation.checkOutDate < accommodation.checkInDate,
+    accommodation &&
+    accommodation.checkInDate &&
+    accommodation.checkOutDate &&
+    accommodation.checkOutDate < accommodation.checkInDate
   );
   const accommodationTotalDays =
     (accommodation && !isAccommodationRangeInvalid
@@ -330,10 +339,10 @@ const ReviewStep = ({ registerSubmit }: ReviewStepProps) => {
 
   const defaultEventType = toEventFamilyTypeOption(sessions[sessions.length - 1]?.sessionType ?? '');
   const [eventFamilyTypeOption, setEventFamilyTypeOption] = useState(
-    () => restored?.eventFamilyTypeOption ?? defaultEventType.option,
+    () => restored?.eventFamilyTypeOption ?? defaultEventType.option
   );
   const [eventFamilyTypeCustom, setEventFamilyTypeCustom] = useState(
-    () => restored?.eventFamilyTypeCustom ?? defaultEventType.custom,
+    () => restored?.eventFamilyTypeCustom ?? defaultEventType.custom
   );
   const [gstPercent, setGstPercent] = useState(() => restored?.gstPercent ?? DEFAULT_GST_PERCENT);
   const [manualLineItems, setManualLineItems] = useState<ManualLineItem[]>(() => restored?.manualLineItems ?? []);
@@ -417,7 +426,7 @@ const ReviewStep = ({ registerSubmit }: ReviewStepProps) => {
     const contacts = mapClientContacts(contactRows);
     if (contacts.length === 0) {
       failSubmission(
-        'Add at least one Client Contact with both a name and a contact number in Step 1 before generating the quotation.',
+        'Add at least one Client Contact with both a name and a contact number in Step 1 before generating the quotation.'
       );
       return;
     }
@@ -443,7 +452,11 @@ const ReviewStep = ({ registerSubmit }: ReviewStepProps) => {
         clientContacts: contacts,
         sessions: mapSessionsForSubmit(sessions, byDate),
         accommodation: mapAccommodationForSubmit(accommodation),
-        extraLineItems: manualLineItems.map(({ name, note, amount }) => ({ name, note: note.trim() || undefined, amount })),
+        extraLineItems: manualLineItems.map(({ name, note, amount }) => ({
+          name,
+          note: note.trim() || undefined,
+          amount,
+        })),
         // STORY-072 — this Step's own GST% field was previously computed
         // here only for this Step's own live preview and then discarded;
         // now persisted so the Quotation's own Total Cost Summary (and any

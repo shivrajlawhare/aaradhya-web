@@ -1,7 +1,7 @@
 import { Box, Button } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { WIZARD_STEPS, wizardStepIndex, type WizardStepId } from './wizard-steps';
 import { footerStyles } from './wizard-footer.styles';
+import { WIZARD_STEPS, type WizardStepId, wizardStepIndex } from './wizard-steps';
 
 interface WizardFooterProps {
   currentStep: WizardStepId;

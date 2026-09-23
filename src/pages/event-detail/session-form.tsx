@@ -1,12 +1,12 @@
-import { useState, type ChangeEvent } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { type ChangeEvent, useState } from 'react';
 import { Alert, Button, MenuItem, Stack, TextField, ToggleButton, Typography } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
+import { Controller, useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import { useToast } from '../../components/ui/toast-provider';
-import { SEATING_ARRANGEMENT_OPTIONS, SeatingArrangement, type filteredEventResultSchema } from '../../contract';
+import { type filteredEventResultSchema, SEATING_ARRANGEMENT_OPTIONS, SeatingArrangement } from '../../contract';
 import { fromPickerDate, fromPickerTime, toDateInputValue, toPickerDate, toPickerTime } from './date-input';
 import {
   CUSTOM_SESSION_TYPE_OPTION,

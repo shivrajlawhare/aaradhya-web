@@ -2,17 +2,17 @@ import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import { Box, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import aaradhyaMarkWhite from '../../assets/aaradhya-mark-white.svg';
-import type { NavItem } from './nav-items';
 import {
   logoutRowWrapperStyles,
   navContentStyles,
   navRowIconStyles,
   navRowLabelStyles,
-  navRowStyles,
   navRowsStyles,
+  navRowStyles,
   wordmarkImageStyles,
   wordmarkStyles,
 } from './app-shell-nav.styles';
+import type { NavItem } from './nav-items';
 
 interface AppShellNavProps {
   items: NavItem[];

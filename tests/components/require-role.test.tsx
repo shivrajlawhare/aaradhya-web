@@ -12,7 +12,7 @@ const DASHBOARD_PATH = '/dashboard';
 const seedSession = (role: Role) => {
   localStorage.setItem(
     SESSION_STORAGE_KEY,
-    JSON.stringify({ token: 'a-token', user: { id: 'user-1', name: 'Someone', role } }),
+    JSON.stringify({ token: 'a-token', user: { id: 'user-1', name: 'Someone', role } })
   );
 };
 
@@ -33,7 +33,7 @@ const renderGuarded = () =>
           />
         </Routes>
       </MemoryRouter>
-    </AuthProvider>,
+    </AuthProvider>
   );
 
 afterEach(() => {

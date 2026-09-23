@@ -25,8 +25,20 @@ const mockMasterListsApi = () => {
       const url = String(input);
       if (url.includes('/event-types')) {
         return jsonResponse(200, [
-          { id: 'et-1', name: 'Wedding', active: true, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
-          { id: 'et-2', name: 'Haldi', active: true, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+          {
+            id: 'et-1',
+            name: 'Wedding',
+            active: true,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'et-2',
+            name: 'Haldi',
+            active: true,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
           {
             id: 'et-3',
             name: 'Retired Type',
@@ -65,7 +77,7 @@ const mockMasterListsApi = () => {
         ]);
       }
       throw new Error(`Unhandled request: ${url}`);
-    }),
+    })
   );
 };
 
@@ -111,7 +123,7 @@ const renderWizard = (initialPath: string) => {
           </LocalizationProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 };
 
@@ -143,7 +155,7 @@ const selectOption = async (labelText: string, optionName: string) => {
 
 const fillMinimalEvent = async (
   user: ReturnType<typeof userEvent.setup>,
-  { eventType = 'Wedding', venue = 'Poolside', ddmmyyyy = '12092026' } = {},
+  { eventType = 'Wedding', venue = 'Poolside', ddmmyyyy = '12092026' } = {}
 ) => {
   await selectOption('Event Type', eventType);
   await selectOption('Venue', venue);
@@ -271,7 +283,7 @@ describe('EventDetailsStep', () => {
             },
           ],
         },
-      }),
+      })
     );
     renderWizard(eventDetailsPath);
 
@@ -332,8 +344,10 @@ describe('EventDetailsStep', () => {
     sessionStorage.setItem(
       WIZARD_STORAGE_KEY,
       JSON.stringify({
-        'sessions-items': { byDate: { '2026-09-12': [{ type: 'Ceremony', name: 'Muhurta' }], '2026-09-13': [{ type: 'Ceremony' }] } },
-      }),
+        'sessions-items': {
+          byDate: { '2026-09-12': [{ type: 'Ceremony', name: 'Muhurta' }], '2026-09-13': [{ type: 'Ceremony' }] },
+        },
+      })
     );
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderWizard(eventDetailsPath);
@@ -356,7 +370,7 @@ describe('EventDetailsStep', () => {
       WIZARD_STORAGE_KEY,
       JSON.stringify({
         'sessions-items': { byDate: { '2026-09-13': [{ type: 'Ceremony' }] } },
-      }),
+      })
     );
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderWizard(eventDetailsPath);
@@ -385,7 +399,7 @@ describe('EventDetailsStep', () => {
       WIZARD_STORAGE_KEY,
       JSON.stringify({
         'sessions-items': { byDate: { '2027-02-26': [{ type: 'Ceremony' }] } },
-      }),
+      })
     );
     vi.spyOn(window, 'confirm');
     renderWizard(eventDetailsPath);
@@ -414,7 +428,7 @@ describe('EventDetailsStep', () => {
     const user = userEvent.setup();
     sessionStorage.setItem(
       WIZARD_STORAGE_KEY,
-      JSON.stringify({ 'sessions-items': { byDate: { '2026-09-12': [{ type: 'Ceremony' }] } } }),
+      JSON.stringify({ 'sessions-items': { byDate: { '2026-09-12': [{ type: 'Ceremony' }] } } })
     );
     vi.spyOn(window, 'confirm').mockReturnValue(false);
     renderWizard(eventDetailsPath);

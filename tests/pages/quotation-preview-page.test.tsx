@@ -1,5 +1,5 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -104,9 +104,12 @@ const computeQuotationSummary = (event: MockEvent) => {
   const foodSubtotal = roundToCurrency(
     activeSessions.reduce(
       (sum, session) =>
-        sum + session.items.filter((item) => item.type === 'Meal').reduce((itemSum, item) => itemSum + (item.totalCost ?? 0), 0),
-      0,
-    ),
+        sum +
+        session.items
+          .filter((item) => item.type === 'Meal')
+          .reduce((itemSum, item) => itemSum + (item.totalCost ?? 0), 0),
+      0
+    )
   );
   const foodTotalInclGst = roundToCurrency(foodSubtotal * (1 + GST_RATE / 100));
   const accommodationTotal = event.accommodation.totalCharges;
@@ -147,13 +150,13 @@ const pdfResponse = (event: MockEvent) =>
     new Response(`Grand Total: ${computeQuotationSummary(event).grandTotal}`, {
       status: 200,
       headers: { 'content-type': 'application/pdf' },
-    }),
+    })
   );
 
 const seedSession = (role = 'EventManager') => {
   localStorage.setItem(
     SESSION_STORAGE_KEY,
-    JSON.stringify({ token: 'signed-jwt', user: { id: 'manager-1', name: 'Priya Nair', role } }),
+    JSON.stringify({ token: 'signed-jwt', user: { id: 'manager-1', name: 'Priya Nair', role } })
   );
 };
 
@@ -183,7 +186,7 @@ const mockApi = ({ event, notFound = false }: { event?: MockEvent; notFound?: bo
         return jsonResponse(200, event);
       }
       throw new Error(`Unhandled request: ${url}`);
-    }),
+    })
   );
 };
 
@@ -205,7 +208,7 @@ const renderPage = (id = 'event-1') => {
           </ToastProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 };
 

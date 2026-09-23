@@ -17,7 +17,7 @@ import {
   pageStyles,
   panelHeaderStyles,
 } from './settings-page.styles';
-import { SECTIONS, type MasterListRow, type SectionId } from './settings-sections';
+import { type MasterListRow, type SectionId, SECTIONS } from './settings-sections';
 
 // Shared by every create/update mutation below — each route's own 409/404
 // apiErrorSchema carries { error: { message } }; anything else (a network
@@ -231,19 +231,19 @@ const SettingsPage = () => {
     if (selectedSectionId === 'venues') {
       updateVenueMutation.mutate(
         { params: { id: editingRow.id }, body: { name: values.name, defaultVenueCost: values.cost ?? 0 } },
-        { onSuccess },
+        { onSuccess }
       );
     } else if (selectedSectionId === 'eventTypes') {
       updateEventTypeMutation.mutate({ params: { id: editingRow.id }, body: { name: values.name } }, { onSuccess });
     } else if (selectedSectionId === 'roomTypes') {
       updateRoomTypeMutation.mutate(
         { params: { id: editingRow.id }, body: { name: values.name, defaultTariff: values.cost ?? 0 } },
-        { onSuccess },
+        { onSuccess }
       );
     } else if (selectedSectionId === 'menuItems') {
       updateMenuItemMutation.mutate(
         { params: { id: editingRow.id }, body: { name: values.name, defaultCostPerPlate: values.cost ?? 0 } },
-        { onSuccess },
+        { onSuccess }
       );
     }
   };
@@ -371,12 +371,7 @@ const SettingsPage = () => {
     <Box sx={pageStyles}>
       <SectionChipRow selected={selectedSectionId} onSelect={handleSelectSection} />
       <Box sx={mobileSectionStyles}>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          fullWidth
-          onClick={() => setIsAddFormOpen((open) => !open)}
-        >
+        <Button variant="contained" startIcon={<AddIcon />} fullWidth onClick={() => setIsAddFormOpen((open) => !open)}>
           Add {section.label.replace(/s$/, '')}
         </Button>
         {addForm}

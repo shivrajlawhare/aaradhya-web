@@ -19,11 +19,46 @@ const jsonResponse = (status: number, body: unknown) =>
   Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
 
 const ROOM_TYPES = [
-  { id: 'rt-1', name: 'Deluxe', defaultTariff: 4000, active: true, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
-  { id: 'rt-2', name: 'Executive', defaultTariff: 6000, active: true, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
-  { id: 'rt-3', name: 'Dormitory', defaultTariff: 1500, active: true, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
-  { id: 'rt-4', name: 'Extra Beds', defaultTariff: 800, active: true, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
-  { id: 'rt-5', name: 'Retired Type', defaultTariff: 2000, active: false, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+  {
+    id: 'rt-1',
+    name: 'Deluxe',
+    defaultTariff: 4000,
+    active: true,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'rt-2',
+    name: 'Executive',
+    defaultTariff: 6000,
+    active: true,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'rt-3',
+    name: 'Dormitory',
+    defaultTariff: 1500,
+    active: true,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'rt-4',
+    name: 'Extra Beds',
+    defaultTariff: 800,
+    active: true,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'rt-5',
+    name: 'Retired Type',
+    defaultTariff: 2000,
+    active: false,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  },
 ];
 
 const mockRoomTypesApi = () => {
@@ -35,7 +70,7 @@ const mockRoomTypesApi = () => {
         return jsonResponse(200, ROOM_TYPES);
       }
       throw new Error(`Unhandled request: ${url}`);
-    }),
+    })
   );
 };
 
@@ -73,7 +108,7 @@ const renderWizard = (initialPath: string) => {
           </LocalizationProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 };
 
@@ -240,10 +275,7 @@ describe('AccommodationStep', () => {
     // at least one Session before its own Next enables — seeded here so
     // stepping back to that placeholder and forward again isn't blocked by
     // an unrelated step's own validation.
-    sessionStorage.setItem(
-      WIZARD_STORAGE_KEY,
-      JSON.stringify({ 'event-details': { sessions: [{ id: 's-1' }] } }),
-    );
+    sessionStorage.setItem(WIZARD_STORAGE_KEY, JSON.stringify({ 'event-details': { sessions: [{ id: 's-1' }] } }));
     renderWizard(accommodationPath);
     await screen.findByText('Deluxe');
     await fillDatePicker(user, 'Check-in date', '10122026');
@@ -267,9 +299,11 @@ describe('AccommodationStep', () => {
           checkInTime: '',
           checkOutDate: '2026-12-12',
           checkOutTime: '',
-          roomLines: [{ id: 'room-line-1', roomType: 'Extra Beds', occupancy: 0, tariff: 800, noOfRooms: 0, locked: true }],
+          roomLines: [
+            { id: 'room-line-1', roomType: 'Extra Beds', occupancy: 0, tariff: 800, noOfRooms: 0, locked: true },
+          ],
         },
-      }),
+      })
     );
     renderWizard(accommodationPath);
 

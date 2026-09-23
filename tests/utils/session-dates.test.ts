@@ -21,7 +21,7 @@ describe('getDistinctDates', () => {
       getDistinctDates([
         { startDate: '2026-09-12', endDate: '2026-09-13' },
         { startDate: '2026-09-13', endDate: '2026-09-14' },
-      ]),
+      ])
     ).toEqual(['2026-09-12', '2026-09-13', '2026-09-14']);
   });
 

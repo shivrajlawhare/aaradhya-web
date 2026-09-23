@@ -10,7 +10,9 @@ import type { WizardStepId } from './wizard-steps';
 // the shell. A step with no entry here (every step STORY-066/067/068
 // haven't replaced their own placeholder for yet) always enables, matching
 // this shell's own "no real validation yet" default (STORY-063).
-export const WIZARD_STEP_READY_CHECKS: Partial<Record<WizardStepId, (stepData: WizardStepData | undefined) => boolean>> = {
+export const WIZARD_STEP_READY_CHECKS: Partial<
+  Record<WizardStepId, (stepData: WizardStepData | undefined) => boolean>
+> = {
   // STORY-065's own AC: "requires at least one Session added."
   'event-details': (stepData) => {
     const sessions = stepData?.sessions;

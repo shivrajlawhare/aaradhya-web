@@ -1,7 +1,7 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -81,7 +81,7 @@ const computePaymentResponse = (
     advancePaidDate?: string;
     paymentMode?: string;
   },
-  current: MockPayment,
+  current: MockPayment
 ): MockPayment => {
   const totalEstimatedAmount = body.totalEstimatedAmount ?? current.totalEstimatedAmount;
   const advancePaid = body.advancePaid ?? current.advancePaid;
@@ -240,12 +240,13 @@ const GST_RATE = 18;
 const roundToCurrency = (amount: number) => Math.round(amount * 100) / 100;
 const computeAccommodationResponse = (
   body: { checkIn?: string; checkOut?: string; roomLines?: MockRoomLineInput[] },
-  current: MockAccommodation,
+  current: MockAccommodation
 ): MockAccommodation => {
   const checkIn = body.checkIn ?? current.checkIn;
   const checkOut = body.checkOut ?? current.checkOut;
   const roomLines = (
-    body.roomLines ?? current.roomLines.map(({ roomType, occupancy, tariff, noOfRooms }) => ({
+    body.roomLines ??
+    current.roomLines.map(({ roomType, occupancy, tariff, noOfRooms }) => ({
       roomType,
       occupancy,
       tariff,
@@ -297,8 +298,8 @@ const computeQuotationSummary = (event: MockEvent) => {
         session.items
           .filter((item) => item.type === 'Meal')
           .reduce((itemSum, item) => itemSum + (item.totalCost ?? 0), 0),
-      0,
-    ),
+      0
+    )
   );
   const foodTotalInclGst = roundToCurrency(foodSubtotal * (1 + GST_RATE / 100));
   const accommodationTotal = event.accommodation.totalCharges;
@@ -335,9 +336,7 @@ const makeEvent = (overrides: Partial<MockEvent> = {}): MockEvent => ({
 });
 
 const jsonResponse = (status: number, body: unknown) =>
-  Promise.resolve(
-    new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }),
-  );
+  Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
 
 // A real (if fake) PDF magic-byte payload — the button's own code only
 // cares that this resolves as a Blob via response.blob(), not that it's a
@@ -347,13 +346,13 @@ const pdfResponse = (status: number) =>
     new Response(status === 200 ? '%PDF-1.4 fake' : JSON.stringify({ error: { code: 'ERROR', message: 'Failed.' } }), {
       status,
       headers: { 'content-type': status === 200 ? 'application/pdf' : 'application/json' },
-    }),
+    })
   );
 
 const seedSession = (role = 'EventManager') => {
   localStorage.setItem(
     SESSION_STORAGE_KEY,
-    JSON.stringify({ token: 'signed-jwt', user: { id: 'manager-1', name: 'Priya Nair', role } }),
+    JSON.stringify({ token: 'signed-jwt', user: { id: 'manager-1', name: 'Priya Nair', role } })
   );
 };
 
@@ -395,7 +394,7 @@ const mockEventDetailApi = ({
       }
       if (method === 'PATCH' && currentEvent && url.endsWith(`/events/${currentEvent.id}/accommodation`)) {
         const body: { checkIn?: string; checkOut?: string; roomLines?: MockRoomLineInput[] } = JSON.parse(
-          String(init?.body),
+          String(init?.body)
         );
         accommodationPatchRequests.push(body);
         currentEvent = {
@@ -448,7 +447,15 @@ const mockEventDetailApi = ({
       // through a real name instead of falling back to the raw id.
       if (method === 'GET' && url.endsWith('/users')) {
         return jsonResponse(200, [
-          { id: 'manager-1', name: 'Priya Nair', username: 'priya', role: 'EventManager', active: true, createdAt: '', updatedAt: '' },
+          {
+            id: 'manager-1',
+            name: 'Priya Nair',
+            username: 'priya',
+            role: 'EventManager',
+            active: true,
+            createdAt: '',
+            updatedAt: '',
+          },
         ]);
       }
       // Checked ahead of the session POST/PATCH handlers below — a plain
@@ -501,7 +508,7 @@ const mockEventDetailApi = ({
         currentEvent = {
           ...currentEvent,
           sessions: currentEvent.sessions.map((session) =>
-            session.id === sid ? { ...session, items: [...session.items, newItem] } : session,
+            session.id === sid ? { ...session, items: [...session.items, newItem] } : session
           ),
         };
         return jsonResponse(201, newItem);
@@ -533,9 +540,7 @@ const mockEventDetailApi = ({
                 if ('id' in ref) {
                   return ref.id;
                 }
-                const existing = currentMenuItems.find(
-                  (item) => item.name.toLowerCase() === ref.name.toLowerCase(),
-                );
+                const existing = currentMenuItems.find((item) => item.name.toLowerCase() === ref.name.toLowerCase());
                 if (existing) {
                   return existing.id;
                 }
@@ -560,7 +565,7 @@ const mockEventDetailApi = ({
                   ...candidate,
                   items: candidate.items.map((item) => (item.id === iid ? updatedItem : item)),
                 }
-              : candidate,
+              : candidate
           ),
         };
         return jsonResponse(200, updatedItem);
@@ -572,7 +577,7 @@ const mockEventDetailApi = ({
           sessions: currentEvent.sessions.map((candidate) =>
             candidate.id === sid
               ? { ...candidate, items: candidate.items.filter((item) => item.id !== iid) }
-              : candidate,
+              : candidate
           ),
         };
         return Promise.resolve(new Response(null, { status: 204 }));
@@ -668,7 +673,7 @@ const mockEventDetailApi = ({
         return jsonResponse(200, currentEvent);
       }
       throw new Error(`Unhandled request: ${method} ${url}`);
-    }),
+    })
   );
 
   return {
@@ -707,7 +712,7 @@ const renderPage = (id = 'event-1') => {
           </LocalizationProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 };
 
@@ -717,11 +722,7 @@ const renderPage = (id = 'event-1') => {
 // typing digits into the first section and letting each section
 // auto-advance, the same interaction a real user's keyboard typing drives.
 // Digit order is DD/MM/YYYY (theme.ts's own MuiDatePicker defaultProps).
-const fillDatePicker = async (
-  user: ReturnType<typeof userEvent.setup>,
-  labelText: string,
-  ddmmyyyy: string,
-) => {
+const fillDatePicker = async (user: ReturnType<typeof userEvent.setup>, labelText: string, ddmmyyyy: string) => {
   const group = screen.getByRole('group', { name: labelText });
   const sections = within(group).getAllByRole('spinbutton');
   const firstSection = sections[0];
@@ -937,7 +938,7 @@ describe('EventDetailPage', () => {
           return jsonResponse(500, { error: { code: 'INTERNAL_ERROR', message: 'Something broke.' } });
         }
         return jsonResponse(200, makeEvent());
-      }),
+      })
     );
     renderPage();
     fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
@@ -1029,7 +1030,7 @@ describe('EventDetailPage', () => {
           return pendingPdfResponse;
         }
         return jsonResponse(200, makeEvent());
-      }),
+      })
     );
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
@@ -1077,7 +1078,7 @@ describe('EventDetailPage', () => {
           return pdfResponse(500);
         }
         return jsonResponse(200, makeEvent());
-      }),
+      })
     );
     renderPage();
     fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
@@ -1184,7 +1185,7 @@ describe('EventDetailPage', () => {
     expect(await screen.findByText('Total Charges: 5,900')).toBeInTheDocument();
   });
 
-  it("renders total_days/total_occupancy/total_charges/total_incl_gst read-only, never independently calculated from an unsaved edit", async () => {
+  it('renders total_days/total_occupancy/total_charges/total_incl_gst read-only, never independently calculated from an unsaved edit', async () => {
     seedSession();
     mockEventDetailApi({
       event: makeEvent({
@@ -1302,7 +1303,14 @@ describe('EventDetailPage', () => {
 
     fireEvent.click(await screen.findByRole('tab', { name: 'Documents' }));
 
-    const labels = ['Aadhar Card', 'PAN Card', 'Leaving/Birth Certificate', 'Ration Card', 'Passport Photos', 'Wedding Card'];
+    const labels = [
+      'Aadhar Card',
+      'PAN Card',
+      'Leaving/Birth Certificate',
+      'Ration Card',
+      'Passport Photos',
+      'Wedding Card',
+    ];
     for (const label of labels) {
       expect(await screen.findByText(label)).toBeInTheDocument();
     }
@@ -1414,7 +1422,7 @@ describe('EventDetailPage', () => {
   // placeholder, not an invalid/NaN date — a new Session's Start/End date
   // pickers start with no value at all, so nothing here should ever read
   // "Invalid Date".
-  it('shows a placeholder, not an invalid date, for a new Session\'s never-set date fields', async () => {
+  it("shows a placeholder, not an invalid date, for a new Session's never-set date fields", async () => {
     seedSession();
     mockEventDetailApi({ event: makeEvent() });
     renderPage();
@@ -1696,7 +1704,7 @@ describe('EventDetailPage', () => {
       expect(screen.queryByText(/^Setup:/)).not.toBeInTheDocument();
     });
 
-    it('shows Client Contacts on F&B Head\'s own Client Details tab, but no Total Cost Summary panel', async () => {
+    it("shows Client Contacts on F&B Head's own Client Details tab, but no Total Cost Summary panel", async () => {
       seedSession('FnBHead');
       mockEventDetailApi({ event: makeEvent() });
       renderPage();

@@ -9,4 +9,3 @@ export const pageStyles: SxProps<Theme> = {
   gap: `${spaceTokens.space24}px`,
   p: `${spaceTokens.space16}px`,
 };
-

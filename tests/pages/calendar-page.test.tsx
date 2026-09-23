@@ -1,5 +1,5 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -85,7 +85,7 @@ const mockCalendarApi = (sessions: MockCalendarSession[], eventManagers: MockEve
         return jsonResponse(200, sessions);
       }
       throw new Error(`Unhandled request: ${url}`);
-    }),
+    })
   );
 };
 
@@ -118,7 +118,7 @@ const renderPage = () => {
           </MemoryRouter>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 };
 
@@ -166,15 +166,13 @@ describe('CalendarPage', () => {
     expect(await screen.findByText(label)).toBeInTheDocument();
   });
 
-  it("renders a fixture 3-day session as a single bar, split into two segments across a week-row break — not three repeated entries", async () => {
+  it('renders a fixture 3-day session as a single bar, split into two segments across a week-row break — not three repeated entries', async () => {
     // Sept 12-14 2026: the 12th falls in the grid's second row, the
     // 13th-14th in the third — the same week-row-break case this story's
     // own AC names explicitly. StandaloneMonthView renders one bar segment
     // per week row it spans (two here), each carrying the title once — not
     // the old hand-built grid's one repeated chip per covered date (three).
-    mockCalendarApi([
-      makeSession({ startDate: '2026-09-12T00:00:00.000Z', endDate: '2026-09-14T00:00:00.000Z' }),
-    ]);
+    mockCalendarApi([makeSession({ startDate: '2026-09-12T00:00:00.000Z', endDate: '2026-09-14T00:00:00.000Z' })]);
     renderPage();
 
     await navigateToSeptember2026();
@@ -489,7 +487,7 @@ describe('CalendarPage', () => {
       [
         { id: 'manager-1', name: 'Priya Sharma' },
         { id: 'manager-2', name: 'Rohan Mehta' },
-      ],
+      ]
     );
     renderPage();
     await navigateToSeptember2026();
@@ -500,7 +498,7 @@ describe('CalendarPage', () => {
     expect(screen.getByRole('menuitem', { name: 'Rohan Mehta' })).toBeInTheDocument();
   });
 
-  it('selecting an Event Manager narrows the grid to that manager\'s Events', async () => {
+  it("selecting an Event Manager narrows the grid to that manager's Events", async () => {
     mockCalendarApi(
       [
         makeSession({
@@ -524,7 +522,7 @@ describe('CalendarPage', () => {
       [
         { id: 'manager-1', name: 'Priya Sharma' },
         { id: 'manager-2', name: 'Rohan Mehta' },
-      ],
+      ]
     );
     renderPage();
     await navigateToSeptember2026();

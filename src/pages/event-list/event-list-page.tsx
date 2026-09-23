@@ -6,9 +6,9 @@ import { tsr } from '../../api/client';
 import { Role } from '../../contract';
 import { EVENT_CREATE_PATH } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
+import { actionsRowStyles, pageStyles } from './event-list-page.styles';
 import EventsCardList from './events-card-list';
 import EventsTable from './events-table';
-import { actionsRowStyles, pageStyles } from './event-list-page.styles';
 
 const EVENTS_QUERY_KEY = ['events'];
 

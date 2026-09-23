@@ -132,13 +132,13 @@ export const computeWizardTotalCostSummary = ({
   });
 
   const foodCostTotal = roundToCurrency(
-    dateBlocks.reduce((total, block) => total + block.foodRows.reduce((sum, row) => sum + row.totalCost, 0), 0),
+    dateBlocks.reduce((total, block) => total + block.foodRows.reduce((sum, row) => sum + row.totalCost, 0), 0)
   );
   const foodCostWithGst = roundToCurrency(foodCostTotal * (1 + gstPercent / 100));
   const accommodationTotal = computeTotalCharges(roomLines, accommodationTotalDays);
   const manualTotal = roundToCurrency(manualLineItems.reduce((total, item) => total + item.amount, 0));
   const venueTotal = roundToCurrency(
-    dateBlocks.reduce((total, block) => total + block.venueRows.reduce((sum, row) => sum + row.amount, 0), 0),
+    dateBlocks.reduce((total, block) => total + block.venueRows.reduce((sum, row) => sum + row.amount, 0), 0)
   );
   const grandTotal = roundToCurrency(venueTotal + foodCostWithGst + accommodationTotal + manualTotal);
 

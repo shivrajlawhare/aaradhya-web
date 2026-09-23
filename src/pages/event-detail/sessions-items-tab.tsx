@@ -1,18 +1,30 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
-import { Alert, Button, IconButton, MenuItem, Paper, Stack, Switch, Tab, Tabs, TextField, Typography } from '@mui/material';
+import {
+  Alert,
+  Button,
+  IconButton,
+  MenuItem,
+  Paper,
+  Stack,
+  Switch,
+  Tab,
+  Tabs,
+  TextField,
+  Typography,
+} from '@mui/material';
 import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
 import { Controller, useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import { useToast } from '../../components/ui/toast-provider';
-import { ItemType, type filteredEventResultSchema } from '../../contract';
+import { type filteredEventResultSchema, ItemType } from '../../contract';
+import { formatEventDate, formatQuotationPax, formatSessionDuration } from '../../utils/quotation-formatting';
+import { getDistinctDates } from '../../utils/session-dates';
 import { fromPickerTime, toDateInputValue, toPickerTime } from './date-input';
 import { formatAmount } from './format-amount';
 import MenuItemSearch, { type MenuItemChip } from './menu-item-search';
-import { formatEventDate, formatQuotationPax, formatSessionDuration } from '../../utils/quotation-formatting';
-import { getDistinctDates } from '../../utils/session-dates';
 import {
   addButtonStyles,
   lsLabelStyles,
@@ -222,7 +234,7 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
     : sessionsStartingOnDate[0];
 
   const dateEntries: DateEntry[] = sessionsStartingOnDate.flatMap((session) =>
-    (session.items ?? []).map((item) => ({ sessionId: session.id, item })),
+    (session.items ?? []).map((item) => ({ sessionId: session.id, item }))
   );
   const ceremonyEntries = dateEntries.filter((entry) => entry.item.type === ItemType.Event);
   const foodEntries = dateEntries.filter((entry) => entry.item.type === ItemType.Meal);
@@ -262,7 +274,10 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
       },
     };
     if (editingCeremony) {
-      updateItemMutation.mutate({ params: { id: event.id, sid: editingCeremony.sessionId, iid: editingCeremony.itemId }, body }, callbacks);
+      updateItemMutation.mutate(
+        { params: { id: event.id, sid: editingCeremony.sessionId, iid: editingCeremony.itemId }, body },
+        callbacks
+      );
     } else {
       createItemMutation.mutate({ params: { id: event.id, sid: sessionId }, body }, callbacks);
     }
@@ -297,7 +312,7 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
           setCeremonySubmitError('Something went wrong. Please try again.');
           showError('Something went wrong. Please try again.');
         },
-      },
+      }
     );
   };
 
@@ -352,7 +367,10 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
       },
     };
     if (editingFood) {
-      updateItemMutation.mutate({ params: { id: event.id, sid: editingFood.sessionId, iid: editingFood.itemId }, body }, callbacks);
+      updateItemMutation.mutate(
+        { params: { id: event.id, sid: editingFood.sessionId, iid: editingFood.itemId }, body },
+        callbacks
+      );
     } else {
       createItemMutation.mutate({ params: { id: event.id, sid: sessionId }, body }, callbacks);
     }
@@ -387,12 +405,16 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
           setFoodSubmitError('Something went wrong. Please try again.');
           showError('Something went wrong. Please try again.');
         },
-      },
+      }
     );
   };
 
   if (distinctDates.length === 0) {
-    return <Typography variant="bodyM">Add at least one Session on the Event Details tab before entering Sessions & Items.</Typography>;
+    return (
+      <Typography variant="bodyM">
+        Add at least one Session on the Event Details tab before entering Sessions & Items.
+      </Typography>
+    );
   }
 
   const ceremonySubmitLabel = editingCeremony ? 'Save Ceremony Event' : 'Add Ceremony Event';
@@ -404,8 +426,8 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
   if (sessionsStartingOnDate.length === 0) {
     reminderContent = (
       <Typography variant="bodyM" sx={reminderStyles}>
-        No Session starts on this date — it falls within a multi-day Session whose Items are shown under that
-        Session's own start date instead.
+        No Session starts on this date — it falls within a multi-day Session whose Items are shown under that Session's
+        own start date instead.
       </Typography>
     );
   } else {
@@ -452,7 +474,11 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
                 )}
               />
               {ceremonyNameOption === CUSTOM_CEREMONY_EVENT_OPTION && (
-                <TextField {...ceremonyForm.register('eventNameCustom')} label="Custom event name" sx={optionFieldStyles} />
+                <TextField
+                  {...ceremonyForm.register('eventNameCustom')}
+                  label="Custom event name"
+                  sx={optionFieldStyles}
+                />
               )}
             </Stack>
             <Stack direction="row" sx={rowStyles}>
@@ -464,7 +490,11 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
                   name="startTime"
                   control={ceremonyForm.control}
                   render={({ field }) => (
-                    <StaticTimePicker ampm value={toPickerTime(field.value)} onChange={(time) => field.onChange(fromPickerTime(time))} />
+                    <StaticTimePicker
+                      ampm
+                      value={toPickerTime(field.value)}
+                      onChange={(time) => field.onChange(fromPickerTime(time))}
+                    />
                   )}
                 />
               </Stack>
@@ -476,7 +506,11 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
                   name="endTime"
                   control={ceremonyForm.control}
                   render={({ field }) => (
-                    <StaticTimePicker ampm value={toPickerTime(field.value)} onChange={(time) => field.onChange(fromPickerTime(time))} />
+                    <StaticTimePicker
+                      ampm
+                      value={toPickerTime(field.value)}
+                      onChange={(time) => field.onChange(fromPickerTime(time))}
+                    />
                   )}
                 />
               </Stack>
@@ -567,7 +601,11 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
                 name="startTime"
                 control={foodForm.control}
                 render={({ field }) => (
-                  <StaticTimePicker ampm value={toPickerTime(field.value)} onChange={(time) => field.onChange(fromPickerTime(time))} />
+                  <StaticTimePicker
+                    ampm
+                    value={toPickerTime(field.value)}
+                    onChange={(time) => field.onChange(fromPickerTime(time))}
+                  />
                 )}
               />
             </Stack>
@@ -579,7 +617,11 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
                 name="endTime"
                 control={foodForm.control}
                 render={({ field }) => (
-                  <StaticTimePicker ampm value={toPickerTime(field.value)} onChange={(time) => field.onChange(fromPickerTime(time))} />
+                  <StaticTimePicker
+                    ampm
+                    value={toPickerTime(field.value)}
+                    onChange={(time) => field.onChange(fromPickerTime(time))}
+                  />
                 )}
               />
             </Stack>
@@ -618,7 +660,9 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
           <Controller
             name="menuItems"
             control={foodForm.control}
-            render={({ field }) => <MenuItemSearch options={menuItemOptions} value={field.value} onChange={field.onChange} />}
+            render={({ field }) => (
+              <MenuItemSearch options={menuItemOptions} value={field.value} onChange={field.onChange} />
+            )}
           />
           <Typography variant="bodyM" sx={previewLineStyles}>
             Shown on Quotation as: {formatQuotationPax(safeFoodPax, foodLimitedSeating)}
@@ -681,7 +725,9 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
                 {mealNameLabel} · {formatQuotationPax(item.pax ?? 0, item.limitedSeating ?? false)}
                 {costSuffix}
                 {menuItemsSuffix}
-                {item.totalCost !== undefined && item.totalCost !== null ? ` · Total cost: ${formatAmount(item.totalCost)}` : ''}
+                {item.totalCost !== undefined && item.totalCost !== null
+                  ? ` · Total cost: ${formatAmount(item.totalCost)}`
+                  : ''}
               </Typography>
               <IconButton
                 aria-label={`Remove ${item.mealName || 'food event'} row`}

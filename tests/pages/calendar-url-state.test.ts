@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EventStatus } from '../../src/contract';
-import { DEFAULT_CALENDAR_FILTERS, type CalendarFilters } from '../../src/pages/calendar/calendar-filters';
+import { type CalendarFilters, DEFAULT_CALENDAR_FILTERS } from '../../src/pages/calendar/calendar-filters';
 import { buildCalendarSearchParams, parseCalendarSearchParams } from '../../src/pages/calendar/calendar-url-state';
 
 describe('parseCalendarSearchParams', () => {
@@ -14,10 +14,7 @@ describe('parseCalendarSearchParams', () => {
   });
 
   it('reads a valid month/year from the URL', () => {
-    const result = parseCalendarSearchParams(
-      new URLSearchParams('month=10&year=2026'),
-      { month: 1, year: 2000 },
-    );
+    const result = parseCalendarSearchParams(new URLSearchParams('month=10&year=2026'), { month: 1, year: 2000 });
 
     expect(result.monthShift).toEqual({ month: 10, year: 2026 });
   });
@@ -37,10 +34,7 @@ describe('parseCalendarSearchParams', () => {
   });
 
   it('falls back to "All" for an unrecognized status value, rather than passing it through', () => {
-    const result = parseCalendarSearchParams(
-      new URLSearchParams('status=NotARealStatus'),
-      { month: 9, year: 2026 },
-    );
+    const result = parseCalendarSearchParams(new URLSearchParams('status=NotARealStatus'), { month: 9, year: 2026 });
 
     expect(result.filters.status).toBe('All');
   });
@@ -48,7 +42,7 @@ describe('parseCalendarSearchParams', () => {
   it('reads venue/eventManager/eventType/event filters from the URL', () => {
     const result = parseCalendarSearchParams(
       new URLSearchParams('venue=Lawn&eventManager=manager-1&eventType=Wedding&event=Corporate Offsite'),
-      { month: 9, year: 2026 },
+      { month: 9, year: 2026 }
     );
 
     expect(result.filters).toEqual({
@@ -94,7 +88,7 @@ describe('buildCalendarSearchParams', () => {
   it('writes the event filter', () => {
     const params = buildCalendarSearchParams(
       { month: 9, year: 2026 },
-      { ...DEFAULT_CALENDAR_FILTERS, event: 'Wedding' },
+      { ...DEFAULT_CALENDAR_FILTERS, event: 'Wedding' }
     );
 
     expect(params.get('event')).toBe('Wedding');

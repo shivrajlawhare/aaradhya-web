@@ -1,7 +1,13 @@
 import { Box, LinearProgress, Stack, Typography, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { WIZARD_STEPS, wizardStepIndex, type WizardStepId } from './wizard-steps';
-import { desktopRowStyles, mobileLabelStyles, mobileWrapperStyles, pillStyles, progressBarStyles } from './wizard-stepper.styles';
+import {
+  desktopRowStyles,
+  mobileLabelStyles,
+  mobileWrapperStyles,
+  pillStyles,
+  progressBarStyles,
+} from './wizard-stepper.styles';
+import { WIZARD_STEPS, type WizardStepId, wizardStepIndex } from './wizard-steps';
 
 interface WizardStepperProps {
   currentStep: WizardStepId;

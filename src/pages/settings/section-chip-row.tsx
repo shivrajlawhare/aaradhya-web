@@ -1,6 +1,6 @@
 import { Box, Chip } from '@mui/material';
-import { SECTIONS, type SectionId } from './settings-sections';
 import { chipStyles, rowStyles } from './section-chip-row.styles';
+import { type SectionId, SECTIONS } from './settings-sections';
 
 interface SectionChipRowProps {
   selected: SectionId;

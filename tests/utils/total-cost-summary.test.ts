@@ -39,8 +39,22 @@ describe('computeWizardTotalCostSummary', () => {
   // manual row.
   it('matches example_quatation_1.pdf’s exact printed numbers', () => {
     const sessions: WizardSessionRow[] = [
-      session({ id: 's1', sessionType: 'Engagement', venue: 'Poolside', venueCost: 60000, startDate: '2026-12-10', endDate: '2026-12-10' }),
-      session({ id: 's2', sessionType: 'Wedding', venue: 'Full Banquet', venueCost: 120000, startDate: '2026-12-11', endDate: '2026-12-11' }),
+      session({
+        id: 's1',
+        sessionType: 'Engagement',
+        venue: 'Poolside',
+        venueCost: 60000,
+        startDate: '2026-12-10',
+        endDate: '2026-12-10',
+      }),
+      session({
+        id: 's2',
+        sessionType: 'Wedding',
+        venue: 'Full Banquet',
+        venueCost: 120000,
+        startDate: '2026-12-11',
+        endDate: '2026-12-11',
+      }),
     ];
     const byDate: Record<string, WizardDateEntry[]> = {
       '2026-12-10': [
@@ -73,7 +87,12 @@ describe('computeWizardTotalCostSummary', () => {
       accommodationTotalDays: 2,
       gstPercent: 5,
       manualLineItems: [
-        { id: 'm1', name: 'Decoration', note: 'poolside engg sangeet + Wedding(Vidhi mandap with saptapadi)', amount: 150000 },
+        {
+          id: 'm1',
+          name: 'Decoration',
+          note: 'poolside engg sangeet + Wedding(Vidhi mandap with saptapadi)',
+          amount: 150000,
+        },
         { id: 'm2', name: 'Bhatji', note: 'wedding', amount: 7000 },
       ],
     });
@@ -85,7 +104,11 @@ describe('computeWizardTotalCostSummary', () => {
     expect(summary.dateBlocks[0]!.venueRows).toEqual([{ id: 's1', label: 'Poolside', amount: 60000 }]);
     expect(summary.dateBlocks[1]!.venueRows).toEqual([{ id: 's2', label: 'Full Banquet', amount: 120000 }]);
     expect(summary.dateBlocks[0]!.foodRows).toHaveLength(6);
-    expect(summary.dateBlocks[0]!.foodRows[1]).toMatchObject({ label: 'Chaat Counter', paxDisplay: 'L.S. (30pax)', totalCost: 12000 });
+    expect(summary.dateBlocks[0]!.foodRows[1]).toMatchObject({
+      label: 'Chaat Counter',
+      paxDisplay: 'L.S. (30pax)',
+      totalCost: 12000,
+    });
     // Grand Total, unrounded to whole rupees (the PDF's own "Rs. 10,73,208
     // /-" is the display-time rounding of this exact figure, per this
     // story's own AC).
@@ -95,8 +118,22 @@ describe('computeWizardTotalCostSummary', () => {
 
   it('supports two same-date Sessions, each contributing its own venue row', () => {
     const sessions: WizardSessionRow[] = [
-      session({ id: 's1', sessionType: 'Halad', venue: 'Half Banquet', venueCost: 60000, startDate: '2027-02-26', endDate: '2027-02-26' }),
-      session({ id: 's2', sessionType: 'Engagement', venue: 'Poolside', venueCost: 60000, startDate: '2027-02-26', endDate: '2027-02-26' }),
+      session({
+        id: 's1',
+        sessionType: 'Halad',
+        venue: 'Half Banquet',
+        venueCost: 60000,
+        startDate: '2027-02-26',
+        endDate: '2027-02-26',
+      }),
+      session({
+        id: 's2',
+        sessionType: 'Engagement',
+        venue: 'Poolside',
+        venueCost: 60000,
+        startDate: '2027-02-26',
+        endDate: '2027-02-26',
+      }),
     ];
 
     const summary = computeWizardTotalCostSummary({

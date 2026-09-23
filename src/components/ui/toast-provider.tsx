@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useRef, useState } from 'react';
 import { Alert, Portal, Stack } from '@mui/material';
 import { errorAlertStyles, successAlertStyles, toastStackStyles } from './toast-provider.styles';
 
@@ -45,7 +45,7 @@ export const ToastProvider = ({ children }: ToastProviderProps) => {
       setToasts((current) => [...current, { id, message, severity }]);
       setTimeout(() => dismiss(id), AUTO_DISMISS_MS);
     },
-    [dismiss],
+    [dismiss]
   );
 
   const showSuccess = useCallback((message: string) => show(message, 'success'), [show]);

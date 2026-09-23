@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { buildMonthGrid, dayOfMonth, formatMonthLabel, isInMonth, shiftMonth } from '../../src/pages/calendar/calendar-dates';
+import {
+  buildMonthGrid,
+  dayOfMonth,
+  formatMonthLabel,
+  isInMonth,
+  shiftMonth,
+} from '../../src/pages/calendar/calendar-dates';
 
 describe('buildMonthGrid', () => {
-  it('pads a month that starts mid-week with the previous month\'s trailing days (5-week grid)', () => {
+  it("pads a month that starts mid-week with the previous month's trailing days (5-week grid)", () => {
     // September 2026: 1st is a Tuesday, 30th is a Wednesday.
     const weeks = buildMonthGrid(9, 2026);
 

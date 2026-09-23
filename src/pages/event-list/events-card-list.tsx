@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router-dom';
 import { Box, Paper, Stack, Typography } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import type { z } from 'zod';
 import { createEventRowActivation } from '../../components/ui/event-row-activation';
 import StatusChip from '../../components/ui/status-chip';

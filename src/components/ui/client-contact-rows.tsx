@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import CloseIcon from '@mui/icons-material/Close';
 import {
   Button,
   FormControl,
@@ -10,7 +10,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
+import type { z } from 'zod';
 import { CLIENT_CONTACT_ROLE_OPTIONS, ClientContactRole, type clientContactSchema } from '../../contract';
 import { addButtonStyles, roleFieldStyles, rowStackStyles, rowStyles } from './client-contact-rows.styles';
 
@@ -75,11 +75,7 @@ const ClientContactRows = ({ rows, onRowChange, onAddRow, onRemoveRow }: ClientC
               ))}
             </Select>
           </FormControl>
-          <IconButton
-            aria-label={`Remove contact row ${index + 1}`}
-            size="small"
-            onClick={() => onRemoveRow(index)}
-          >
+          <IconButton aria-label={`Remove contact row ${index + 1}`} size="small" onClick={() => onRemoveRow(index)}>
             <CloseIcon fontSize="small" />
           </IconButton>
         </Stack>

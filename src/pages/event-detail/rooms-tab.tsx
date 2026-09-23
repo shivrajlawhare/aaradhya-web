@@ -1,14 +1,14 @@
-import { useState, type ReactNode } from 'react';
-import { Controller, useFieldArray, useForm } from 'react-hook-form';
+import { type ReactNode, useState } from 'react';
 import { Alert, Button, Paper, Stack, Typography } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import { useToast } from '../../components/ui/toast-provider';
-import { roomLineSchema, type filteredAccommodationResultSchema } from '../../contract';
-import { formatAmount } from './format-amount';
-import { fromPickerDate, toDateInputValue, toPickerDate } from './date-input';
+import { type filteredAccommodationResultSchema, roomLineSchema } from '../../contract';
 import { formatEventDate } from '../../utils/quotation-formatting';
+import { fromPickerDate, toDateInputValue, toPickerDate } from './date-input';
+import { formatAmount } from './format-amount';
 import RoomLineRows from './room-line-rows';
 import {
   dateFieldsStyles,
@@ -142,9 +142,13 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
   // the wizard's Accommodation step read the same way.
   const summaryLine = (
     <Typography variant="bodyM" sx={summaryLineStyles}>
-      {toDateInputValue(savedAccommodation.checkIn) ? formatEventDate(toDateInputValue(savedAccommodation.checkIn)) : '—'}
+      {toDateInputValue(savedAccommodation.checkIn)
+        ? formatEventDate(toDateInputValue(savedAccommodation.checkIn))
+        : '—'}
       {' to '}
-      {toDateInputValue(savedAccommodation.checkOut) ? formatEventDate(toDateInputValue(savedAccommodation.checkOut)) : '—'}
+      {toDateInputValue(savedAccommodation.checkOut)
+        ? formatEventDate(toDateInputValue(savedAccommodation.checkOut))
+        : '—'}
       {' · Total days: '}
       {savedAccommodation.totalDays ?? '—'}
     </Typography>
@@ -240,7 +244,8 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
           Total Occupancy: {savedAccommodation.totalOccupancy}
         </Typography>
         <Typography variant="bodyM" sx={footerCellStyles('charges')}>
-          Total Charges: {savedAccommodation.totalCharges !== undefined ? formatAmount(savedAccommodation.totalCharges) : '—'}
+          Total Charges:{' '}
+          {savedAccommodation.totalCharges !== undefined ? formatAmount(savedAccommodation.totalCharges) : '—'}
         </Typography>
       </Stack>
     </Stack>

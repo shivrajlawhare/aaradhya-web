@@ -19,7 +19,7 @@ export interface MonthShift {
 // Wraps year on both directions — December → next January, January →
 // previous December.
 export const shiftMonth = ({ month, year }: MonthShift, delta: number): MonthShift => {
-  const zeroBasedTotal = (month - 1) + delta;
+  const zeroBasedTotal = month - 1 + delta;
   const normalizedMonth = ((zeroBasedTotal % 12) + 12) % 12;
   const yearOffset = Math.floor(zeroBasedTotal / 12);
   return { month: normalizedMonth + 1, year: year + yearOffset };
@@ -48,7 +48,7 @@ export const buildMonthGrid = (month: number, year: number): string[][] => {
   gridEnd.setUTCDate(gridEnd.getUTCDate() + (6 - gridEnd.getUTCDay()));
 
   const days: string[] = [];
-  for (const cursor = new Date(gridStart); cursor.getTime() <= gridEnd.getTime(); ) {
+  for (const cursor = new Date(gridStart); cursor.getTime() <= gridEnd.getTime();) {
     days.push(toDateString(cursor));
     cursor.setUTCDate(cursor.getUTCDate() + 1);
   }

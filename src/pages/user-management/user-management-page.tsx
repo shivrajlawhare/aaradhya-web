@@ -1,12 +1,12 @@
-import { useState, type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import AddIcon from '@mui/icons-material/Add';
 import { Box, Button, CircularProgress, Stack, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { tsr } from '../../api/client';
 import NewUserForm from './new-user-form';
+import { contentStyles, mobileSectionStyles, pageStyles } from './user-management-page.styles';
 import UsersCardList from './users-card-list';
 import UsersTable from './users-table';
-import { contentStyles, mobileSectionStyles, pageStyles } from './user-management-page.styles';
 
 const USERS_QUERY_KEY = ['users'];
 
@@ -51,7 +51,12 @@ const UserManagementPage = () => {
   } else {
     listSlot = (
       <Box sx={mobileSectionStyles}>
-        <Button variant="contained" startIcon={<AddIcon />} fullWidth onClick={() => setMobileFormOpen((open) => !open)}>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          fullWidth
+          onClick={() => setMobileFormOpen((open) => !open)}
+        >
           Add User
         </Button>
         {mobileFormOpen && <NewUserForm onCreated={handleMobileUserCreated} />}

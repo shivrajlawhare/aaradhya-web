@@ -9,8 +9,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { tsr } from '../../src/api/client';
 import EventWizardShell from '../../src/pages/event-creation/event-wizard-shell';
 import SessionsItemsStep from '../../src/pages/event-creation/sessions-items-step';
-import { WIZARD_STEPS } from '../../src/pages/event-creation/wizard-steps';
 import WizardStepPlaceholder from '../../src/pages/event-creation/wizard-step-placeholder';
+import { WIZARD_STEPS } from '../../src/pages/event-creation/wizard-steps';
 import { WIZARD_STORAGE_KEY } from '../../src/stores/event-wizard-context';
 import { theme } from '../../src/theme/theme';
 import { mockMatchMedia } from '../support/match-media';
@@ -22,7 +22,13 @@ let menuItems: { id: string; name: string; defaultCostPerPlate: number; createdA
 
 const mockMenuItemsApi = () => {
   menuItems = [
-    { id: 'mi-1', name: 'Paneer Tikka', defaultCostPerPlate: 150, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+    {
+      id: 'mi-1',
+      name: 'Paneer Tikka',
+      defaultCostPerPlate: 150,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    },
   ];
   vi.stubGlobal(
     'fetch',
@@ -37,7 +43,9 @@ const mockMenuItemsApi = () => {
         const body = JSON.parse(String(init.body)) as { name: string };
         const existing = menuItems.find((item) => item.name.trim().toLowerCase() === body.name.trim().toLowerCase());
         if (existing) {
-          return jsonResponse(409, { error: { code: 'MENU_ITEM_NAME_TAKEN', message: 'A Menu Item with that name already exists.' } });
+          return jsonResponse(409, {
+            error: { code: 'MENU_ITEM_NAME_TAKEN', message: 'A Menu Item with that name already exists.' },
+          });
         }
         const created = {
           id: `mi-${menuItems.length + 1}`,
@@ -50,7 +58,7 @@ const mockMenuItemsApi = () => {
         return jsonResponse(201, created);
       }
       throw new Error(`Unhandled request: ${url}`);
-    }),
+    })
   );
 };
 
@@ -88,7 +96,7 @@ const renderWizard = (initialPath: string) => {
           </LocalizationProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 };
 
@@ -141,7 +149,9 @@ describe('SessionsItemsStep', () => {
     seedEventDetails([TWO_DAY_WEDDING]);
     renderWizard(sessionsItemsPath);
 
-    expect(await screen.findByText(/Wedding — Venue for this date: Poolside · 60,000\/- \(from Event Details\)/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Wedding — Venue for this date: Poolside · 60,000\/- \(from Event Details\)/)
+    ).toBeInTheDocument();
   });
 
   it('adds a Ceremony Event with every field blank, matching the reference quotations’ valid bare row', async () => {
@@ -256,13 +266,13 @@ describe('SessionsItemsStep', () => {
                     createdAt: '2026-01-01T00:00:00.000Z',
                     updatedAt: '2026-01-01T00:00:00.000Z',
                   }),
-                  { status: 201, headers: { 'content-type': 'application/json' } },
-                ),
+                  { status: 201, headers: { 'content-type': 'application/json' } }
+                )
               );
           });
         }
         return original(input, init);
-      }),
+      })
     );
 
     const menuSearchInput = screen.getByLabelText('Menu items');
@@ -387,7 +397,16 @@ describe('SessionsItemsStep', () => {
     const parsed = raw ? JSON.parse(raw) : {};
     sessionStorage.setItem(
       WIZARD_STORAGE_KEY,
-      JSON.stringify({ ...parsed, accommodation: { checkInDate: '2026-09-12', checkInTime: '', checkOutDate: '2026-09-13', checkOutTime: '', roomLines: [] } }),
+      JSON.stringify({
+        ...parsed,
+        accommodation: {
+          checkInDate: '2026-09-12',
+          checkInTime: '',
+          checkOutDate: '2026-09-13',
+          checkOutTime: '',
+          roomLines: [],
+        },
+      })
     );
     renderWizard(sessionsItemsPath);
     await screen.findByRole('tab', { name: '12/09/2026' });

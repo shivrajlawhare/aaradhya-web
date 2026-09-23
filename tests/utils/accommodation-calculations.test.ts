@@ -30,7 +30,7 @@ describe('computeTotalOccupancy', () => {
       computeTotalOccupancy([
         { occupancy: 2, tariff: 4000, noOfRooms: 3 },
         { occupancy: 4, tariff: 1500, noOfRooms: 1 },
-      ]),
+      ])
     ).toBe(10);
   });
 });
@@ -44,8 +44,8 @@ describe('computeTotalCharges', () => {
           { occupancy: 2, tariff: 4000, noOfRooms: 3 },
           { occupancy: 4, tariff: 1500, noOfRooms: 1 },
         ],
-        1,
-      ),
+        1
+      )
     ).toBe(12600 + 1575);
   });
 

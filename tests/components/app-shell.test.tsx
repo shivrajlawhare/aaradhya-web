@@ -20,7 +20,7 @@ import { mockMatchMedia } from '../support/match-media';
 const seedSession = (role = 'EventManager') => {
   localStorage.setItem(
     SESSION_STORAGE_KEY,
-    JSON.stringify({ token: 'signed-jwt', user: { id: 'user-1', name: 'Priya Nair', role } }),
+    JSON.stringify({ token: 'signed-jwt', user: { id: 'user-1', name: 'Priya Nair', role } })
   );
 };
 
@@ -86,7 +86,7 @@ const renderShell = (initialPath: string) =>
           </Routes>
         </MemoryRouter>
       </AuthProvider>
-    </ThemeProvider>,
+    </ThemeProvider>
   );
 
 afterEach(() => {

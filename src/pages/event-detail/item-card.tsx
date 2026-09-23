@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
 import { Alert, Button, Stack, TextField, ToggleButton, Typography } from '@mui/material';
 import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
+import { Controller, useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
-import { ItemType, type filteredEventResultSchema } from '../../contract';
+import { type filteredEventResultSchema, ItemType } from '../../contract';
 import { fromPickerTime, toPickerTime } from './date-input';
+import { cardStyles, totalCostStyles } from './item-card.styles';
 import MenuItemSearch, { type MenuItemChip } from './menu-item-search';
 import { rowStyles, timeFieldStyles, toggleActiveStyles } from './session-form.styles';
-import { cardStyles, totalCostStyles } from './item-card.styles';
 
 type PublicEvent = z.infer<typeof filteredEventResultSchema>;
 type SessionResult = PublicEvent['sessions'][number];

@@ -22,11 +22,11 @@ import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
 import { Controller, useForm } from 'react-hook-form';
 import { tsr } from '../../api/client';
 import { SEATING_ARRANGEMENT_OPTIONS, SeatingArrangement } from '../../contract';
-import { fromPickerDate, fromPickerTime, toPickerDate, toPickerTime } from '../event-detail/date-input';
-import { SEATING_ARRANGEMENT_LABELS } from '../event-detail/session-form-options';
 import { useEventWizard } from '../../stores/event-wizard-context';
 import { formatEventDate, formatSessionDuration } from '../../utils/quotation-formatting';
 import { enumerateDates, getDistinctDates } from '../../utils/session-dates';
+import { fromPickerDate, fromPickerTime, toPickerDate, toPickerTime } from '../event-detail/date-input';
+import { SEATING_ARRANGEMENT_LABELS } from '../event-detail/session-form-options';
 import {
   addButtonStyles,
   formCardStyles,
@@ -191,7 +191,9 @@ const EventDetailsStep = () => {
     clearErrors('endDate');
 
     const sessionType =
-      values.sessionTypeOption === CUSTOM_EVENT_TYPE_OPTION ? values.sessionTypeCustom.trim() : values.sessionTypeOption;
+      values.sessionTypeOption === CUSTOM_EVENT_TYPE_OPTION
+        ? values.sessionTypeCustom.trim()
+        : values.sessionTypeOption;
 
     setRows((current) => [
       ...current,
@@ -232,7 +234,7 @@ const EventDetailsStep = () => {
       const dateList = datesWithEntries.map(formatEventDate).join(', ');
       const verb = datesWithEntries.length > 1 ? 'already have' : 'already has';
       const confirmed = window.confirm(
-        `${dateList} ${verb} Sessions & Items entered in Step 4. Removing this Session will also remove them. Continue?`,
+        `${dateList} ${verb} Sessions & Items entered in Step 4. Removing this Session will also remove them. Continue?`
       );
       if (!confirmed) {
         return;
@@ -368,7 +370,11 @@ const EventDetailsStep = () => {
               name="startTime"
               control={control}
               render={({ field }) => (
-                <StaticTimePicker ampm value={toPickerTime(field.value)} onChange={(time) => field.onChange(fromPickerTime(time))} />
+                <StaticTimePicker
+                  ampm
+                  value={toPickerTime(field.value)}
+                  onChange={(time) => field.onChange(fromPickerTime(time))}
+                />
               )}
             />
           </Stack>
@@ -380,7 +386,11 @@ const EventDetailsStep = () => {
               name="endTime"
               control={control}
               render={({ field }) => (
-                <StaticTimePicker ampm value={toPickerTime(field.value)} onChange={(time) => field.onChange(fromPickerTime(time))} />
+                <StaticTimePicker
+                  ampm
+                  value={toPickerTime(field.value)}
+                  onChange={(time) => field.onChange(fromPickerTime(time))}
+                />
               )}
             />
           </Stack>
@@ -491,7 +501,11 @@ const EventDetailsStep = () => {
                 <TableCell>{row.venue}</TableCell>
                 <TableCell>{row.venueCost}</TableCell>
                 <TableCell>
-                  <IconButton aria-label={`Remove ${row.sessionType || 'event'} row`} size="small" onClick={() => handleRemoveRow(row)}>
+                  <IconButton
+                    aria-label={`Remove ${row.sessionType || 'event'} row`}
+                    size="small"
+                    onClick={() => handleRemoveRow(row)}
+                  >
                     <CloseIcon fontSize="small" />
                   </IconButton>
                 </TableCell>

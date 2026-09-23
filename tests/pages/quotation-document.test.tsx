@@ -1,6 +1,7 @@
-import { render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { ClientContactRole, ItemType, SessionStatus } from '../../src/contract';
 import QuotationDocument, {
   type QuotationDocumentAccommodation,
   type QuotationDocumentClientContact,
@@ -8,7 +9,6 @@ import QuotationDocument, {
   type QuotationDocumentSession,
   type QuotationDocumentSessionItem,
 } from '../../src/pages/quotation-preview/quotation-document';
-import { ClientContactRole, ItemType, SessionStatus } from '../../src/contract';
 import { theme } from '../../src/theme/theme';
 
 interface RenderOptions {
@@ -50,11 +50,11 @@ const renderDocument = ({
         foodGstRatePercent={foodGstRatePercent}
         quotationDate={quotationDate}
       />
-    </ThemeProvider>,
+    </ThemeProvider>
   );
 
 const makeManualLineItem = (
-  overrides: Partial<QuotationDocumentManualLineItem> = {},
+  overrides: Partial<QuotationDocumentManualLineItem> = {}
 ): QuotationDocumentManualLineItem => ({
   name: 'Decoration',
   note: null,
@@ -107,7 +107,7 @@ const makeCeremonyItem = (overrides: Partial<QuotationDocumentSessionItem> = {})
 });
 
 const makeRoomLine = (
-  overrides: Partial<QuotationDocumentAccommodation['roomLines'][number]> = {},
+  overrides: Partial<QuotationDocumentAccommodation['roomLines'][number]> = {}
 ): QuotationDocumentAccommodation['roomLines'][number] => ({
   roomType: 'Delux',
   occupancy: 2,
@@ -117,7 +117,9 @@ const makeRoomLine = (
   ...overrides,
 });
 
-const makeAccommodation = (overrides: Partial<QuotationDocumentAccommodation> = {}): QuotationDocumentAccommodation => ({
+const makeAccommodation = (
+  overrides: Partial<QuotationDocumentAccommodation> = {}
+): QuotationDocumentAccommodation => ({
   checkIn: '2026-12-10T00:00:00.000Z',
   checkOut: '2026-12-12T00:00:00.000Z',
   totalDays: 2,
@@ -208,8 +210,18 @@ describe('QuotationDocument', () => {
   it('renders two Sessions on the same date as two separate rows, never merged (example_quatation_2.pdf: Halad+Engagement)', () => {
     renderDocument({
       sessions: [
-        makeSession({ id: 'halad', sessionType: 'Halad', venue: 'Half Banquet', startDate: '2027-02-26T00:00:00.000Z' }),
-        makeSession({ id: 'engagement', sessionType: 'Engagement', venue: 'Poolside', startDate: '2027-02-26T00:00:00.000Z' }),
+        makeSession({
+          id: 'halad',
+          sessionType: 'Halad',
+          venue: 'Half Banquet',
+          startDate: '2027-02-26T00:00:00.000Z',
+        }),
+        makeSession({
+          id: 'engagement',
+          sessionType: 'Engagement',
+          venue: 'Poolside',
+          startDate: '2027-02-26T00:00:00.000Z',
+        }),
       ],
     });
 
@@ -313,7 +325,9 @@ describe('QuotationDocument', () => {
   });
 
   it('still renders full column headers and a zero footer for an Accommodation Block with zero Room Lines at all', () => {
-    renderDocument({ accommodation: makeAccommodation({ checkIn: null, checkOut: null, totalDays: null, roomLines: [] }) });
+    renderDocument({
+      accommodation: makeAccommodation({ checkIn: null, checkOut: null, totalDays: null, roomLines: [] }),
+    });
 
     const table = screen.getByRole('table', { name: 'Accommodation Details' });
     expect(within(table).getByRole('columnheader', { name: 'Room Type' })).toBeInTheDocument();
@@ -420,7 +434,9 @@ describe('QuotationDocument', () => {
       // "bare number" convention a Room Line's own Tariff cell already
       // established (STORY-070), just with a trailing "/-".
       expect(cells[3]!.textContent).toBe('275/-');
-      expect(cells[4]!.textContent).toBe('1. Tea2. Coffee3. Cold Drinks - black4. Onion Pakoda5. Veg Sandwich6. Biscuits');
+      expect(cells[4]!.textContent).toBe(
+        '1. Tea2. Coffee3. Cold Drinks - black4. Onion Pakoda5. Veg Sandwich6. Biscuits'
+      );
     });
 
     it('renders Number of Pax as "L.S. (Npax)" when limitedSeating is set (FR-QUO-8)', () => {
@@ -440,7 +456,7 @@ describe('QuotationDocument', () => {
       expect(within(table).getByText('45000/-')).toBeInTheDocument();
     });
 
-    it('renders a Food/Dining row with a blank Time when the Item\'s own time fields are blank', () => {
+    it("renders a Food/Dining row with a blank Time when the Item's own time fields are blank", () => {
       renderDocument({
         sessions: [
           makeSession({
@@ -462,7 +478,9 @@ describe('QuotationDocument', () => {
         sessions: [
           makeSession({
             startDate: '2026-12-10T00:00:00.000Z',
-            items: [makeCeremonyItem({ eventName: 'Engagement Sangeet', venue: 'Poolside', startTime: null, endTime: null })],
+            items: [
+              makeCeremonyItem({ eventName: 'Engagement Sangeet', venue: 'Poolside', startTime: null, endTime: null }),
+            ],
           }),
         ],
       });
@@ -583,7 +601,7 @@ describe('QuotationDocument', () => {
       expect(within(table).getAllByRole('row')).toHaveLength(2);
     });
 
-    it('does not truncate a long Menu list (example_quatation_1.pdf\'s own 16-item Dinner menu)', () => {
+    it("does not truncate a long Menu list (example_quatation_1.pdf's own 16-item Dinner menu)", () => {
       const sixteenItemMenu = [
         'Veg Manchow Soup',
         'Veg Manchurian',
@@ -616,7 +634,7 @@ describe('QuotationDocument', () => {
       expect(within(table).getByText('16. Kulfi')).toBeInTheDocument();
     });
 
-    it('excludes a Cancelled Session\'s Items from the per-date tables', () => {
+    it("excludes a Cancelled Session's Items from the per-date tables", () => {
       renderDocument({
         sessions: [
           makeSession({
@@ -680,7 +698,7 @@ describe('QuotationDocument', () => {
       expect(poolsideRow[5]!.textContent).toBe('60000');
     });
 
-    it('bills a limited-seating Meal Item\'s Total Cost at pax=1, not the literal headcount (FR-QUO-8)', () => {
+    it("bills a limited-seating Meal Item's Total Cost at pax=1, not the literal headcount (FR-QUO-8)", () => {
       renderDocument({
         sessions: [
           makeSession({
@@ -710,7 +728,7 @@ describe('QuotationDocument', () => {
       expect(cells[5]!.textContent).toBe('');
     });
 
-    it('renders a Meal Item genuinely entered with pax/cost 0 as a real 0 row, not hidden (example_quatation_1.pdf\'s own blank/zero row)', () => {
+    it("renders a Meal Item genuinely entered with pax/cost 0 as a real 0 row, not hidden (example_quatation_1.pdf's own blank/zero row)", () => {
       renderDocument({
         sessions: [
           makeSession({
@@ -809,7 +827,7 @@ describe('QuotationDocument', () => {
       const table = screen.getByRole('table', { name: 'Total Cost Summary' });
       const decorationRow = within(table).getByText('Decoration').closest('tr')!;
       expect(
-        within(decorationRow).getByText('poolside engg sangeet + Wedding(Vidhi mandap with saptapadi)'),
+        within(decorationRow).getByText('poolside engg sangeet + Wedding(Vidhi mandap with saptapadi)')
       ).toBeInTheDocument();
       expect(within(decorationRow).getByText('150000')).toBeInTheDocument();
 
@@ -855,7 +873,7 @@ describe('QuotationDocument', () => {
     // Full end-to-end reproduction of example_quatation_1.pdf's own Total
     // Cost Summary — every row and the final Grand Total, verified to the
     // rupee against its printed "Rs. 10,73,208 /-".
-    it('reproduces example_quatation_1.pdf\'s exact printed Total Cost Summary figures', () => {
+    it("reproduces example_quatation_1.pdf's exact printed Total Cost Summary figures", () => {
       renderDocument({
         sessions: [
           makeSession({
@@ -866,10 +884,22 @@ describe('QuotationDocument', () => {
             startDate: '2026-12-10T00:00:00.000Z',
             items: [
               makeMealItem({ id: 'hitea', mealName: 'Hi Tea', pax: 30, costPerPlate: 275 }),
-              makeMealItem({ id: 'chaat', mealName: 'Chaat Counter', pax: 30, limitedSeating: true, costPerPlate: 12000 }),
+              makeMealItem({
+                id: 'chaat',
+                mealName: 'Chaat Counter',
+                pax: 30,
+                limitedSeating: true,
+                costPerPlate: 12000,
+              }),
               makeMealItem({ id: 'chai', mealName: 'Chai Tapri', pax: 30, limitedSeating: true, costPerPlate: 5000 }),
               makeMealItem({ id: 'drinks', mealName: 'Drinks', pax: 30, costPerPlate: 80 }),
-              makeMealItem({ id: 'cake', mealName: 'Engagement Cake', pax: 30, limitedSeating: true, costPerPlate: 3000 }),
+              makeMealItem({
+                id: 'cake',
+                mealName: 'Engagement Cake',
+                pax: 30,
+                limitedSeating: true,
+                costPerPlate: 3000,
+              }),
               makeMealItem({ id: 'dinner', mealName: 'Dinner - poolside', pax: 30, costPerPlate: 900 }),
             ],
           }),
@@ -882,7 +912,13 @@ describe('QuotationDocument', () => {
             items: [
               makeMealItem({ id: 'breakfast', mealName: 'Breakfast', pax: 50, costPerPlate: 350 }),
               makeMealItem({ id: 'starter', mealName: 'Starter', pax: 300, costPerPlate: 180 }),
-              makeMealItem({ id: 'chaat2', mealName: 'Chaat Counter', pax: 300, limitedSeating: true, costPerPlate: 45000 }),
+              makeMealItem({
+                id: 'chaat2',
+                mealName: 'Chaat Counter',
+                pax: 300,
+                limitedSeating: true,
+                costPerPlate: 45000,
+              }),
               makeMealItem({ id: 'welcome', mealName: 'Welcome Drink', pax: 300, costPerPlate: 210 }),
               makeMealItem({ id: 'lunch', mealName: 'Lunch', pax: 300, costPerPlate: 1200 }),
             ],
@@ -985,7 +1021,13 @@ describe('QuotationDocument', () => {
       const table = screen.getByRole('table', { name: 'Bank Account Details' });
       const rows = within(table).getAllByRole('row');
       expect(rows).toHaveLength(6);
-      expect(rows.map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent))).toEqual([
+      expect(
+        rows.map((row) =>
+          within(row)
+            .getAllByRole('cell')
+            .map((cell) => cell.textContent)
+        )
+      ).toEqual([
         ['Name', 'Aaradhya Adorer'],
         ['Account Number', '142320110000165'],
         ['Bank Name', 'Bank of India'],

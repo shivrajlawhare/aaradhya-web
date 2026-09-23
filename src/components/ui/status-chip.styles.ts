@@ -1,5 +1,5 @@
-import { colorTokens } from '../../theme/tokens';
 import { EventStatus } from '../../contract';
+import { colorTokens } from '../../theme/tokens';
 
 interface StatusChipColors {
   backgroundColor: string;

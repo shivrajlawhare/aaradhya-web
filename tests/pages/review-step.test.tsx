@@ -39,8 +39,22 @@ const mockCreateEventApi = (responseStatus: number) => {
           status: 'Tentative',
           eventManager: 'manager-1',
           clientContacts: [],
-          accommodation: { checkIn: null, checkOut: null, totalDays: null, roomLines: [], totalOccupancy: 0, totalCharges: 0 },
-          payment: { totalEstimatedAmount: 0, advanceRequired: 0, advancePaid: 0, advancePaidDate: null, paymentMode: null, balance: 0 },
+          accommodation: {
+            checkIn: null,
+            checkOut: null,
+            totalDays: null,
+            roomLines: [],
+            totalOccupancy: 0,
+            totalCharges: 0,
+          },
+          payment: {
+            totalEstimatedAmount: 0,
+            advanceRequired: 0,
+            advancePaid: 0,
+            advancePaidDate: null,
+            paymentMode: null,
+            balance: 0,
+          },
           documentsChecklist: {
             aadharCard: false,
             panCard: false,
@@ -58,7 +72,7 @@ const mockCreateEventApi = (responseStatus: number) => {
         });
       }
       throw new Error(`Unhandled request: ${url}`);
-    }),
+    })
   );
 };
 
@@ -107,7 +121,7 @@ const renderWizard = (initialPath: string) => {
           </ToastProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 };
 
@@ -116,7 +130,7 @@ const reviewPath = WIZARD_STEPS[4]!.path;
 const seedSession = () => {
   localStorage.setItem(
     SESSION_STORAGE_KEY,
-    JSON.stringify({ token: 'signed-jwt', user: { id: 'manager-1', name: 'Priya Nair', role: 'EventManager' } }),
+    JSON.stringify({ token: 'signed-jwt', user: { id: 'manager-1', name: 'Priya Nair', role: 'EventManager' } })
   );
 };
 
@@ -360,7 +374,11 @@ describe('ReviewStep', () => {
 
   it('blocks submission with a message when no Client Contact has a name, without calling the API', async () => {
     mockCreateEventApi(201);
-    seedWizardData({ 'client-details': { contacts: [{ id: 'bride', roleLabel: 'Bride', isDefault: true, name: '', contactNumber: '' }] } });
+    seedWizardData({
+      'client-details': {
+        contacts: [{ id: 'bride', roleLabel: 'Bride', isDefault: true, name: '', contactNumber: '' }],
+      },
+    });
     renderWizard(reviewPath);
     await screen.findByText('Poolside');
 
@@ -368,8 +386,8 @@ describe('ReviewStep', () => {
 
     expect(
       await screen.findByText(
-        'Add at least one Client Contact with both a name and a contact number in Step 1 before generating the quotation.',
-      ),
+        'Add at least one Client Contact with both a name and a contact number in Step 1 before generating the quotation.'
+      )
     ).toBeInTheDocument();
     expect(lastCreateEventBody).toBeUndefined();
   });
@@ -388,8 +406,8 @@ describe('ReviewStep', () => {
 
     expect(
       await screen.findByText(
-        'Add at least one Client Contact with both a name and a contact number in Step 1 before generating the quotation.',
-      ),
+        'Add at least one Client Contact with both a name and a contact number in Step 1 before generating the quotation.'
+      )
     ).toBeInTheDocument();
     expect(lastCreateEventBody).toBeUndefined();
   });
@@ -406,12 +424,15 @@ describe('ReviewStep', () => {
           return new Promise((resolve) => {
             resolveFirstCall = () =>
               resolve(
-                new Response(JSON.stringify({ id: 'evt-1' }), { status: 201, headers: { 'content-type': 'application/json' } }),
+                new Response(JSON.stringify({ id: 'evt-1' }), {
+                  status: 201,
+                  headers: { 'content-type': 'application/json' },
+                })
               );
           });
         }
         throw new Error(`Unhandled request: ${url}`);
-      }),
+      })
     );
     seedWizardData();
     renderWizard(reviewPath);

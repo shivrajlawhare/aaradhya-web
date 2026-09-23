@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router-dom';
 import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import { tsr } from '../../api/client';
 import { useToast } from '../../components/ui/toast-provider';
 import { EVENT_LIST_PATH } from '../../routes';
@@ -44,8 +44,8 @@ const DeleteEventDialog = ({ eventId, eventDisplayId, open, onClose }: DeleteEve
       <DialogTitle>Delete {eventDisplayId}?</DialogTitle>
       <DialogContent>
         <DialogContentText>
-          This permanently deletes {eventDisplayId} — including every Session, Item, Accommodation, Payment,
-          Document, and its entire Activity history. This action cannot be undone.
+          This permanently deletes {eventDisplayId} — including every Session, Item, Accommodation, Payment, Document,
+          and its entire Activity history. This action cannot be undone.
         </DialogContentText>
       </DialogContent>
       <DialogActions>

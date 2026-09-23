@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import {
@@ -18,12 +18,12 @@ import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
 import { Controller, useForm } from 'react-hook-form';
 import { tsr } from '../../api/client';
 import { ItemType } from '../../contract';
-import { fromPickerTime, toPickerTime } from '../event-detail/date-input';
-import { formatAmount } from '../event-detail/format-amount';
-import MenuItemSearch, { type MenuItemChip } from '../event-detail/menu-item-search';
 import { useEventWizard } from '../../stores/event-wizard-context';
 import { formatEventDate, formatQuotationPax, formatSessionDuration } from '../../utils/quotation-formatting';
 import { getDistinctDates } from '../../utils/session-dates';
+import { fromPickerTime, toPickerTime } from '../event-detail/date-input';
+import { formatAmount } from '../event-detail/format-amount';
+import MenuItemSearch, { type MenuItemChip } from '../event-detail/menu-item-search';
 import type { WizardSessionRow } from './event-details-step';
 import {
   addButtonStyles,
@@ -248,9 +248,13 @@ const SessionsItemsStep = () => {
   };
 
   const activeDateEntries = byDate[activeDate] ?? [];
-  const ceremonyEntries = activeDateEntries.filter((entry): entry is WizardCeremonyItem => entry.type === ItemType.Event);
+  const ceremonyEntries = activeDateEntries.filter(
+    (entry): entry is WizardCeremonyItem => entry.type === ItemType.Event
+  );
   const foodEntries = activeDateEntries.filter((entry): entry is WizardFoodItem => entry.type === ItemType.Meal);
-  const activeDateSessions = sessions.filter((session) => activeDate >= session.startDate && activeDate <= session.endDate);
+  const activeDateSessions = sessions.filter(
+    (session) => activeDate >= session.startDate && activeDate <= session.endDate
+  );
 
   const handleAddCeremonyEvent = ceremonyForm.handleSubmit((values) => {
     const eventName =
@@ -284,7 +288,10 @@ const SessionsItemsStep = () => {
   };
 
   const handleRemoveCeremonyRow = (id: string) => {
-    setByDate((current) => ({ ...current, [activeDate]: (current[activeDate] ?? []).filter((entry) => entry.id !== id) }));
+    setByDate((current) => ({
+      ...current,
+      [activeDate]: (current[activeDate] ?? []).filter((entry) => entry.id !== id),
+    }));
     if (editingCeremonyId === id) {
       handleCancelCeremonyEdit();
     }
@@ -312,7 +319,7 @@ const SessionsItemsStep = () => {
       } catch {
         const refetched = await menuItemsQuery.refetch();
         const match = (refetched.data?.body ?? []).find(
-          (option) => option.name.trim().toLowerCase() === chip.name.trim().toLowerCase(),
+          (option) => option.name.trim().toLowerCase() === chip.name.trim().toLowerCase()
         );
         if (!match) {
           return null;
@@ -325,7 +332,8 @@ const SessionsItemsStep = () => {
 
   const handleAddFoodEvent = foodForm.handleSubmit(async (values) => {
     setFoodSubmitError(null);
-    const mealName = values.mealNameOption === CUSTOM_MEAL_NAME_OPTION ? values.mealNameCustom.trim() : values.mealNameOption;
+    const mealName =
+      values.mealNameOption === CUSTOM_MEAL_NAME_OPTION ? values.mealNameCustom.trim() : values.mealNameOption;
     const hadNewChips = values.menuItems.some((chip) => chip.id === '');
     const resolvedMenuItems = await resolveMenuItemChips(values.menuItems);
     if (resolvedMenuItems === null) {
@@ -354,7 +362,9 @@ const SessionsItemsStep = () => {
     };
     setByDate((current) => {
       const existing = current[activeDate] ?? [];
-      const next = editingFoodId ? existing.map((entry) => (entry.id === editingFoodId ? newItem : entry)) : [...existing, newItem];
+      const next = editingFoodId
+        ? existing.map((entry) => (entry.id === editingFoodId ? newItem : entry))
+        : [...existing, newItem];
       return { ...current, [activeDate]: next };
     });
     foodForm.reset(emptyFoodEntry);
@@ -372,7 +382,10 @@ const SessionsItemsStep = () => {
   };
 
   const handleRemoveFoodRow = (id: string) => {
-    setByDate((current) => ({ ...current, [activeDate]: (current[activeDate] ?? []).filter((entry) => entry.id !== id) }));
+    setByDate((current) => ({
+      ...current,
+      [activeDate]: (current[activeDate] ?? []).filter((entry) => entry.id !== id),
+    }));
     if (editingFoodId === id) {
       handleCancelFoodEdit();
     }
@@ -380,7 +393,9 @@ const SessionsItemsStep = () => {
 
   if (distinctDates.length === 0) {
     return (
-      <Typography variant="bodyM">Add at least one Session in Event Details before entering Sessions & Items.</Typography>
+      <Typography variant="bodyM">
+        Add at least one Session in Event Details before entering Sessions & Items.
+      </Typography>
     );
   }
 
@@ -448,7 +463,11 @@ const SessionsItemsStep = () => {
               name="startTime"
               control={ceremonyForm.control}
               render={({ field }) => (
-                <StaticTimePicker ampm value={toPickerTime(field.value)} onChange={(time) => field.onChange(fromPickerTime(time))} />
+                <StaticTimePicker
+                  ampm
+                  value={toPickerTime(field.value)}
+                  onChange={(time) => field.onChange(fromPickerTime(time))}
+                />
               )}
             />
           </Stack>
@@ -460,7 +479,11 @@ const SessionsItemsStep = () => {
               name="endTime"
               control={ceremonyForm.control}
               render={({ field }) => (
-                <StaticTimePicker ampm value={toPickerTime(field.value)} onChange={(time) => field.onChange(fromPickerTime(time))} />
+                <StaticTimePicker
+                  ampm
+                  value={toPickerTime(field.value)}
+                  onChange={(time) => field.onChange(fromPickerTime(time))}
+                />
               )}
             />
           </Stack>
@@ -528,7 +551,11 @@ const SessionsItemsStep = () => {
               name="startTime"
               control={foodForm.control}
               render={({ field }) => (
-                <StaticTimePicker ampm value={toPickerTime(field.value)} onChange={(time) => field.onChange(fromPickerTime(time))} />
+                <StaticTimePicker
+                  ampm
+                  value={toPickerTime(field.value)}
+                  onChange={(time) => field.onChange(fromPickerTime(time))}
+                />
               )}
             />
           </Stack>
@@ -540,7 +567,11 @@ const SessionsItemsStep = () => {
               name="endTime"
               control={foodForm.control}
               render={({ field }) => (
-                <StaticTimePicker ampm value={toPickerTime(field.value)} onChange={(time) => field.onChange(fromPickerTime(time))} />
+                <StaticTimePicker
+                  ampm
+                  value={toPickerTime(field.value)}
+                  onChange={(time) => field.onChange(fromPickerTime(time))}
+                />
               )}
             />
           </Stack>
@@ -579,7 +610,9 @@ const SessionsItemsStep = () => {
         <Controller
           name="menuItems"
           control={foodForm.control}
-          render={({ field }) => <MenuItemSearch options={menuItemOptions} value={field.value} onChange={field.onChange} />}
+          render={({ field }) => (
+            <MenuItemSearch options={menuItemOptions} value={field.value} onChange={field.onChange} />
+          )}
         />
         <Typography variant="bodyM" sx={previewLineStyles}>
           Shown on Quotation as: {formatQuotationPax(safeFoodPax, foodLimitedSeating)}
@@ -617,11 +650,13 @@ const SessionsItemsStep = () => {
           const isEditing = editingFoodId === item.id;
           const cardSx = isEditing ? rowCardEditingStyles : rowCardStyles;
           const mealNameLabel = item.mealName || '(blank food row)';
-          const menuItemsSuffix = item.menuItems.length > 0 ? ` · ${item.menuItems.map((menuItem) => menuItem.name).join(', ')}` : '';
+          const menuItemsSuffix =
+            item.menuItems.length > 0 ? ` · ${item.menuItems.map((menuItem) => menuItem.name).join(', ')}` : '';
           return (
             <Stack key={item.id} direction="row" sx={cardSx} onClick={() => handleEditFoodRow(item)}>
               <Typography variant="bodyM">
-                {mealNameLabel} · {formatQuotationPax(item.pax, item.limitedSeating)} · {formatAmount(item.costPerPlate)}
+                {mealNameLabel} · {formatQuotationPax(item.pax, item.limitedSeating)} ·{' '}
+                {formatAmount(item.costPerPlate)}
                 {menuItemsSuffix}
               </Typography>
               <IconButton

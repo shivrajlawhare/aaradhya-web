@@ -1,4 +1,4 @@
-import { Autocomplete, Chip, TextField, createFilterOptions } from '@mui/material';
+import { Autocomplete, Chip, createFilterOptions, TextField } from '@mui/material';
 import { chipStyles, searchFieldStyles } from './menu-item-search.styles';
 
 // id === '' marks a chip that hasn't been resolved to a real Menu Item yet

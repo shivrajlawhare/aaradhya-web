@@ -23,9 +23,7 @@ const makeSession = (overrides: Partial<MockCalendarSession> = {}): MockCalendar
 
 describe('mapSessionsToSchedulerEvents', () => {
   it('maps a single-day, timed session to one all-fields-set SchedulerEvent', () => {
-    const [event] = mapSessionsToSchedulerEvents([
-      makeSession({ startTime: '10:00', endTime: '14:00' }),
-    ]);
+    const [event] = mapSessionsToSchedulerEvents([makeSession({ startTime: '10:00', endTime: '14:00' })]);
 
     expect(event).toMatchObject({
       id: 'event-1',
@@ -80,7 +78,12 @@ describe('mapSessionsToSchedulerEvents', () => {
       }),
       makeSession({
         id: 'session-2',
-        event: { id: 'event-2', eventFamilyType: 'Corporate Offsite', status: EventStatus.Confirmed, eventManager: 'manager-1' },
+        event: {
+          id: 'event-2',
+          eventFamilyType: 'Corporate Offsite',
+          status: EventStatus.Confirmed,
+          eventManager: 'manager-1',
+        },
       }),
     ]);
 
@@ -88,9 +91,11 @@ describe('mapSessionsToSchedulerEvents', () => {
     expect(events.map((event) => event.aaradhyaEventId).sort()).toEqual(['event-1', 'event-2']);
   });
 
-  it('sets resource to the Event\'s current status', () => {
+  it("sets resource to the Event's current status", () => {
     const [event] = mapSessionsToSchedulerEvents([
-      makeSession({ event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Cancelled, eventManager: 'manager-1' } }),
+      makeSession({
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Cancelled, eventManager: 'manager-1' },
+      }),
     ]);
 
     expect(event?.resource).toBe('Cancelled');

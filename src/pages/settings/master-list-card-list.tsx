@@ -1,6 +1,5 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { Box, IconButton, Paper, Stack, Switch, Typography } from '@mui/material';
-import type { MasterListRow, SectionConfig } from './settings-sections';
 import {
   actionsRowStyles,
   activeStatusStyles,
@@ -11,6 +10,7 @@ import {
   inactiveStatusStyles,
   listStyles,
 } from './master-list-card-list.styles';
+import type { MasterListRow, SectionConfig } from './settings-sections';
 
 interface MasterListCardListProps {
   section: SectionConfig;

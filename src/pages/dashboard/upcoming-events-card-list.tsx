@@ -1,11 +1,17 @@
-import { useNavigate } from 'react-router-dom';
 import { Box, Paper, Stack, Typography } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import type { z } from 'zod';
 import { createEventRowActivation } from '../../components/ui/event-row-activation';
 import type { dashboardUpcomingEventResultSchema } from '../../contract';
 import { toDateInputValue } from '../event-detail/date-input';
+import {
+  cardStyles,
+  clientStyles,
+  dateStyles,
+  emptyStateCardStyles,
+  listStyles,
+} from './upcoming-events-card-list.styles';
 import { formatClientNames } from './upcoming-events-table';
-import { cardStyles, clientStyles, dateStyles, emptyStateCardStyles, listStyles } from './upcoming-events-card-list.styles';
 
 type UpcomingEvent = z.infer<typeof dashboardUpcomingEventResultSchema>;
 

@@ -1,10 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  EventWizardProvider,
-  WIZARD_STORAGE_KEY,
-  useEventWizard,
-} from '../../src/stores/event-wizard-context';
+import { EventWizardProvider, useEventWizard, WIZARD_STORAGE_KEY } from '../../src/stores/event-wizard-context';
 
 // A test-only harness exposing useEventWizard() through real DOM
 // interactions (type, click) rather than reaching into the hook directly —
@@ -33,7 +29,7 @@ const renderHarness = () =>
   render(
     <EventWizardProvider>
       <WizardStoreHarness />
-    </EventWizardProvider>,
+    </EventWizardProvider>
   );
 
 afterEach(() => {

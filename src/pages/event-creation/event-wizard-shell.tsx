@@ -5,8 +5,8 @@ import { EVENT_LIST_PATH } from '../../routes';
 import { EventWizardProvider, useEventWizard } from '../../stores/event-wizard-context';
 import { contentStyles, headerRowStyles, shellStyles } from './event-wizard-shell.styles';
 import WizardFooter from './wizard-footer';
-import WizardStepper from './wizard-stepper';
 import { isWizardStepReady } from './wizard-step-readiness';
+import WizardStepper from './wizard-stepper';
 import type { WizardStepId } from './wizard-steps';
 
 interface EventWizardShellProps {

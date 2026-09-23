@@ -1,6 +1,6 @@
 import { Box } from '@mui/material';
-import { SECTIONS, type SectionId } from './settings-sections';
 import { navListStyles, sectionRowStyles } from './section-nav-list.styles';
+import { type SectionId, SECTIONS } from './settings-sections';
 
 interface SectionNavListProps {
   selected: SectionId;

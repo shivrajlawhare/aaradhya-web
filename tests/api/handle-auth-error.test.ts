@@ -5,7 +5,7 @@ import { SESSION_STORAGE_KEY } from '../../src/stores/auth-context';
 const seedSession = () => {
   localStorage.setItem(
     SESSION_STORAGE_KEY,
-    JSON.stringify({ token: 'a-token', user: { id: 'user-1', name: 'Priya Nair', role: 'EventManager' } }),
+    JSON.stringify({ token: 'a-token', user: { id: 'user-1', name: 'Priya Nair', role: 'EventManager' } })
   );
 };
 

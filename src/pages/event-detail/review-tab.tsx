@@ -33,7 +33,12 @@ const ReviewTab = ({ event, canEdit, onEventChanged }: ReviewTabProps) => (
         same class of financial data STORY-046 already strips end-to-end
         for every non-EventManager role (`extras` is undefined for them). */}
     {canEdit && event.extras && (
-      <TotalCostSummaryPanel eventId={event.id} extras={event.extras} canEdit={canEdit} onEventChanged={onEventChanged} />
+      <TotalCostSummaryPanel
+        eventId={event.id}
+        extras={event.extras}
+        canEdit={canEdit}
+        onEventChanged={onEventChanged}
+      />
     )}
     {canEdit && <GenerateQuotationPdfButton event={event} />}
     {/* STORY-045's entry point into the Quotation Preview screen. */}

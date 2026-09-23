@@ -23,7 +23,13 @@ export const SECTIONS: SectionConfig[] = [
   { id: 'venues', label: 'Venues', costLabel: 'Default Venue Cost', supportsStatus: true, supportsEdit: true },
   { id: 'eventTypes', label: 'Event Types', costLabel: null, supportsStatus: true, supportsEdit: true },
   { id: 'roomTypes', label: 'Room Types', costLabel: 'Default Tariff', supportsStatus: true, supportsEdit: true },
-  { id: 'menuItems', label: 'Menu Items', costLabel: 'Default Cost / Plate', supportsStatus: false, supportsEdit: true },
+  {
+    id: 'menuItems',
+    label: 'Menu Items',
+    costLabel: 'Default Cost / Plate',
+    supportsStatus: false,
+    supportsEdit: true,
+  },
 ];
 
 // A common row shape every section's table/card list renders from, so

@@ -1,5 +1,5 @@
 import type { SxProps, Theme } from '@mui/material';
-import { spaceTokens, radiusTokens } from '../../theme/tokens';
+import { radiusTokens, spaceTokens } from '../../theme/tokens';
 
 export const tableCardStyles: SxProps<Theme> = {
   width: '100%',

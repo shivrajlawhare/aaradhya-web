@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
 import type { WizardStepId } from '../pages/event-creation/wizard-steps';
 
 // Arbitrary, step-owned JSON — each step's own future story (STORY-064
@@ -79,7 +79,7 @@ export const EventWizardProvider = ({ children }: EventWizardProviderProps) => {
 
   const value = useMemo<WizardContextValue>(
     () => ({ data, setStepData, clearWizard }),
-    [data, setStepData, clearWizard],
+    [data, setStepData, clearWizard]
   );
 
   return <WizardContext.Provider value={value}>{children}</WizardContext.Provider>;

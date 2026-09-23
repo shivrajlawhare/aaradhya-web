@@ -9,7 +9,7 @@ import { type CalendarFilters, type StatusFilterValue } from './calendar-filters
 // Select-driven EventStatus narrowing avoids a cast, just applied to an
 // actually-unchecked source (a URL, not a fully-typed form control).
 const STATUS_LOOKUP: Record<string, EventStatus> = Object.fromEntries(
-  Object.values(EventStatus).map((status) => [status, status]),
+  Object.values(EventStatus).map((status) => [status, status])
 );
 
 // Query param names deliberately differ from CalendarFilters' own field
@@ -32,7 +32,7 @@ const EVENT_PARAM = 'event';
 // not that every param be present together.
 export const parseCalendarSearchParams = (
   searchParams: URLSearchParams,
-  fallbackMonthShift: MonthShift,
+  fallbackMonthShift: MonthShift
 ): { monthShift: MonthShift; filters: CalendarFilters } => {
   const monthParam = Number(searchParams.get(MONTH_PARAM));
   const yearParam = Number(searchParams.get(YEAR_PARAM));

@@ -1,14 +1,14 @@
 import { useState } from 'react';
+import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
+import aaradhyaMark from '../../assets/aaradhya-mark.svg';
 import { loginBodySchema } from '../../contract';
 import { DASHBOARD_PATH } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
 import { cardStyles, fieldStackStyles, pageStyles, wordmarkImageStyles, wordmarkStyles } from './login-page.styles';
-import aaradhyaMark from '../../assets/aaradhya-mark.svg';
 
 type LoginFormValues = z.infer<typeof loginBodySchema>;
 
@@ -60,9 +60,9 @@ const LoginPage = () => {
     <Box sx={pageStyles}>
       <Paper sx={cardStyles} component="form" onSubmit={handleSubmit(handleLogin)} noValidate>
         <Stack sx={fieldStackStyles}>
-           <Box sx={wordmarkStyles}>
-                  <Box component="img" src={aaradhyaMark} alt="Aaradhya" sx={wordmarkImageStyles} />
-                </Box>
+          <Box sx={wordmarkStyles}>
+            <Box component="img" src={aaradhyaMark} alt="Aaradhya" sx={wordmarkImageStyles} />
+          </Box>
           <TextField label="Username" autoComplete="username" fullWidth {...register('username')} />
           <TextField
             label="Password"
@@ -76,12 +76,7 @@ const LoginPage = () => {
               <Typography variant="bodyM">{loginError}</Typography>
             </Alert>
           )}
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            disabled={!canSubmit || loginMutation.isPending}
-          >
+          <Button type="submit" variant="contained" fullWidth disabled={!canSubmit || loginMutation.isPending}>
             Log in
           </Button>
         </Stack>

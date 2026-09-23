@@ -26,16 +26,16 @@
 //      real entry order (Breakfast, Welcome Drink, Lunch), the same
 //      "don't invent an unrequested reorder" call STORY-072 already
 //      documents for example_quatation_1.pdf's own Cake/Dinner swap.
-import { render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { ClientContactRole, ItemType, SessionStatus } from '../../src/contract';
 import QuotationDocument, {
   type QuotationDocumentAccommodation,
   type QuotationDocumentClientContact,
   type QuotationDocumentManualLineItem,
   type QuotationDocumentSession,
 } from '../../src/pages/quotation-preview/quotation-document';
-import { ClientContactRole, ItemType, SessionStatus } from '../../src/contract';
 import { theme } from '../../src/theme/theme';
 
 const renderFixture = (options: {
@@ -58,7 +58,7 @@ const renderFixture = (options: {
         foodGstRatePercent={5}
         quotationDate={new Date(2026, 7, 23)}
       />
-    </ThemeProvider>,
+    </ThemeProvider>
   );
 
 describe('Quotation fidelity — example_quatation_1.pdf (Sneha & Nishant)', () => {
@@ -342,12 +342,18 @@ describe('Quotation fidelity — example_quatation_1.pdf (Sneha & Nishant)', () 
     { name: 'Bhatji', note: 'wedding', amount: 7000 },
   ];
 
-  it('renders the Client Details table exactly (3 rows, including Nishant\'s blank Contact Number)', () => {
+  it("renders the Client Details table exactly (3 rows, including Nishant's blank Contact Number)", () => {
     renderFixture({ clientContacts, sessions, accommodation, extraLineItems });
 
     const table = screen.getByRole('table', { name: 'Client Details' });
     const rows = within(table).getAllByRole('row').slice(1);
-    expect(rows.map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent))).toEqual([
+    expect(
+      rows.map((row) =>
+        within(row)
+          .getAllByRole('cell')
+          .map((cell) => cell.textContent)
+      )
+    ).toEqual([
       ['Bride', 'Sneha Bhaskar Vaidya', '9850053586'],
       ['Groom', 'Nishant', ''],
       ['Point of Contact', 'Mr. Bhaskar Vaidya', '9422055215'],
@@ -359,7 +365,13 @@ describe('Quotation fidelity — example_quatation_1.pdf (Sneha & Nishant)', () 
 
     const table = screen.getByRole('table', { name: 'Event Details' });
     const rows = within(table).getAllByRole('row').slice(1);
-    expect(rows.map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent))).toEqual([
+    expect(
+      rows.map((row) =>
+        within(row)
+          .getAllByRole('cell')
+          .map((cell) => cell.textContent)
+      )
+    ).toEqual([
       ['Engagement', '10/12/2026', '6pm to 10pm', '30', 'Poolside', '60,000/-'],
       ['Wedding', '11/12/2026', '9am to 3pm', '300', 'Full Banquet', '1,20,000/-'],
     ]);
@@ -379,7 +391,14 @@ describe('Quotation fidelity — example_quatation_1.pdf (Sneha & Nishant)', () 
     expect(firstRoomLineCells[1]!.textContent).toBe('12-12-202611am');
     expect(firstRoomLineCells[2]!.textContent).toBe('2');
 
-    expect(rows.map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent).slice(-5))).toEqual([
+    expect(
+      rows.map((row) =>
+        within(row)
+          .getAllByRole('cell')
+          .map((cell) => cell.textContent)
+          .slice(-5)
+      )
+    ).toEqual([
       ['Delux', '2', '2500', '14', '73500'],
       ['Executive', '3', '3500', '2', '14700'],
       ['Dormatory', '6', '5000', '2', '21000'],
@@ -401,7 +420,11 @@ describe('Quotation fidelity — example_quatation_1.pdf (Sneha & Nishant)', () 
     // Drinks, Dinner - poolside, Engagement Cake = 8.
     expect(rows).toHaveLength(8);
 
-    expect(within(rows[1]!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
+    expect(
+      within(rows[1]!)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent)
+    ).toEqual([
       'Hi Tea snacks - poolside',
       '6pm to 7pm',
       '30',
@@ -414,41 +437,37 @@ describe('Quotation fidelity — example_quatation_1.pdf (Sneha & Nishant)', () 
     expect(ceremonyCell.textContent).toBe('Engagement Sangeet - Poolside');
     expect(ceremonyCell).toHaveStyle({ backgroundColor: 'rgb(217, 217, 217)' });
 
-    expect(within(rows[3]!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
-      'Chaat Counter',
-      '',
-      'L.S. (30pax)',
-      '12000/-',
-      '1. Aloo Tikki Chat2. Pani puri/ sevpuri',
-    ]);
-    expect(within(rows[4]!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
-      'Chai Tapri',
-      '',
-      'L.S. (30pax)',
-      '5000/-',
-      '1. Maggie2. Tea',
-    ]);
-    expect(within(rows[5]!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
-      'Drinks',
-      '',
-      '30',
-      '80/-',
-      '1. Mint Mojito',
-    ]);
-    expect(within(rows[6]!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
+    expect(
+      within(rows[3]!)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent)
+    ).toEqual(['Chaat Counter', '', 'L.S. (30pax)', '12000/-', '1. Aloo Tikki Chat2. Pani puri/ sevpuri']);
+    expect(
+      within(rows[4]!)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent)
+    ).toEqual(['Chai Tapri', '', 'L.S. (30pax)', '5000/-', '1. Maggie2. Tea']);
+    expect(
+      within(rows[5]!)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent)
+    ).toEqual(['Drinks', '', '30', '80/-', '1. Mint Mojito']);
+    expect(
+      within(rows[6]!)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent)
+    ).toEqual([
       'Dinner - poolside',
       '',
       '30',
       '900/-',
       '1. Veg Manchow Soup2. Veg Manchurian3. Paneer Tikka4. Jeera Rice5. Dal Fry6. Veg Kolhapuri7. Paneer Bhurji8. Tandoori Roti9. Fulke10. Butter on the side11. Peanut Salad12. Veg Raita13. Green Salad14. Rabdi Jalebi15. Gulabjamun16. Kulfi',
     ]);
-    expect(within(rows[7]!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
-      'Engagement Cake',
-      '',
-      'L.S. (30pax)',
-      '3000/-',
-      '',
-    ]);
+    expect(
+      within(rows[7]!)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent)
+    ).toEqual(['Engagement Cake', '', 'L.S. (30pax)', '3000/-', '']);
   });
 
   it('renders the 11/12/2026 Event Details table exactly, Muhurta merged with time only', () => {
@@ -460,46 +479,44 @@ describe('Quotation fidelity — example_quatation_1.pdf (Sneha & Nishant)', () 
     // Lunch = 7.
     expect(rows).toHaveLength(7);
 
-    expect(within(rows[1]!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
+    expect(
+      within(rows[1]!)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent)
+    ).toEqual([
       'Breakfast',
       '8am to 9:30am',
       '50',
       '350/-',
       '1. Tea2. Coffee3. Hot Milk4. Aloo paratha with Butter5. Curd6. Poha7. Idli8. Coconut Chutney (Green Spicy)9. Cornflakes/Chocos10. Mix Fruit Juice11. Cut Fruits',
     ]);
-    expect(within(rows[2]!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
-      'Starter',
-      '',
-      '300',
-      '180/-',
-      '1. Spring Roll2. Cheese potato bites',
-    ]);
-    expect(within(rows[3]!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
-      'Chaat Counter',
-      '',
-      'L.S. (300pax)',
-      '45000/-',
-      '1. Pani puri2. Sev puri',
-    ]);
-    expect(within(rows[4]!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
-      'Welcome Drink - moving',
-      '10:30am to 11am',
-      '300',
-      '210/-',
-      '1. Thandai2. Juice3. Cold drinks',
-    ]);
+    expect(
+      within(rows[2]!)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent)
+    ).toEqual(['Starter', '', '300', '180/-', '1. Spring Roll2. Cheese potato bites']);
+    expect(
+      within(rows[3]!)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent)
+    ).toEqual(['Chaat Counter', '', 'L.S. (300pax)', '45000/-', '1. Pani puri2. Sev puri']);
+    expect(
+      within(rows[4]!)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent)
+    ).toEqual(['Welcome Drink - moving', '10:30am to 11am', '300', '210/-', '1. Thandai2. Juice3. Cold drinks']);
     // Muhurta: time set, no venue — "Name Time" per the AC's own literal
     // example (this renderer's "to" join, not the PDF's own one-off "–").
     const muhurtaCell = rows[5]!.querySelector('td')!;
     expect(muhurtaCell.textContent).toBe('Muhurta 11am to 12:30pm');
 
     const lunchRow = rows[6]!;
-    expect(within(lunchRow).getAllByRole('cell').map((cell) => cell.textContent).slice(0, 4)).toEqual([
-      'Lunch',
-      '12:30pm to 3pm',
-      '300',
-      '1200/-',
-    ]);
+    expect(
+      within(lunchRow)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent)
+        .slice(0, 4)
+    ).toEqual(['Lunch', '12:30pm to 3pm', '300', '1200/-']);
     expect(within(lunchRow).getByText('1. Spring Roll')).toBeInTheDocument();
     expect(within(lunchRow).getByText('26. Ice – Cream with Choco syrup')).toBeInTheDocument();
   });
@@ -522,7 +539,7 @@ describe('Quotation fidelity — example_quatation_1.pdf (Sneha & Nishant)', () 
 
     const decorationRow = within(table).getByText('Decoration').closest('tr')!;
     expect(
-      within(decorationRow).getByText('poolside engg sangeet + Wedding(Vidhi mandap with saptapadi)'),
+      within(decorationRow).getByText('poolside engg sangeet + Wedding(Vidhi mandap with saptapadi)')
     ).toBeInTheDocument();
     expect(within(decorationRow).getByText('150000')).toBeInTheDocument();
     expect(within(table).getByText('Bhatji').closest('tr')!).toHaveTextContent('wedding');
@@ -536,7 +553,7 @@ describe('Quotation fidelity — example_quatation_1.pdf (Sneha & Nishant)', () 
 
     expect(within(screen.getByRole('list', { name: 'Terms & Conditions' })).getAllByRole('listitem')).toHaveLength(13);
     expect(
-      within(screen.getByRole('list', { name: 'Documents Required from Bride and Groom' })).getAllByRole('listitem'),
+      within(screen.getByRole('list', { name: 'Documents Required from Bride and Groom' })).getAllByRole('listitem')
     ).toHaveLength(6);
     expect(screen.getByRole('table', { name: 'Bank Account Details' })).toBeInTheDocument();
     expect(screen.getByText('Aaradhya Adorer')).toBeInTheDocument();
@@ -805,7 +822,13 @@ describe('Quotation fidelity — example_quatation_2.pdf (Saish Rege)', () => {
 
     const table = screen.getByRole('table', { name: 'Client Details' });
     const rows = within(table).getAllByRole('row').slice(1);
-    expect(rows.map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent))).toEqual([
+    expect(
+      rows.map((row) =>
+        within(row)
+          .getAllByRole('cell')
+          .map((cell) => cell.textContent)
+      )
+    ).toEqual([
       ['Bride', '', ''],
       ['Groom', '', ''],
       ['Point of Contact', 'Mr. Saish Rege', '7875023468'],
@@ -817,7 +840,13 @@ describe('Quotation fidelity — example_quatation_2.pdf (Saish Rege)', () => {
 
     const table = screen.getByRole('table', { name: 'Event Details' });
     const rows = within(table).getAllByRole('row').slice(1);
-    expect(rows.map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent))).toEqual([
+    expect(
+      rows.map((row) =>
+        within(row)
+          .getAllByRole('cell')
+          .map((cell) => cell.textContent)
+      )
+    ).toEqual([
       ['Halad', '26/02/2027', '9am to 3pm', '150', 'Half Banquet', '60,000/-'],
       ['Engagement', '26/02/2027', '6pm to 10pm', '150', 'Poolside/Half Banquet', '60,000/-'],
       ['Wedding', '27/02/2027', '9am to 3pm', '300', 'Full Banquet', '1,20,000/-'],
@@ -829,7 +858,14 @@ describe('Quotation fidelity — example_quatation_2.pdf (Saish Rege)', () => {
 
     const table = screen.getByRole('table', { name: 'Accommodation Details' });
     const rows = within(table).getAllByRole('row').slice(1);
-    expect(rows.map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent).slice(-5))).toEqual([
+    expect(
+      rows.map((row) =>
+        within(row)
+          .getAllByRole('cell')
+          .map((cell) => cell.textContent)
+          .slice(-5)
+      )
+    ).toEqual([
       ['Delux', '2', '2800', '14', '82320'],
       ['Executive', '3', '3800', '2', '15960'],
       ['Dormatory', '6', '6000', '2', '25200'],
@@ -929,12 +965,12 @@ describe('Quotation fidelity — example_quatation_2.pdf (Saish Rege)', () => {
     expect(within(grandTotalRow).getByText('Rs. 9,49,555 /-')).toBeInTheDocument();
   });
 
-  it('renders the static footer identically to example_quatation_1.pdf\'s own fixture (same fixed constants, no per-Event drift)', () => {
+  it("renders the static footer identically to example_quatation_1.pdf's own fixture (same fixed constants, no per-Event drift)", () => {
     renderFixture({ clientContacts, sessions, accommodation, extraLineItems });
 
     expect(within(screen.getByRole('list', { name: 'Terms & Conditions' })).getAllByRole('listitem')).toHaveLength(13);
     expect(
-      within(screen.getByRole('list', { name: 'Documents Required from Bride and Groom' })).getAllByRole('listitem'),
+      within(screen.getByRole('list', { name: 'Documents Required from Bride and Groom' })).getAllByRole('listitem')
     ).toHaveLength(6);
     expect(screen.getByText('Aaradhya Adorer')).toBeInTheDocument();
     expect(screen.getByText('Regards')).toBeInTheDocument();

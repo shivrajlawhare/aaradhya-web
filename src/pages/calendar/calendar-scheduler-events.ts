@@ -1,6 +1,6 @@
 import type { SchedulerEvent, SchedulerResource } from '@mui/x-scheduler/models';
 import type { z } from 'zod';
-import { EventStatus, type calendarSessionResultSchema } from '../../contract';
+import { type calendarSessionResultSchema, EventStatus } from '../../contract';
 
 type CalendarSession = z.infer<typeof calendarSessionResultSchema>;
 // Only the fields this module actually reads — narrower than the full

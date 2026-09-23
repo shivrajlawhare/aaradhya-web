@@ -5,15 +5,14 @@ import aaradhyaMark from '../../assets/aaradhya-mark.svg';
 import aaradhyaHeaderText from '../../assets/header-text.svg';
 import {
   ClientContactRole,
-  ItemType,
-  SessionStatus,
   clientContactSchema,
   filteredAccommodationResultSchema,
   filteredItemResultSchema,
   filteredSessionResultSchema,
+  ItemType,
   manualLineItemResultSchema,
+  SessionStatus,
 } from '../../contract';
-import { toDateInputValue } from '../event-detail/date-input';
 import { roundToCurrency } from '../../utils/accommodation-calculations';
 import {
   formatAccommodationDate,
@@ -25,6 +24,7 @@ import {
   formatQuotationRupees,
   formatSessionDuration,
 } from '../../utils/quotation-formatting';
+import { toDateInputValue } from '../event-detail/date-input';
 import {
   brandLockupStyles,
   bulletedListStyles,
@@ -181,7 +181,16 @@ export type QuotationDocumentClientContact = z.infer<typeof clientContactSchema>
 // §4), not something this shared render tree should have to do twice.
 export type QuotationDocumentSessionItem = Pick<
   z.infer<typeof filteredItemResultSchema>,
-  'id' | 'type' | 'mealName' | 'pax' | 'costPerPlate' | 'limitedSeating' | 'eventName' | 'venue' | 'startTime' | 'endTime'
+  | 'id'
+  | 'type'
+  | 'mealName'
+  | 'pax'
+  | 'costPerPlate'
+  | 'limitedSeating'
+  | 'eventName'
+  | 'venue'
+  | 'startTime'
+  | 'endTime'
 > & {
   menuItemNames: string[];
 };
@@ -495,9 +504,11 @@ const QuotationDocument = ({
   // Exactly one Food Cost row for the WHOLE table (a per-date subtotal is
   // this story's own explicit non-goal) — summed across every date's own
   // Meal Items, not just costSummaryDateBlocks' last entry.
-  const allMealItemsAcrossDates = dateGroups.flatMap((group) => group.items.filter((item) => item.type === ItemType.Meal));
+  const allMealItemsAcrossDates = dateGroups.flatMap((group) =>
+    group.items.filter((item) => item.type === ItemType.Meal)
+  );
   const foodCostTotal = roundToCurrency(
-    allMealItemsAcrossDates.reduce((total, item) => total + computeFoodItemTotalCost(item), 0),
+    allMealItemsAcrossDates.reduce((total, item) => total + computeFoodItemTotalCost(item), 0)
   );
   // Verified against both reference PDFs' own printed figures: 597150 ×
   // 1.05 = 627007.5 (example_quatation_1.pdf), 391500 × 1.05 = 411075
@@ -606,9 +617,7 @@ const QuotationDocument = ({
         <Typography component="h1" sx={titleTextStyles}>
           Event Quotation
         </Typography>
-        <Typography sx={quotationDateStyles}>
-          Quotation Date: {formatQuotationGenerationDate(quotationDate)}
-        </Typography>
+        <Typography sx={quotationDateStyles}>Quotation Date: {formatQuotationGenerationDate(quotationDate)}</Typography>
       </Box>
 
       <Box sx={sectionStyles}>
@@ -672,7 +681,9 @@ const QuotationDocument = ({
                 <TableCell sx={totalOccupancyCellStyles}>{accommodation?.totalOccupancy ?? 0}</TableCell>
                 <TableCell />
                 <TableCell sx={rowLabelCellStyles}>Total Charges</TableCell>
-                <TableCell sx={totalChargesCellStyles}>{formatQuotationRupees(accommodation?.totalCharges ?? 0)}</TableCell>
+                <TableCell sx={totalChargesCellStyles}>
+                  {formatQuotationRupees(accommodation?.totalCharges ?? 0)}
+                </TableCell>
               </TableRow>
             </TableBody>
           </Table>

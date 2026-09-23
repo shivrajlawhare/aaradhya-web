@@ -6,16 +6,14 @@ import { StandaloneMonthView } from '@mui/x-scheduler/month-view';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { tsr } from '../../api/client';
 import { eventDetailPath } from '../../routes';
-import { formatMonthLabel, shiftMonth, type MonthShift } from './calendar-dates';
+import { formatMonthLabel, type MonthShift, shiftMonth } from './calendar-dates';
 import {
+  type CalendarFilters,
   filterCalendarSessions,
   getDistinctEventFamilyTypes,
   getDistinctVenues,
   isCalendarFiltered,
-  type CalendarFilters,
 } from './calendar-filters';
-import { mapSessionsToSchedulerEvents, STATUS_RESOURCES } from './calendar-scheduler-events';
-import { buildCalendarSearchParams, parseCalendarSearchParams } from './calendar-url-state';
 import {
   gridStyles,
   mobileWeekdayHeaderCellStyles,
@@ -23,6 +21,8 @@ import {
   monthNavStyles,
   pageStyles,
 } from './calendar-page.styles';
+import { mapSessionsToSchedulerEvents, STATUS_RESOURCES } from './calendar-scheduler-events';
+import { buildCalendarSearchParams, parseCalendarSearchParams } from './calendar-url-state';
 import FilterChipRow from './filter-chip-row';
 
 const currentMonthShift = (): MonthShift => {
@@ -68,7 +68,7 @@ const CalendarPage = () => {
   // back to, so navigation always lands on the actual Event.
   const aaradhyaEventIdByOccurrenceId = useMemo(
     () => new Map(mappedEvents.map((event) => [String(event.id), event.aaradhyaEventId])),
-    [mappedEvents],
+    [mappedEvents]
   );
 
   // `replace: true` — changing the month or a filter updates the current

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button, List, ListItem, Stack, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { formatSetup } from '../../components/ui/format-setup';
-import { ItemType, type filteredEventResultSchema } from '../../contract';
+import { type filteredEventResultSchema, ItemType } from '../../contract';
 import { toDateInputValue } from './date-input';
 import SessionForm from './session-form';
 import { listStyles, rowStyles, sectionStyles } from './sessions-tab.styles';

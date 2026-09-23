@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
-import { Link as RouterLink, useParams, useSearchParams } from 'react-router-dom';
 import { Box, CircularProgress, Link, Typography } from '@mui/material';
+import { Link as RouterLink, useParams, useSearchParams } from 'react-router-dom';
 import { tsr } from '../../api/client';
+import { EVENT_LIST_PATH } from '../../routes';
 import GenerateQuotationPdfButton from '../event-detail/generate-quotation-pdf-button';
 import TotalCostSummaryPanel from '../event-detail/total-cost-summary-panel';
-import { EVENT_LIST_PATH } from '../../routes';
 import QuotationDocument from './quotation-document';
 import { pageStyles } from './quotation-preview-page.styles';
 

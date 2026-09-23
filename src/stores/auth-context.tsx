@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, type ReactNode, useContext, useMemo, useState } from 'react';
 import { z } from 'zod';
 import { Role } from '../contract';
 
@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setState({ token: null, user: null });
       },
     }),
-    [state],
+    [state]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

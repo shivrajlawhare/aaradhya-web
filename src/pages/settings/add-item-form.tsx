@@ -1,7 +1,7 @@
-import { useForm } from 'react-hook-form';
 import { Alert, Button, Paper, Stack, TextField, Typography } from '@mui/material';
-import type { SectionConfig } from './settings-sections';
+import { useForm } from 'react-hook-form';
 import { fieldStackStyles, formStyles } from './add-item-form.styles';
+import type { SectionConfig } from './settings-sections';
 
 interface AddItemFormValues {
   name: string;

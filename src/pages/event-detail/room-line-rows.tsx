@@ -1,9 +1,19 @@
-import type { FieldArrayWithId, UseFormRegister } from 'react-hook-form';
-import { Button, IconButton, Paper, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import {
+  Button,
+  IconButton,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+} from '@mui/material';
+import type { FieldArrayWithId, UseFormRegister } from 'react-hook-form';
 import type { z } from 'zod';
 import type { roomLineSchema } from '../../contract';
-import type { AccommodationFormValues } from './rooms-tab';
 import {
   addButtonStyles,
   numericCellStyles,
@@ -11,6 +21,7 @@ import {
   roomTypeFieldStyles,
   tableCardStyles,
 } from './room-line-rows.styles';
+import type { AccommodationFormValues } from './rooms-tab';
 
 type RoomLineResult = z.infer<typeof roomLineSchema> & { totalInclGst: number };
 

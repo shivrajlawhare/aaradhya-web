@@ -1,6 +1,6 @@
-import { afterEach } from 'vitest';
-import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
+import { cleanup } from '@testing-library/react';
+import { afterEach } from 'vitest';
 import { mockMatchMedia } from './match-media';
 
 // jsdom doesn't implement matchMedia — MUI's useMediaQuery (AppShell's own

@@ -1,5 +1,5 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -123,21 +123,31 @@ const mockSettingsApi = (initial: {
       if (method === 'PATCH' && url.includes('/venues/')) {
         const id = url.split('/venues/')[1];
         venues = venues.map((venue) => (venue.id === id ? { ...venue, ...body } : venue));
-        return jsonResponse(200, venues.find((venue) => venue.id === id));
+        return jsonResponse(
+          200,
+          venues.find((venue) => venue.id === id)
+        );
       }
 
       if (method === 'GET' && url.endsWith('/event-types')) {
         return jsonResponse(200, eventTypes);
       }
       if (method === 'POST' && url.endsWith('/event-types')) {
-        const created: MockEventType = makeEventType({ ...body, id: `event-type-${eventTypes.length + 1}`, active: true });
+        const created: MockEventType = makeEventType({
+          ...body,
+          id: `event-type-${eventTypes.length + 1}`,
+          active: true,
+        });
         eventTypes = [...eventTypes, created];
         return jsonResponse(201, created);
       }
       if (method === 'PATCH' && url.includes('/event-types/')) {
         const id = url.split('/event-types/')[1];
         eventTypes = eventTypes.map((eventType) => (eventType.id === id ? { ...eventType, ...body } : eventType));
-        return jsonResponse(200, eventTypes.find((eventType) => eventType.id === id));
+        return jsonResponse(
+          200,
+          eventTypes.find((eventType) => eventType.id === id)
+        );
       }
 
       if (method === 'GET' && url.endsWith('/room-types')) {
@@ -151,7 +161,10 @@ const mockSettingsApi = (initial: {
       if (method === 'PATCH' && url.includes('/room-types/')) {
         const id = url.split('/room-types/')[1];
         roomTypes = roomTypes.map((roomType) => (roomType.id === id ? { ...roomType, ...body } : roomType));
-        return jsonResponse(200, roomTypes.find((roomType) => roomType.id === id));
+        return jsonResponse(
+          200,
+          roomTypes.find((roomType) => roomType.id === id)
+        );
       }
 
       if (method === 'GET' && url.includes('/menu-items')) {
@@ -165,11 +178,14 @@ const mockSettingsApi = (initial: {
       if (method === 'PATCH' && url.includes('/menu-items/')) {
         const id = url.split('/menu-items/')[1];
         menuItems = menuItems.map((menuItem) => (menuItem.id === id ? { ...menuItem, ...body } : menuItem));
-        return jsonResponse(200, menuItems.find((menuItem) => menuItem.id === id));
+        return jsonResponse(
+          200,
+          menuItems.find((menuItem) => menuItem.id === id)
+        );
       }
 
       throw new Error(`Unhandled request: ${method} ${url}`);
-    }),
+    })
   );
 
   return { requestLog };
@@ -191,7 +207,7 @@ const renderPage = () => {
           </ToastProvider>
         </ThemeProvider>
       </tsr.ReactQueryProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 };
 
@@ -318,7 +334,7 @@ describe('SettingsPage', () => {
       expect(screen.queryByText('Status')).not.toBeInTheDocument();
     });
 
-    it('edits a Menu Item\'s name and default cost per plate via the Edit dialog', async () => {
+    it("edits a Menu Item's name and default cost per plate via the Edit dialog", async () => {
       mockMatchMedia(true);
       mockSettingsApi({ menuItems: [makeMenuItem({ name: 'Paneer Tikka', defaultCostPerPlate: 250 })] });
       renderPage();
