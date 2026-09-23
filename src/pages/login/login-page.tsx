@@ -7,7 +7,8 @@ import { tsr } from '../../api/client';
 import { loginBodySchema } from '../../contract';
 import { DASHBOARD_PATH } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
-import { cardStyles, fieldStackStyles, pageStyles } from './login-page.styles';
+import { cardStyles, fieldStackStyles, pageStyles, wordmarkImageStyles, wordmarkStyles } from './login-page.styles';
+import aaradhyaMark from '../../assets/aaradhya-mark.svg';
 
 type LoginFormValues = z.infer<typeof loginBodySchema>;
 
@@ -59,9 +60,9 @@ const LoginPage = () => {
     <Box sx={pageStyles}>
       <Paper sx={cardStyles} component="form" onSubmit={handleSubmit(handleLogin)} noValidate>
         <Stack sx={fieldStackStyles}>
-          <Typography variant="titleL" component="h1">
-            Aaradhya
-          </Typography>
+           <Box sx={wordmarkStyles}>
+                  <Box component="img" src={aaradhyaMark} alt="Aaradhya" sx={wordmarkImageStyles} />
+                </Box>
           <TextField label="Username" autoComplete="username" fullWidth {...register('username')} />
           <TextField
             label="Password"

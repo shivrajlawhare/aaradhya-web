@@ -1,4 +1,6 @@
 import type { SxProps, Theme } from '@mui/material';
+import { colorTokens, radiusTokens, spaceTokens } from '../../theme/tokens';
+
 
 export const pageStyles: SxProps<Theme> = {
   minHeight: '100vh',
@@ -19,4 +21,17 @@ export const cardStyles: SxProps<Theme> = {
 
 export const fieldStackStyles: SxProps<Theme> = {
   gap: 2, // space-16
+};
+
+export const wordmarkStyles: SxProps<Theme> = {
+  display: 'flex',
+  justifyContent: 'center',
+  px: `${spaceTokens.space8}px`,
+  py: `${spaceTokens.space16}px`,
+};
+
+export const wordmarkImageStyles: SxProps<Theme> = {
+  display: 'block',
+  height: 64,
+  width: 'auto',
 };
