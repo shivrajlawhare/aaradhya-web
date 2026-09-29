@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import PageHeader from '../../components/ui/page-header';
 import { EVENT_LIST_PATH } from '../../routes';
 import { EventWizardProvider, useEventWizard } from '../../stores/event-wizard-context';
-import { contentStyles, headerRowStyles, shellStyles } from './event-wizard-shell.styles';
+import { contentStyles, headerActionsStyles, shellStyles } from './event-wizard-shell.styles';
 import WizardFooter from './wizard-footer';
 import { isWizardStepReady } from './wizard-step-readiness';
 import WizardStepper from './wizard-stepper';
@@ -15,13 +16,16 @@ interface EventWizardShellProps {
   // Only Step 5 (STORY-068) needs this — see wizard-footer.tsx's own
   // comment.
   onNext?: () => void;
+  // Extra header actions before Cancel — the slot DEV-11's "One Day
+  // Event" button fills.
+  headerActions?: ReactNode;
 }
 
 // Split from EventWizardShell below so useEventWizard() (Cancel's own
 // clearWizard call, and Next's own readiness check) has a
 // EventWizardProvider ancestor to read — the outer component's job is only
 // to mount that Provider.
-const ShellContent = ({ step, children, onNext }: EventWizardShellProps) => {
+const ShellContent = ({ step, children, onNext, headerActions }: EventWizardShellProps) => {
   const navigate = useNavigate();
   const { data, clearWizard } = useEventWizard();
   // Computed from whatever the current step already wrote into the wizard
@@ -43,14 +47,19 @@ const ShellContent = ({ step, children, onNext }: EventWizardShellProps) => {
 
   return (
     <Box sx={shellStyles}>
-      <Box sx={headerRowStyles}>
-        <Typography variant="titleL" component="h1">
-          New Event
-        </Typography>
-        <Button variant="text" onClick={handleCancel}>
-          Cancel
-        </Button>
-      </Box>
+      <PageHeader
+        eyebrow="Create"
+        title="New Event"
+        isMobileDecorHidden
+        actions={
+          <Box sx={headerActionsStyles}>
+            {headerActions}
+            <Button variant="ghost" onClick={handleCancel}>
+              Cancel
+            </Button>
+          </Box>
+        }
+      />
       <WizardStepper currentStep={step} />
       <Box sx={contentStyles}>{children}</Box>
       <WizardFooter currentStep={step} nextDisabled={nextDisabled} onNext={onNext} />
@@ -64,9 +73,9 @@ const ShellContent = ({ step, children, onNext }: EventWizardShellProps) => {
 // event-creation-form.tsx currently does." Mounts a fresh EventWizardProvider
 // per step route (see event-wizard-context.tsx's own comment for why that's
 // fine) rather than assuming one already exists higher up the tree.
-const EventWizardShell = ({ step, children, onNext }: EventWizardShellProps) => (
+const EventWizardShell = ({ step, children, onNext, headerActions }: EventWizardShellProps) => (
   <EventWizardProvider>
-    <ShellContent step={step} onNext={onNext}>
+    <ShellContent step={step} onNext={onNext} headerActions={headerActions}>
       {children}
     </ShellContent>
   </EventWizardProvider>

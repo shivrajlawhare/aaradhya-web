@@ -525,3 +525,149 @@ describe('EventDetailsStep', () => {
     expect(await screen.findByText('Wedding')).toBeInTheDocument();
   });
 });
+
+describe('EventDetailsStep — edit an added row (DEV-06)', () => {
+  const makeStoredRow = (overrides: Record<string, unknown> = {}) => ({
+    id: 'session-1',
+    sessionType: 'Wedding',
+    venue: 'Poolside',
+    venueCost: 60000,
+    pax: 200,
+    startDate: '2026-09-12',
+    endDate: '2026-09-12',
+    startTime: '18:00',
+    endTime: '22:00',
+    setup: {
+      seating: 'RoundTables',
+      tableCount: 20,
+      chairCount: 200,
+      stage: true,
+      buffet: false,
+      registrationDesk: false,
+      vipSeating: false,
+      brideGroomSeating: false,
+      notes: 'Near the pool',
+    },
+    ...overrides,
+  });
+
+  const seedRows = (sessions: unknown[]) => {
+    sessionStorage.setItem(WIZARD_STORAGE_KEY, JSON.stringify({ 'event-details': { sessions } }));
+  };
+
+  const storedSessions = () => JSON.parse(sessionStorage.getItem(WIZARD_STORAGE_KEY) ?? '{}')['event-details'].sessions;
+
+  const rowFor = (eventType: string) => {
+    const row = screen.getByText(eventType, { selector: 'td' }).closest('tr');
+    if (!row) {
+      throw new Error(`expected a ${eventType} row`);
+    }
+    return row;
+  };
+
+  it('clicking a row loads all its fields and Setup into the entry card, in the Editing state', async () => {
+    seedRows([makeStoredRow()]);
+    renderWizard(eventDetailsPath);
+    await screen.findByLabelText('Event Type');
+
+    fireEvent.click(rowFor('Wedding'));
+
+    expect(screen.getByRole('combobox', { name: 'Event Type' })).toHaveTextContent('Wedding');
+    expect(screen.getByRole('combobox', { name: 'Venue' })).toHaveTextContent('Poolside');
+    expect(screen.getByLabelText('Venue Cost')).toHaveValue(60000);
+    expect(screen.getByLabelText('Pax')).toHaveValue(200);
+    expect(screen.getByRole('combobox', { name: 'Seating' })).toHaveTextContent('Round Tables');
+    expect(screen.getByLabelText('Tables')).toHaveValue(20);
+    expect(screen.getByLabelText('Chairs')).toHaveValue(200);
+    expect(screen.getByRole('button', { name: 'Stage' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Notes')).toHaveValue('Near the pool');
+    expect(
+      within(screen.getByRole('group', { name: 'Start date' })).getByRole('spinbutton', { name: 'Year' })
+    ).toHaveTextContent('2026');
+
+    expect(rowFor('Wedding')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'Save Event' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel edit' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add Event' })).not.toBeInTheDocument();
+  });
+
+  it('Save Event replaces the row in place — no duplicate, dates/times/Setup kept, order kept', async () => {
+    seedRows([makeStoredRow(), makeStoredRow({ id: 'session-2', sessionType: 'Haldi', pax: 120 })]);
+    renderWizard(eventDetailsPath);
+    await screen.findByLabelText('Event Type');
+
+    fireEvent.click(rowFor('Wedding'));
+    fireEvent.change(screen.getByLabelText('Pax'), { target: { value: '250' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Event' }));
+
+    await waitFor(() => expect(within(rowFor('Wedding')).getByText('250')).toBeInTheDocument());
+    const sessions = storedSessions();
+    expect(sessions).toHaveLength(2);
+    expect(sessions.map((session: { id: string }) => session.id)).toEqual(['session-1', 'session-2']);
+    expect(sessions[0]).toMatchObject({
+      id: 'session-1',
+      sessionType: 'Wedding',
+      pax: 250,
+      startDate: '2026-09-12',
+      endDate: '2026-09-12',
+      startTime: '18:00',
+      endTime: '22:00',
+    });
+    expect(sessions[0].setup).toMatchObject({ seating: 'RoundTables', tableCount: 20, stage: true });
+
+    // Back to adding, with a cleared card.
+    expect(screen.getByRole('button', { name: 'Add Event' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel edit' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Pax')).toHaveValue(0);
+    expect(rowFor('Wedding')).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('Cancel edit clears the entry card and leaves the row untouched', async () => {
+    seedRows([makeStoredRow()]);
+    renderWizard(eventDetailsPath);
+    await screen.findByLabelText('Event Type');
+
+    fireEvent.click(rowFor('Wedding'));
+    fireEvent.change(screen.getByLabelText('Pax'), { target: { value: '999' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel edit' }));
+
+    expect(screen.getByLabelText('Pax')).toHaveValue(0);
+    expect(screen.getByLabelText('Tables')).toHaveValue(0);
+    expect(screen.getByRole('button', { name: 'Add Event' })).toBeInTheDocument();
+    expect(storedSessions()[0].pax).toBe(200);
+    expect(within(rowFor('Wedding')).getByText('200')).toBeInTheDocument();
+  });
+
+  it('removing the row being edited also resets the entry card', async () => {
+    seedRows([makeStoredRow()]);
+    renderWizard(eventDetailsPath);
+    await screen.findByLabelText('Event Type');
+
+    fireEvent.click(rowFor('Wedding'));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Wedding row' }));
+
+    expect(screen.queryByText('Wedding', { selector: 'td' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Pax')).toHaveValue(0);
+    expect(screen.getByRole('button', { name: 'Add Event' })).toBeInTheDocument();
+    expect(storedSessions()).toHaveLength(0);
+  });
+
+  it('reopens a custom event type as "Custom…" with its text filled in', async () => {
+    seedRows([makeStoredRow({ sessionType: 'Mehendi Night' })]);
+    renderWizard(eventDetailsPath);
+    await screen.findByLabelText('Event Type');
+
+    fireEvent.click(rowFor('Mehendi Night'));
+
+    expect(screen.getByRole('combobox', { name: 'Event Type' })).toHaveTextContent('Custom…');
+    expect(screen.getByLabelText('Custom event type')).toHaveValue('Mehendi Night');
+  });
+
+  it('shows the "Added events" summary as N events · N guests (D19)', async () => {
+    seedRows([makeStoredRow(), makeStoredRow({ id: 'session-2', sessionType: 'Haldi', pax: 120 })]);
+    renderWizard(eventDetailsPath);
+
+    expect(await screen.findByText('2 events · 320 guests')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Added events' })).toBeInTheDocument();
+  });
+});

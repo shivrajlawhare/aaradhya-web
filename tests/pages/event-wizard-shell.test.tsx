@@ -8,7 +8,7 @@ import { WIZARD_STEPS } from '../../src/pages/event-creation/wizard-steps';
 import { EVENT_LIST_PATH } from '../../src/routes';
 import { WIZARD_STORAGE_KEY } from '../../src/stores/event-wizard-context';
 import { theme } from '../../src/theme/theme';
-import { colorTokens } from '../../src/theme/tokens';
+import { colorTokens, paletteVar } from '../../src/theme/tokens';
 import { emittedRuleFor } from '../support/emitted-css';
 import { mockMatchMedia } from '../support/match-media';
 
@@ -80,23 +80,30 @@ describe('EventWizardShell — desktop (>=900px) stepper', () => {
     expect(allCurrent).toHaveLength(1);
   });
 
-  it('fills completed steps accent-tint/accent-deep and leaves remaining steps outlined', () => {
+  // DEV-06 (Figma Wizard/Step): completed = inverse disc with a check,
+  // current = orange disc, upcoming = outlined number.
+  it('marks completed steps with a check on the inverse disc, the current step orange and upcoming steps outlined', () => {
     mockMatchMedia(true);
     renderWizard(accommodationPath);
 
-    const completedPill = screen.getByText('1. Client Details').closest('div');
-    const currentPill = screen.getByText('3. Accommodation').closest('div');
-    const upcomingPill = screen.getByText('5. Review & Quotation').closest('div');
+    const marker = (status: string) => {
+      const step = document.querySelector(`[data-status="${status}"]`);
+      const circle = step?.querySelector('[aria-hidden="true"]') ?? null;
+      if (!circle) {
+        throw new Error(`expected a ${status} step marker`);
+      }
+      return circle;
+    };
 
-    expect(completedPill).toHaveStyle({ backgroundColor: colorTokens.accentTint, color: colorTokens.accentDeep });
-    expect(currentPill).toHaveStyle({ backgroundColor: colorTokens.accent });
-    // "Outlined only" (this story's own AC wording) — asserted via its
-    // border color rather than its background, since jsdom's CSSOM
-    // normalizes a literal `background-color: transparent` declaration
-    // away from the string 'transparent' on read-back.
+    expect(document.querySelectorAll('[data-status="completed"]')).toHaveLength(2);
+    expect(marker('completed').querySelector('[data-testid="CheckRoundedIcon"]')).toBeInTheDocument();
+    expect(emittedRuleFor(marker('completed'))).toContain(`background-color:${paletteVar('brand-inverse')}`);
+    expect(marker('current')).toHaveTextContent('3');
+    expect(emittedRuleFor(marker('current'))).toContain(`background-color:${colorTokens.accent}`);
     // jsdom drops a `border` shorthand whose colour is a CSS variable, so the
-    // outline is asserted on the emitted rule for the pill's own class.
-    expect(emittedRuleFor(upcomingPill)).toContain(`border:1px solid ${colorTokens.line}`);
+    // outline is asserted on the emitted rule for the marker's own class.
+    expect(emittedRuleFor(marker('upcoming'))).toContain('background-color:transparent');
+    expect(emittedRuleFor(marker('upcoming'))).toContain('border:1.5px solid var(--mui-palette-brand-borderHover)');
   });
 
   it('deep-links directly to a later step without forcing replay of earlier ones', () => {

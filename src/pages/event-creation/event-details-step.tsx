@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react';
+import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 import AddIcon from '@mui/icons-material/Add';
+import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import {
+  Box,
   Button,
   CircularProgress,
   IconButton,
+  InputAdornment,
   MenuItem,
   Paper,
   Stack,
@@ -16,7 +20,9 @@ import {
   TextField,
   ToggleButton,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
 import { Controller, useForm } from 'react-hook-form';
@@ -28,13 +34,37 @@ import { enumerateDates, getDistinctDates } from '../../utils/session-dates';
 import { fromPickerDate, fromPickerTime, toPickerDate, toPickerTime } from '../event-detail/date-input';
 import { SEATING_ARRANGEMENT_LABELS } from '../event-detail/session-form-options';
 import {
-  addButtonStyles,
+  addedCardHeaderStyles,
+  addedCardIconStyles,
+  addedCardLineStyles,
+  addedCardStyles,
+  addedHeaderStyles,
+  addedRowStyles,
+  addedSectionStyles,
+  cardListStyles,
+  costFieldStyles,
+  costPaxRowStyles,
+  countFieldStyles,
+  dateColumnStyles,
+  emptyCellStyles,
+  emptyTextStyles,
+  eventTypeFieldStyles,
+  formActionsStyles,
   formCardStyles,
-  rowStyles,
+  loadingStyles,
+  paxFieldStyles,
+  primaryFieldsStyles,
+  scheduleStyles,
+  seatingFieldStyles,
   setupCardStyles,
+  setupFieldsStyles,
+  setupToggleStyles,
+  summaryStyles,
   tableCardStyles,
   timeFieldStyles,
-  toggleActiveStyles,
+  timePickerCardStyles,
+  toggleRowStyles,
+  venueFieldStyles,
   wrapperStyles,
 } from './event-details-step.styles';
 
@@ -43,6 +73,29 @@ import {
 // convention this app already uses elsewhere (session-form-options.ts's
 // own CUSTOM_SESSION_TYPE_OPTION).
 const CUSTOM_EVENT_TYPE_OPTION = 'Custom…';
+
+type SetupToggleKey = 'stage' | 'buffet' | 'registrationDesk' | 'vipSeating' | 'brideGroomSeating';
+
+interface SetupToggle {
+  key: SetupToggleKey;
+  label: string;
+}
+
+// The field label sits above the input, so an empty select shows its own
+// empty option ("Not set", "Select a venue", …) instead of a blank box.
+const SHOW_EMPTY_OPTION = { select: { displayEmpty: true } };
+
+// Figma Picker/Time Static (actions hidden): the clock commits on change,
+// so the Cancel/OK bar is noise here.
+const HIDDEN_PICKER_ACTIONS = { actionBar: { actions: [] } };
+
+const SETUP_TOGGLES: SetupToggle[] = [
+  { key: 'stage', label: 'Stage' },
+  { key: 'buffet', label: 'Buffet' },
+  { key: 'registrationDesk', label: 'Registration desk' },
+  { key: 'vipSeating', label: 'VIP seating' },
+  { key: 'brideGroomSeating', label: 'Bride/Groom seating' },
+];
 
 // A Session row as this step holds it — field names match
 // createSessionBodySchema (contract/index.ts) one-for-one (sessionType,
@@ -136,6 +189,26 @@ const emptyEntry: EntryFormValues = {
   setup: emptySetup,
 };
 
+// A stored row back into entry-card values for editing (DEV-06). A type that
+// isn't one of the active Event Types was entered via "Custom…", so it
+// reopens as the custom option with its text filled in. Rows stored before
+// Setup existed get the empty Setup defaults.
+const toEntryFormValues = (row: WizardSessionRow, activeEventTypeNames: string[]): EntryFormValues => {
+  const isKnownType = row.sessionType === '' || activeEventTypeNames.includes(row.sessionType);
+  return {
+    sessionTypeOption: isKnownType ? row.sessionType : CUSTOM_EVENT_TYPE_OPTION,
+    sessionTypeCustom: isKnownType ? '' : row.sessionType,
+    venue: row.venue,
+    venueCost: row.venueCost,
+    pax: row.pax,
+    startDate: row.startDate,
+    endDate: row.endDate,
+    startTime: row.startTime,
+    endTime: row.endTime,
+    setup: { ...emptySetup, ...row.setup },
+  };
+};
+
 // Time+random, not a module-level counter — same reasoning as
 // client-details-step.tsx's own createRowId (avoids colliding with an id
 // already sitting in sessionStorage from before a reload reset a counter).
@@ -148,6 +221,8 @@ const createRowId = (): string => `session-${Date.now()}-${Math.random().toStrin
 const EventDetailsStep = () => {
   const { data, setStepData } = useEventWizard();
   const stored = data['event-details'];
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
   const [rows, setRows] = useState<WizardSessionRow[]>(() => (isEventDetailsStepData(stored) ? stored.sessions : []));
 
@@ -179,6 +254,55 @@ const EventDetailsStep = () => {
     }
   };
 
+  // DEV-06: the row currently loaded into the entry card for editing (same
+  // model as sessions-items-step.tsx's handleEditCeremonyRow).
+  const [editingRowId, setEditingRowId] = useState<string | null>(null);
+  const entryCardRef = useRef<HTMLFormElement>(null);
+
+  // A row whose dates stop covering some day (removed, or edited to other
+  // dates) orphans any Step 4 (Sessions & Items) entries made against that
+  // day — STORY-067 keys them by every calendar date a Session spans, so a
+  // multi-day Session is checked across its whole range. A date still
+  // covered by another remaining Session is never touched. Confirms first
+  // when entries exist; returns false if the user declines.
+  const confirmAndClearOrphanedEntries = (
+    previousRow: WizardSessionRow,
+    nextRows: WizardSessionRow[],
+    action: string
+  ): boolean => {
+    const remainingDates = new Set(getDistinctDates(nextRows));
+    const orphanedDates = enumerateDates(previousRow.startDate, previousRow.endDate).filter(
+      (date) => !remainingDates.has(date)
+    );
+
+    const sessionsItemsData = data['sessions-items'] as SessionsItemsStoreShape | undefined;
+    const datesWithEntries = orphanedDates.filter((date) => (sessionsItemsData?.byDate?.[date] ?? []).length > 0);
+
+    if (datesWithEntries.length === 0) {
+      return true;
+    }
+    const dateList = datesWithEntries.map(formatEventDate).join(', ');
+    const verb = datesWithEntries.length > 1 ? 'already have' : 'already has';
+    const confirmed = window.confirm(
+      `${dateList} ${verb} Sessions & Items entered in Step 4. ${action} this Session will also remove them. Continue?`
+    );
+    if (!confirmed) {
+      return false;
+    }
+    const remainingByDate = { ...(sessionsItemsData?.byDate ?? {}) };
+    for (const date of datesWithEntries) {
+      delete remainingByDate[date];
+    }
+    setStepData('sessions-items', { ...sessionsItemsData, byDate: remainingByDate });
+    return true;
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRowId(null);
+    clearErrors('endDate');
+    reset(emptyEntry);
+  };
+
   const handleAddEvent = handleSubmit((values) => {
     // Blocked client-side before this ever becomes a row (this story's own
     // AC) — plain string comparison, since 'YYYY-MM-DD' values sort
@@ -195,58 +319,59 @@ const EventDetailsStep = () => {
         ? values.sessionTypeCustom.trim()
         : values.sessionTypeOption;
 
-    setRows((current) => [
-      ...current,
-      {
-        id: createRowId(),
-        sessionType,
-        venue: values.venue,
-        venueCost: values.venueCost,
-        pax: values.pax,
-        startDate: values.startDate,
-        endDate: values.endDate,
-        startTime: values.startTime,
-        endTime: values.endTime,
-        setup: values.setup,
-      },
-    ]);
+    const savedRow: WizardSessionRow = {
+      id: editingRowId ?? createRowId(),
+      sessionType,
+      venue: values.venue,
+      venueCost: values.venueCost,
+      pax: values.pax,
+      startDate: values.startDate,
+      endDate: values.endDate,
+      startTime: values.startTime,
+      endTime: values.endTime,
+      setup: values.setup,
+    };
+
+    const previousRow = rows.find((row) => row.id === editingRowId);
+    if (previousRow) {
+      // Save replaces the row in place (same position, same id).
+      const nextRows = rows.map((row) => (row.id === previousRow.id ? savedRow : row));
+      if (!confirmAndClearOrphanedEntries(previousRow, nextRows, 'Moving')) {
+        return;
+      }
+      setRows(nextRows);
+    } else {
+      setRows((current) => [...current, savedRow]);
+    }
+    setEditingRowId(null);
     reset(emptyEntry);
   });
 
-  // Removing a Session also removes any Step 4 (Sessions & Items) entries
-  // already made against that Session's own date(s), with a confirmation
-  // prompt if any exist (this story's own AC) — STORY-067 gives Step 4 real
-  // content, keyed by every calendar date a Session spans (not just its
-  // startDate), so a multi-day Session's removal is checked/cleared across
-  // its whole date range. A date still covered by another remaining Session
-  // (e.g. two same-day Sessions at different venues) is never touched here
-  // — its own tab, and whatever was entered against it, still legitimately
-  // exists after this one Session is gone.
+  // Loads the row's fields, times and Setup into the entry card.
+  const handleEditRow = (row: WizardSessionRow) => {
+    setEditingRowId(row.id);
+    clearErrors('endDate');
+    reset(
+      toEntryFormValues(
+        row,
+        activeEventTypes.map((eventType) => eventType.name)
+      )
+    );
+    entryCardRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Removing a Session also removes any Step 4 entries it orphans (with a
+  // confirmation prompt if any exist). Removing the row being edited also
+  // resets the entry card.
   const handleRemoveRow = (row: WizardSessionRow) => {
     const remainingRows = rows.filter((existing) => existing.id !== row.id);
-    const remainingDates = new Set(getDistinctDates(remainingRows));
-    const orphanedDates = enumerateDates(row.startDate, row.endDate).filter((date) => !remainingDates.has(date));
-
-    const sessionsItemsData = data['sessions-items'] as SessionsItemsStoreShape | undefined;
-    const datesWithEntries = orphanedDates.filter((date) => (sessionsItemsData?.byDate?.[date] ?? []).length > 0);
-
-    if (datesWithEntries.length > 0) {
-      const dateList = datesWithEntries.map(formatEventDate).join(', ');
-      const verb = datesWithEntries.length > 1 ? 'already have' : 'already has';
-      const confirmed = window.confirm(
-        `${dateList} ${verb} Sessions & Items entered in Step 4. Removing this Session will also remove them. Continue?`
-      );
-      if (!confirmed) {
-        return;
-      }
-      const remainingByDate = { ...(sessionsItemsData?.byDate ?? {}) };
-      for (const date of datesWithEntries) {
-        delete remainingByDate[date];
-      }
-      setStepData('sessions-items', { ...sessionsItemsData, byDate: remainingByDate });
+    if (!confirmAndClearOrphanedEntries(row, remainingRows, 'Removing')) {
+      return;
     }
-
     setRows(remainingRows);
+    if (editingRowId === row.id) {
+      handleCancelEdit();
+    }
   };
 
   const formatRowDate = (row: WizardSessionRow): string =>
@@ -256,24 +381,141 @@ const EventDetailsStep = () => {
 
   if (isMasterListsLoading) {
     return (
-      <Stack sx={{ ...wrapperStyles, alignItems: 'center' }}>
+      <Stack sx={loadingStyles}>
         <CircularProgress aria-label="Loading event type and venue options" />
+      </Stack>
+    );
+  }
+
+  const isEditing = editingRowId !== null;
+  let submitLabel = 'Add Event';
+  if (isEditing) {
+    submitLabel = 'Save Event';
+  }
+  const totalGuests = rows.reduce((sum, row) => sum + (Number.isFinite(row.pax) ? row.pax : 0), 0);
+  const summary = `${rows.length} ${rows.length === 1 ? 'event' : 'events'} · ${totalGuests} guests`;
+
+  const handleRowKeyDown = (event: KeyboardEvent<HTMLElement>, row: WizardSessionRow) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleEditRow(row);
+    }
+  };
+
+  const removeButton = (row: WizardSessionRow) => (
+    <IconButton
+      aria-label={`Remove ${row.sessionType || 'event'} row`}
+      size="small"
+      onClick={(event) => {
+        event.stopPropagation();
+        handleRemoveRow(row);
+      }}
+    >
+      <CloseIcon fontSize="small" />
+    </IconButton>
+  );
+
+  let addedEvents: ReactNode;
+  if (isDesktop) {
+    addedEvents = (
+      <Paper elevation={0} sx={tableCardStyles}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Event Type</TableCell>
+              <TableCell>Date</TableCell>
+              <TableCell>Duration</TableCell>
+              <TableCell>Guests</TableCell>
+              <TableCell>Venue</TableCell>
+              <TableCell align="right">Cost</TableCell>
+              <TableCell />
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {rows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7} sx={emptyCellStyles}>
+                  No Sessions yet.
+                </TableCell>
+              </TableRow>
+            )}
+            {rows.map((row) => (
+              <TableRow
+                key={row.id}
+                hover
+                tabIndex={0}
+                aria-selected={row.id === editingRowId}
+                onClick={() => handleEditRow(row)}
+                onKeyDown={(event) => handleRowKeyDown(event, row)}
+                sx={addedRowStyles(row.id === editingRowId)}
+              >
+                <TableCell>{row.sessionType}</TableCell>
+                <TableCell>{formatRowDate(row)}</TableCell>
+                <TableCell>{formatSessionDuration(row.startTime, row.endTime)}</TableCell>
+                <TableCell>{row.pax}</TableCell>
+                <TableCell>{row.venue}</TableCell>
+                <TableCell align="right">{row.venueCost}</TableCell>
+                <TableCell padding="checkbox">{removeButton(row)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Paper>
+    );
+  } else {
+    addedEvents = (
+      <Stack sx={cardListStyles}>
+        {rows.length === 0 && (
+          <Typography variant="bodyM" sx={emptyTextStyles}>
+            No Sessions yet.
+          </Typography>
+        )}
+        {rows.map((row) => (
+          <Box
+            key={row.id}
+            role="button"
+            tabIndex={0}
+            aria-pressed={row.id === editingRowId}
+            onClick={() => handleEditRow(row)}
+            onKeyDown={(event) => handleRowKeyDown(event, row)}
+            sx={addedCardStyles(row.id === editingRowId)}
+          >
+            <Box sx={addedCardHeaderStyles}>
+              <Typography variant="titleS" component="p">
+                {row.sessionType}
+              </Typography>
+              {removeButton(row)}
+            </Box>
+            <Box sx={addedCardLineStyles}>
+              <CalendarTodayOutlinedIcon aria-hidden sx={addedCardIconStyles} />
+              <Typography variant="bodyS" component="span">
+                {formatRowDate(row)} · {formatSessionDuration(row.startTime, row.endTime)}
+              </Typography>
+            </Box>
+            <Box sx={addedCardLineStyles}>
+              <PlaceOutlinedIcon aria-hidden sx={addedCardIconStyles} />
+              <Typography variant="bodyS" component="span">
+                {row.venue} · {row.pax} guests · {row.venueCost}
+              </Typography>
+            </Box>
+          </Box>
+        ))}
       </Stack>
     );
   }
 
   return (
     <Stack sx={wrapperStyles}>
-      <Paper elevation={0} component="form" onSubmit={handleAddEvent} sx={formCardStyles}>
-        <Typography variant="titleM" component="h2">
+      <Paper elevation={0} component="form" ref={entryCardRef} onSubmit={handleAddEvent} sx={formCardStyles}>
+        <Typography variant="h3" component="h2">
           Event Details
         </Typography>
-        <Stack direction="row" sx={rowStyles}>
+        <Box sx={primaryFieldsStyles}>
           <Controller
             name="sessionTypeOption"
             control={control}
             render={({ field }) => (
-              <TextField {...field} select label="Event Type" sx={{ minWidth: 200 }}>
+              <TextField {...field} select label="Event Type" slotProps={SHOW_EMPTY_OPTION} sx={eventTypeFieldStyles}>
                 <MenuItem value="">Select an event type</MenuItem>
                 {activeEventTypes.map((eventType) => (
                   <MenuItem key={eventType.id} value={eventType.name}>
@@ -285,7 +527,7 @@ const EventDetailsStep = () => {
             )}
           />
           {sessionTypeOption === CUSTOM_EVENT_TYPE_OPTION && (
-            <TextField {...register('sessionTypeCustom')} label="Custom event type" sx={{ minWidth: 200 }} />
+            <TextField {...register('sessionTypeCustom')} label="Custom event type" sx={eventTypeFieldStyles} />
           )}
           <Controller
             name="venue"
@@ -295,7 +537,8 @@ const EventDetailsStep = () => {
                 {...field}
                 select
                 label="Venue"
-                sx={{ minWidth: 200 }}
+                slotProps={SHOW_EMPTY_OPTION}
+                sx={venueFieldStyles}
                 onChange={(event) => {
                   field.onChange(event);
                   handleVenueChange(event.target.value);
@@ -310,91 +553,103 @@ const EventDetailsStep = () => {
               </TextField>
             )}
           />
-          <TextField
-            {...register('venueCost', { valueAsNumber: true })}
-            label="Venue Cost"
-            type="number"
-            slotProps={{ htmlInput: { min: 0 } }}
-            sx={{ minWidth: 140 }}
-          />
-          <TextField
-            {...register('pax', { valueAsNumber: true })}
-            label="Pax"
-            type="number"
-            slotProps={{ htmlInput: { min: 0 } }}
-            sx={{ minWidth: 120 }}
-          />
-        </Stack>
-        <Stack direction="row" sx={rowStyles}>
-          <Controller
-            name="startDate"
-            control={control}
-            render={({ field }) => (
-              <DatePicker
-                label="Start date"
-                value={toPickerDate(field.value)}
-                onChange={(date) => field.onChange(fromPickerDate(date))}
-                slotProps={{ textField: { onBlur: field.onBlur } }}
-              />
-            )}
-          />
-          <Controller
-            name="endDate"
-            control={control}
-            render={({ field, fieldState }) => (
-              <DatePicker
-                label="End date"
-                value={toPickerDate(field.value)}
-                onChange={(date) => field.onChange(fromPickerDate(date))}
-                slotProps={{
-                  textField: {
-                    onBlur: field.onBlur,
-                    error: Boolean(fieldState.error),
-                    helperText: fieldState.error?.message,
-                  },
-                }}
-              />
-            )}
-          />
-        </Stack>
-        {/* StaticTimePicker — the always-visible clock face SRS §6.9 calls
-            for, not TimePicker's popover-only one, with an explicit AM/PM
-            control (`ampm`), matching session-form.tsx's own identical
-            usage. */}
-        <Stack direction="row" sx={rowStyles}>
+          <Box sx={costPaxRowStyles}>
+            <TextField
+              {...register('venueCost', { valueAsNumber: true })}
+              label="Venue Cost"
+              type="number"
+              slotProps={{
+                htmlInput: { min: 0 },
+                input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> },
+              }}
+              sx={costFieldStyles}
+            />
+            <TextField
+              {...register('pax', { valueAsNumber: true })}
+              label="Pax"
+              type="number"
+              slotProps={{ htmlInput: { min: 0 } }}
+              sx={paxFieldStyles}
+            />
+          </Box>
+        </Box>
+        <Box sx={scheduleStyles}>
+          <Stack sx={dateColumnStyles}>
+            <Controller
+              name="startDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  label="Start date"
+                  value={toPickerDate(field.value)}
+                  onChange={(date) => field.onChange(fromPickerDate(date))}
+                  slotProps={{ textField: { onBlur: field.onBlur, fullWidth: true } }}
+                />
+              )}
+            />
+            <Controller
+              name="endDate"
+              control={control}
+              render={({ field, fieldState }) => (
+                <DatePicker
+                  label="End date"
+                  value={toPickerDate(field.value)}
+                  onChange={(date) => field.onChange(fromPickerDate(date))}
+                  slotProps={{
+                    textField: {
+                      onBlur: field.onBlur,
+                      fullWidth: true,
+                      error: Boolean(fieldState.error),
+                      helperText: fieldState.error?.message,
+                    },
+                  }}
+                />
+              )}
+            />
+          </Stack>
+          {/* StaticTimePicker — the always-visible clock face SRS §6.9 calls
+              for, not TimePicker's popover-only one, with an explicit AM/PM
+              control (`ampm`), matching session-form.tsx's own identical
+              usage. */}
           <Stack sx={timeFieldStyles}>
             <Typography variant="titleM" component="h3">
               Start time
             </Typography>
-            <Controller
-              name="startTime"
-              control={control}
-              render={({ field }) => (
-                <StaticTimePicker
-                  ampm
-                  value={toPickerTime(field.value)}
-                  onChange={(time) => field.onChange(fromPickerTime(time))}
-                />
-              )}
-            />
+            <Box sx={timePickerCardStyles}>
+              <Controller
+                name="startTime"
+                control={control}
+                render={({ field }) => (
+                  <StaticTimePicker
+                    ampm
+                    slotProps={HIDDEN_PICKER_ACTIONS}
+                    value={toPickerTime(field.value)}
+                    onChange={(time) => field.onChange(fromPickerTime(time))}
+                  />
+                )}
+              />
+            </Box>
           </Stack>
           <Stack sx={timeFieldStyles}>
             <Typography variant="titleM" component="h3">
               End time
             </Typography>
-            <Controller
-              name="endTime"
-              control={control}
-              render={({ field }) => (
-                <StaticTimePicker
-                  ampm
-                  value={toPickerTime(field.value)}
-                  onChange={(time) => field.onChange(fromPickerTime(time))}
-                />
-              )}
-            />
+            <Box sx={timePickerCardStyles}>
+              <Controller
+                name="endTime"
+                control={control}
+                render={({ field }) => (
+                  <StaticTimePicker
+                    ampm
+                    slotProps={HIDDEN_PICKER_ACTIONS}
+                    value={toPickerTime(field.value)}
+                    onChange={(time) => field.onChange(fromPickerTime(time))}
+                  />
+                )}
+              />
+            </Box>
           </Stack>
-        </Stack>
+        </Box>
         {/* Setup — optional, not required to add a Session (this story's own
             AC: filled in properly in a later version). Mirrors
             session-form.tsx's own "Setup" card field-for-field so the Event
@@ -404,44 +659,38 @@ const EventDetailsStep = () => {
           <Typography variant="titleM" component="h3">
             Setup
           </Typography>
-          <Controller
-            name="setup.seating"
-            control={control}
-            render={({ field }) => (
-              <TextField {...field} select label="Seating" fullWidth>
-                <MenuItem value="">Not set</MenuItem>
-                {SEATING_ARRANGEMENT_OPTIONS.map((option) => (
-                  <MenuItem key={option} value={option}>
-                    {SEATING_ARRANGEMENT_LABELS[option]}
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
-          />
-          <Stack direction="row" sx={rowStyles}>
+          <Box sx={setupFieldsStyles}>
+            <Controller
+              name="setup.seating"
+              control={control}
+              render={({ field }) => (
+                <TextField {...field} select label="Seating" slotProps={SHOW_EMPTY_OPTION} sx={seatingFieldStyles}>
+                  <MenuItem value="">Not set</MenuItem>
+                  {SEATING_ARRANGEMENT_OPTIONS.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {SEATING_ARRANGEMENT_LABELS[option]}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
             <TextField
               {...register('setup.tableCount', { valueAsNumber: true })}
               label="Tables"
               type="number"
               slotProps={{ htmlInput: { min: 0 } }}
+              sx={countFieldStyles}
             />
             <TextField
               {...register('setup.chairCount', { valueAsNumber: true })}
               label="Chairs"
               type="number"
               slotProps={{ htmlInput: { min: 0 } }}
+              sx={countFieldStyles}
             />
-          </Stack>
-          <Stack direction="row" sx={rowStyles}>
-            {(
-              [
-                ['stage', 'Stage'],
-                ['buffet', 'Buffet'],
-                ['registrationDesk', 'Registration desk'],
-                ['vipSeating', 'VIP seating'],
-                ['brideGroomSeating', 'Bride/Groom seating'],
-              ] as const
-            ).map(([key, label]) => (
+          </Box>
+          <Box sx={toggleRowStyles}>
+            {SETUP_TOGGLES.map(({ key, label }) => (
               <Controller
                 key={key}
                 name={`setup.${key}`}
@@ -451,69 +700,41 @@ const EventDetailsStep = () => {
                     value={key}
                     selected={field.value}
                     onChange={() => field.onChange(!field.value)}
-                    sx={field.value ? toggleActiveStyles : undefined}
+                    sx={setupToggleStyles}
                   >
-                    <Typography variant="labelS">{label}</Typography>
+                    <Typography variant="labelM" component="span">
+                      {label}
+                    </Typography>
                   </ToggleButton>
                 )}
               />
             ))}
-          </Stack>
-          <TextField {...register('setup.notes')} label="Notes" multiline minRows={2} fullWidth />
+          </Box>
+          <TextField {...register('setup.notes')} label="Notes" multiline minRows={3} fullWidth />
         </Stack>
-        <Button type="submit" variant="contained" startIcon={<AddIcon />} sx={addButtonStyles}>
-          Add Event
-        </Button>
+        <Box sx={formActionsStyles}>
+          <Button type="submit" variant="contained" startIcon={<AddIcon />}>
+            {submitLabel}
+          </Button>
+          {isEditing && (
+            <Button variant="ghost" onClick={handleCancelEdit}>
+              Cancel edit
+            </Button>
+          )}
+        </Box>
       </Paper>
 
-      <Paper elevation={0} sx={tableCardStyles}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>
-                <Typography variant="labelS">Event Type</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="labelS">Date</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="labelS">Duration</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="labelS">Guests</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="labelS">Venue</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="labelS">Cost</Typography>
-              </TableCell>
-              <TableCell />
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.id}>
-                <TableCell>{row.sessionType}</TableCell>
-                <TableCell>{formatRowDate(row)}</TableCell>
-                <TableCell>{formatSessionDuration(row.startTime, row.endTime)}</TableCell>
-                <TableCell>{row.pax}</TableCell>
-                <TableCell>{row.venue}</TableCell>
-                <TableCell>{row.venueCost}</TableCell>
-                <TableCell>
-                  <IconButton
-                    aria-label={`Remove ${row.sessionType || 'event'} row`}
-                    size="small"
-                    onClick={() => handleRemoveRow(row)}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Paper>
+      <Stack component="section" aria-label="Added events" sx={addedSectionStyles}>
+        <Box sx={addedHeaderStyles}>
+          <Typography variant="h3" component="h2">
+            Added events
+          </Typography>
+          <Typography variant="bodyS" sx={summaryStyles}>
+            {summary}
+          </Typography>
+        </Box>
+        {addedEvents}
+      </Stack>
     </Stack>
   );
 };

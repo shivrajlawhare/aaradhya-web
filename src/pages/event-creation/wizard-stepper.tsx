@@ -1,11 +1,18 @@
-import { Box, LinearProgress, Stack, Typography, useMediaQuery } from '@mui/material';
+import { Fragment, type ReactNode } from 'react';
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
+import { Box, Typography, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import StepLabel from './step-label';
 import {
+  connectorStyles,
   desktopRowStyles,
+  markerStyles,
   mobileLabelStyles,
   mobileWrapperStyles,
-  pillStyles,
-  progressBarStyles,
+  segmentRowStyles,
+  segmentStyles,
+  type StepStatus,
+  stepStyles,
 } from './wizard-stepper.styles';
 import { WIZARD_STEPS, type WizardStepId, wizardStepIndex } from './wizard-steps';
 
@@ -13,14 +20,21 @@ interface WizardStepperProps {
   currentStep: WizardStepId;
 }
 
-// This story's own AC: five numbered pills on desktop (current filled
-// accent, completed filled accent-tint/accent-deep text, remaining
-// outlined-only), condensing on mobile to "Step N of 5 — <Name>" plus a
-// thin progress bar — five pills don't fit at 390px. "Completed" is purely
-// positional (index < current) — deep-linking is allowed with no forced
-// replay (this story's own AC), so this shell has no per-step validation
-// state to call "completed" instead; a future step story is free to make
-// that distinction sharper once it has real validation to report.
+const getStepStatus = (index: number, currentIndex: number): StepStatus => {
+  if (index === currentIndex) {
+    return 'current';
+  }
+  if (index < currentIndex) {
+    return 'completed';
+  }
+  return 'upcoming';
+};
+
+// Five numbered steps on desktop, condensing on mobile to "Step N of 5 —
+// <Name>" plus a segmented progress bar — five steps don't fit at 390px.
+// "Completed" is purely positional (index < current): deep-linking is
+// allowed with no forced replay, so there's no per-step validation state to
+// call "completed" instead. The stepper is not clickable (UI-09).
 const WizardStepper = ({ currentStep }: WizardStepperProps) => {
   const theme = useTheme();
   // 900px — MUI's own `md` breakpoint, matching every other responsive
@@ -30,34 +44,53 @@ const WizardStepper = ({ currentStep }: WizardStepperProps) => {
 
   if (!isDesktop) {
     const current = WIZARD_STEPS[currentIndex];
+    const progress = ((currentIndex + 1) / WIZARD_STEPS.length) * 100;
     return (
       <Box sx={mobileWrapperStyles}>
-        <Typography variant="labelS" sx={mobileLabelStyles}>
+        <Typography variant="labelM" sx={mobileLabelStyles}>
           Step {currentIndex + 1} of {WIZARD_STEPS.length} — {current?.label}
         </Typography>
-        <LinearProgress
-          variant="determinate"
-          value={((currentIndex + 1) / WIZARD_STEPS.length) * 100}
-          sx={progressBarStyles}
+        <Box
+          role="progressbar"
           aria-label="Wizard progress"
-        />
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress}
+          sx={segmentRowStyles}
+        >
+          {WIZARD_STEPS.map((step, index) => (
+            <Box key={step.id} sx={segmentStyles(index <= currentIndex)} />
+          ))}
+        </Box>
       </Box>
     );
   }
 
   return (
-    <Stack direction="row" component="nav" aria-label="Wizard steps" sx={desktopRowStyles}>
+    <Box component="nav" aria-label="Wizard steps" sx={desktopRowStyles}>
       {WIZARD_STEPS.map((step, index) => {
-        const status = index === currentIndex ? 'current' : index < currentIndex ? 'completed' : 'upcoming';
+        const status = getStepStatus(index, currentIndex);
+        let marker: ReactNode = index + 1;
+        let ariaCurrent: 'step' | undefined;
+        if (status === 'completed') {
+          marker = <CheckRoundedIcon aria-hidden />;
+        }
+        if (status === 'current') {
+          ariaCurrent = 'step';
+        }
         return (
-          <Box key={step.id} sx={pillStyles(status)} aria-current={status === 'current' ? 'step' : undefined}>
-            <Typography variant="labelS">
-              {index + 1}. {step.label}
-            </Typography>
-          </Box>
+          <Fragment key={step.id}>
+            {index > 0 && <Box aria-hidden sx={connectorStyles(index <= currentIndex)} />}
+            <Box sx={stepStyles} data-status={status} aria-current={ariaCurrent}>
+              <Box aria-hidden sx={markerStyles(status)}>
+                {marker}
+              </Box>
+              <StepLabel number={index + 1} label={step.label} status={status} />
+            </Box>
+          </Fragment>
         );
       })}
-    </Stack>
+    </Box>
   );
 };
 

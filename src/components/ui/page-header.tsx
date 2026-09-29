@@ -24,11 +24,20 @@ interface PageHeaderProps {
   supportingText?: ReactNode;
   actions?: ReactNode;
   isTitleHiddenOnMobile?: boolean;
+  // Figma's compact mobile headers (e.g. the wizard) drop the decor.
+  isMobileDecorHidden?: boolean;
 }
 
 // The page header band from the redesign's page anatomy: eyebrow, h1,
 // optional supporting line and actions, abstract decor on the right.
-const PageHeader = ({ eyebrow, title, supportingText, actions, isTitleHiddenOnMobile = false }: PageHeaderProps) => (
+const PageHeader = ({
+  eyebrow,
+  title,
+  supportingText,
+  actions,
+  isTitleHiddenOnMobile = false,
+  isMobileDecorHidden = false,
+}: PageHeaderProps) => (
   <Box component="header" sx={pageHeaderStyles}>
     <Box sx={textColumnStyles}>
       <Typography variant="labelS" component="p" sx={eyebrowStyles}>
@@ -44,9 +53,11 @@ const PageHeader = ({ eyebrow, title, supportingText, actions, isTitleHiddenOnMo
       )}
     </Box>
     {actions && <Box sx={actionsStyles}>{actions}</Box>}
-    <Box sx={mobileDecorFrameStyles} aria-hidden data-decor="mobile">
-      <ThemedImage light={pageHeaderDecorMobile} dark={pageHeaderDecorMobileDark} sx={mobileDecorImageStyles} />
-    </Box>
+    {!isMobileDecorHidden && (
+      <Box sx={mobileDecorFrameStyles} aria-hidden data-decor="mobile">
+        <ThemedImage light={pageHeaderDecorMobile} dark={pageHeaderDecorMobileDark} sx={mobileDecorImageStyles} />
+      </Box>
+    )}
     <Box sx={desktopDecorFrameStyles} aria-hidden data-decor="desktop">
       <ThemedImage light={pageHeaderDecor} dark={pageHeaderDecorDark} sx={desktopDecorImageStyles} />
     </Box>

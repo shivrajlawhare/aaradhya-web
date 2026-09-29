@@ -1,16 +1,27 @@
 import { useEffect, useState } from 'react';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
-import { Button, IconButton, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Box, Button, IconButton, Paper, Stack, TextField, Typography } from '@mui/material';
+import { ILLUSTRATIONS } from '../../components/ui/illustrations';
+import ThemedImage from '../../components/ui/themed-image';
 import { useEventWizard } from '../../stores/event-wizard-context';
 import {
   addButtonStyles,
   cardStyles,
-  roleFieldStyles,
+  customRowHeaderStyles,
+  helperArtStyles,
+  helperItemStyles,
+  helperListStyles,
+  helperStyles,
+  layoutStyles,
+  removeButtonStyles,
   roleLabelStyles,
   rowStackStyles,
   rowStyles,
 } from './client-details-step.styles';
+import StepLabel from './step-label';
+import { markerStyles } from './wizard-stepper.styles';
+import { WIZARD_STEPS } from './wizard-steps';
 
 // A row held in the wizard store — deliberately not aaradhya-web's own
 // clientContactSchema/ClientContactRole (contract/index.ts): that shape's
@@ -49,6 +60,31 @@ interface ClientDetailsStepData {
 
 const isClientDetailsStepData = (value: unknown): value is ClientDetailsStepData =>
   typeof value === 'object' && value !== null && Array.isArray((value as ClientDetailsStepData).contacts);
+
+// Figma's read-only "What's next" helper (desktop only): the five steps,
+// Client Details current. Each label reads "1. Client Details" to assistive
+// tech, the same way the stepper does, with the number shown in the marker.
+const WhatsNextHelper = () => (
+  <Box component="aside" aria-label="What's next" sx={helperStyles}>
+    <ThemedImage {...ILLUSTRATIONS.users} sx={helperArtStyles} />
+    <Typography variant="h3" component="h2">
+      What&apos;s next
+    </Typography>
+    <Box component="ol" sx={helperListStyles}>
+      {WIZARD_STEPS.map((step, index) => {
+        const status = index === 0 ? 'current' : 'upcoming';
+        return (
+          <Box component="li" key={step.id} sx={helperItemStyles}>
+            <Box aria-hidden sx={markerStyles(status)}>
+              {index + 1}
+            </Box>
+            <StepLabel number={index + 1} label={step.label} status={status} />
+          </Box>
+        );
+      })}
+    </Box>
+  </Box>
+);
 
 // Wizard Step 1 (STORY-064). No react-hook-form here, unlike the old
 // single-page form's ClientContactRows — there's nothing to validate or
@@ -92,53 +128,62 @@ const ClientDetailsStep = () => {
   };
 
   return (
-    <Paper elevation={0} sx={cardStyles}>
-      <Typography variant="titleM" component="h2">
-        Client Details
-      </Typography>
-      <Stack sx={rowStackStyles}>
-        {rows.map((row, index) => (
-          <Stack key={row.id} direction="row" sx={rowStyles}>
-            {row.isDefault ? (
-              <Typography variant="bodyM" sx={roleLabelStyles}>
-                {row.roleLabel}
-              </Typography>
-            ) : (
+    <Box sx={layoutStyles}>
+      <Paper elevation={0} sx={cardStyles}>
+        <Typography variant="h3" component="h2">
+          Client Details
+        </Typography>
+        <Stack sx={rowStackStyles}>
+          {rows.map((row, index) => (
+            <Box key={row.id} sx={rowStyles}>
+              {row.isDefault && (
+                <Typography component="p" sx={roleLabelStyles}>
+                  {row.roleLabel}
+                </Typography>
+              )}
+              {!row.isDefault && (
+                <>
+                  <Typography variant="labelS" component="p" sx={customRowHeaderStyles}>
+                    Additional contact
+                  </Typography>
+                  <TextField
+                    label="Role"
+                    value={row.roleLabel}
+                    onChange={(event) => handleFieldChange(row.id, { roleLabel: event.target.value })}
+                  />
+                </>
+              )}
               <TextField
-                label="Role"
-                value={row.roleLabel}
-                onChange={(event) => handleFieldChange(row.id, { roleLabel: event.target.value })}
-                sx={roleFieldStyles}
+                label="Name"
+                fullWidth
+                value={row.name}
+                onChange={(event) => handleFieldChange(row.id, { name: event.target.value })}
               />
-            )}
-            <TextField
-              label="Name"
-              fullWidth
-              value={row.name}
-              onChange={(event) => handleFieldChange(row.id, { name: event.target.value })}
-            />
-            <TextField
-              label="Contact Number"
-              fullWidth
-              value={row.contactNumber}
-              onChange={(event) => handleFieldChange(row.id, { contactNumber: event.target.value })}
-            />
-            {!row.isDefault && (
-              <IconButton
-                aria-label={`Remove contact row ${index + 1}`}
-                size="small"
-                onClick={() => handleRemoveRow(row.id)}
-              >
-                <CloseIcon fontSize="small" />
-              </IconButton>
-            )}
-          </Stack>
-        ))}
-        <Button onClick={handleAddRow} startIcon={<AddIcon />} sx={addButtonStyles}>
-          Add Contact
-        </Button>
-      </Stack>
-    </Paper>
+              <TextField
+                label="Contact Number"
+                fullWidth
+                value={row.contactNumber}
+                onChange={(event) => handleFieldChange(row.id, { contactNumber: event.target.value })}
+              />
+              {!row.isDefault && (
+                <IconButton
+                  aria-label={`Remove contact row ${index + 1}`}
+                  size="small"
+                  onClick={() => handleRemoveRow(row.id)}
+                  sx={removeButtonStyles}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              )}
+            </Box>
+          ))}
+          <Button variant="tonal" onClick={handleAddRow} startIcon={<AddIcon />} sx={addButtonStyles}>
+            Add Contact
+          </Button>
+        </Stack>
+      </Paper>
+      <WhatsNextHelper />
+    </Box>
   );
 };
 
