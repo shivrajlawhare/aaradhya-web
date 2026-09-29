@@ -162,4 +162,30 @@ describe('LoginPage', () => {
     expect(consoleError).not.toHaveBeenCalled();
     consoleError.mockRestore();
   });
+
+  describe('redesign (DEV-04)', () => {
+    it('renders the card heading, subtitle and hero headline copy', () => {
+      renderLoginPage();
+
+      expect(screen.getByRole('heading', { level: 1, name: 'Welcome back' })).toBeInTheDocument();
+      expect(screen.getByText('Log in to continue')).toBeInTheDocument();
+      expect(screen.getByText(/Every celebration,\s+beautifully planned\./)).toBeInTheDocument();
+    });
+
+    it('shows and hides the password with the eye toggle, which sits after the field in tab order', () => {
+      renderLoginPage();
+      const passwordInput = screen.getByLabelText('Password');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
+      expect(passwordInput).toHaveAttribute('type', 'text');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Hide password' }));
+      expect(passwordInput).toHaveAttribute('type', 'password');
+
+      const focusable = Array.from(document.querySelectorAll<HTMLElement>('input, button'));
+      const order = focusable.map((element) => element.getAttribute('aria-label') ?? element.textContent ?? element.id);
+      expect(order.indexOf('Show password')).toBeGreaterThan(focusable.indexOf(passwordInput));
+      expect(order.indexOf('Show password')).toBeLessThan(order.indexOf('Log in'));
+    });
+  });
 });

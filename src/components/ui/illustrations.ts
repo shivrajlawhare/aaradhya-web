@@ -26,6 +26,7 @@ import somethingWentWrongDark from '../../assets/illustrations/something-went-wr
 import somethingWentWrong from '../../assets/illustrations/something-went-wrong.svg';
 import usersDark from '../../assets/illustrations/users-dark.svg';
 import users from '../../assets/illustrations/users.svg';
+import type { ThemedImageSources } from './themed-image';
 
 // The Handoff board 08 illustration set: each Figma `Illustration/*`
 // component exported once per colour scheme.
@@ -45,12 +46,7 @@ export type IllustrationName =
   | 'settings'
   | 'login-hero';
 
-export interface IllustrationSources {
-  light: string;
-  dark: string;
-}
-
-export const ILLUSTRATIONS: Record<IllustrationName, IllustrationSources> = {
+export const ILLUSTRATIONS: Record<IllustrationName, ThemedImageSources> = {
   'no-upcoming-events': { light: noUpcomingEvents, dark: noUpcomingEventsDark },
   'no-events-yet': { light: noEventsYet, dark: noEventsYetDark },
   'no-filter-results': { light: noFilterResults, dark: noFilterResultsDark },

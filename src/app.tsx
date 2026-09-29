@@ -50,7 +50,7 @@ const App = () => {
       <Route
         path={DASHBOARD_PATH}
         element={
-          <AppShell title="Dashboard">
+          <AppShell title="Dashboard" isDesktopTitleHidden>
             <DashboardPage />
           </AppShell>
         }

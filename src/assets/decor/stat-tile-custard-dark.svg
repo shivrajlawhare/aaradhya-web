@@ -1,0 +1,54 @@
+<svg width="200" height="160" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g>
+<g id="stat-tile-custard-dark" clip-path="url(#clip0_1_12)">
+<g id="Motif/Quarter Circle">
+<path id="Quarter Circle" d="M200 0H68C68 72.897 127.103 132 200 132V0Z" fill="#F77331"/>
+</g>
+<g id="Motif/Ring" opacity="0.35">
+<circle id="Ring 1" cx="185" cy="5" r="74.375" stroke="#FFF9EB" stroke-width="1.25"/>
+<circle id="Ring 2" cx="185" cy="5" r="55.625" stroke="#F77331" stroke-width="1.25" stroke-linecap="round" stroke-dasharray="1.25 5"/>
+<circle id="Ring 3" cx="185" cy="5" r="36.875" stroke="#FFF9EB" stroke-width="1.25"/>
+</g>
+<g id="Motif/Sparkle">
+<path id="Sparkle" d="M118 22C119.094 30.75 123.25 34.9062 132 36C123.25 37.0938 119.094 41.25 118 50C116.906 41.25 112.75 37.0938 104 36C112.75 34.9062 116.906 30.75 118 22Z" fill="#FFF9EB"/>
+</g>
+<g id="Motif/Dot Grid" opacity="0.4">
+<circle id="Dot" cx="129.698" cy="109.698" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_2" cx="141.019" cy="109.698" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_3" cx="152.34" cy="109.698" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_4" cx="163.66" cy="109.698" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_5" cx="174.981" cy="109.698" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_6" cx="186.302" cy="109.698" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_7" cx="129.698" cy="121.019" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_8" cx="141.019" cy="121.019" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_9" cx="152.34" cy="121.019" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_10" cx="163.66" cy="121.019" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_11" cx="174.981" cy="121.019" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_12" cx="186.302" cy="121.019" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_13" cx="129.698" cy="132.34" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_14" cx="141.019" cy="132.34" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_15" cx="152.34" cy="132.34" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_16" cx="163.66" cy="132.34" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_17" cx="174.981" cy="132.34" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_18" cx="186.302" cy="132.34" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_19" cx="129.698" cy="143.66" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_20" cx="141.019" cy="143.66" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_21" cx="152.34" cy="143.66" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_22" cx="163.66" cy="143.66" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_23" cx="174.981" cy="143.66" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_24" cx="186.302" cy="143.66" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_25" cx="129.698" cy="154.981" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_26" cx="141.019" cy="154.981" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_27" cx="152.34" cy="154.981" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_28" cx="163.66" cy="154.981" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_29" cx="174.981" cy="154.981" r="1.69811" fill="#FFF9EB"/>
+<circle id="Dot_30" cx="186.302" cy="154.981" r="1.69811" fill="#FFF9EB"/>
+</g>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_1_12">
+<rect width="200" height="160" fill="white"/>
+</clipPath>
+</defs>
+</svg>

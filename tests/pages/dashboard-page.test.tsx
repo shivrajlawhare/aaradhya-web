@@ -1,6 +1,6 @@
 import { ThemeProvider } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { tsr } from '../../src/api/client';
@@ -113,14 +113,14 @@ const seedSession = (role = 'EventManager') => {
   );
 };
 
-const renderPage = () => {
+const renderPage = (isDesktop = true) => {
   const queryClient = new QueryClient();
   // Every existing test in this file asserts on the desktop Table's own
   // structure (UpcomingEventsTable) — DashboardPage now also has a
   // below-`md` UpcomingEventsCardList branch (mobile responsiveness pass),
   // so tests need an explicit "desktop" media-query answer to keep
   // exercising the branch they were actually written for.
-  mockMatchMedia(true);
+  mockMatchMedia(isDesktop);
 
   return render(
     <QueryClientProvider client={queryClient}>
@@ -567,6 +567,74 @@ describe('DashboardPage', () => {
       // Same shared card style as the populated table — 'auto' is a no-op
       // with nothing to scroll (unlike 'hidden', which would clip it).
       expect(card).toHaveStyle({ overflowX: 'auto' });
+    });
+  });
+
+  describe('redesign (DEV-04)', () => {
+    const upcomingEvent: MockUpcomingEvent = {
+      id: 'event-1',
+      eventId: 'ARD-EVT-2026-001',
+      eventFamilyType: 'Wedding',
+      status: 'Tentative',
+      date: '2026-06-15T00:00:00.000Z',
+      venue: 'Lawn',
+      pax: 200,
+      clientContacts: [{ name: 'Priya Nair', contactNumber: '9876543210', role: 'Bride' }],
+    };
+
+    it('renders the page header with the date eyebrow, the Dashboard h1 and a first-name greeting', async () => {
+      seedSession();
+      mockDashboardApi(makeCounts(), []);
+      renderPage();
+
+      expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
+      expect(screen.getByText(/^Good (morning|afternoon|evening), Priya$/)).toBeInTheDocument();
+      expect(screen.getByText(/^[A-Z][a-z]+day, \d{1,2} [A-Z][a-z]+ \d{4}$/)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 2, name: 'Upcoming Events' })).toBeInTheDocument();
+    });
+
+    it('shows skeleton tiles and rows (not a lone spinner) while loading, announced as a status', async () => {
+      seedSession();
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() => new Promise<Response>(() => undefined))
+      );
+      renderPage();
+
+      expect(await screen.findByRole('status')).toHaveTextContent('Loading dashboard');
+      expect(document.querySelectorAll('.MuiSkeleton-root').length).toBeGreaterThan(8);
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+
+    it('shows the day and month as a date block while keeping the YYYY-MM-DD date', async () => {
+      seedSession();
+      mockDashboardApi(makeCounts({ upcoming: 1 }), [upcomingEvent]);
+      renderPage();
+
+      expect(await screen.findByText('15 Jun')).toBeInTheDocument();
+      expect(screen.getByText('2026-06-15')).toBeInTheDocument();
+    });
+
+    it('uses the No Upcoming Events illustration for the empty state', async () => {
+      seedSession();
+      mockDashboardApi(makeCounts(), []);
+      renderPage();
+
+      await screen.findByText('No upcoming Events');
+      expect(document.querySelector('img[data-scheme="light"][src*="no-upcoming-events"]')).toBeInTheDocument();
+    });
+
+    it('renders mobile cards with a date block, the date, client names and a chevron', async () => {
+      seedSession();
+      mockDashboardApi(makeCounts({ upcoming: 1 }), [upcomingEvent]);
+      renderPage(false);
+
+      const card = await screen.findByRole('link', { name: 'Open Event ARD-EVT-2026-001' });
+      expect(within(card).getByText('15')).toBeInTheDocument();
+      expect(within(card).getByText('Jun')).toBeInTheDocument();
+      expect(within(card).getByText('2026-06-15')).toBeInTheDocument();
+      expect(within(card).getByText('Priya Nair')).toBeInTheDocument();
+      expect(card.querySelector('svg[data-testid="ChevronRightRoundedIcon"]')).toBeInTheDocument();
     });
   });
 });

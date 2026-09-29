@@ -1,15 +1,20 @@
+import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import { Box, Paper, Stack, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import type { z } from 'zod';
+import EmptyState from '../../components/ui/empty-state';
 import { createEventRowActivation } from '../../components/ui/event-row-activation';
 import type { dashboardUpcomingEventResultSchema } from '../../contract';
-import { toDateInputValue } from '../event-detail/date-input';
+import { getDateBlockParts } from './dashboard-dates';
 import {
   cardStyles,
+  chevronStyles,
   clientStyles,
+  dateBlockStyles,
   dateStyles,
   emptyStateCardStyles,
   listStyles,
+  textColumnStyles,
 } from './upcoming-events-card-list.styles';
 import { formatClientNames } from './upcoming-events-table';
 
@@ -33,30 +38,44 @@ const UpcomingEventsCardList = ({ events }: UpcomingEventsCardListProps) => {
   if (events.length === 0) {
     return (
       <Paper elevation={0} sx={emptyStateCardStyles}>
-        <Typography variant="bodyM">No upcoming Events</Typography>
+        <EmptyState illustration="no-upcoming-events" title="No upcoming Events" />
       </Paper>
     );
   }
 
   return (
     <Stack sx={listStyles}>
-      {events.map((event) => (
-        <Box
-          key={event.id}
-          tabIndex={0}
-          role="link"
-          aria-label={`Open Event ${event.eventId}`}
-          {...createEventRowActivation(navigate, event.id)}
-          sx={cardStyles}
-        >
-          <Typography variant="bodyM" sx={dateStyles}>
-            {toDateInputValue(event.date)}
-          </Typography>
-          <Typography variant="bodyM" sx={clientStyles}>
-            {formatClientNames(event.clientContacts)}
-          </Typography>
-        </Box>
-      ))}
+      {events.map((event) => {
+        const date = getDateBlockParts(event.date);
+        return (
+          <Box
+            key={event.id}
+            tabIndex={0}
+            role="link"
+            aria-label={`Open Event ${event.eventId}`}
+            {...createEventRowActivation(navigate, event.id)}
+            sx={cardStyles}
+          >
+            <Box sx={dateBlockStyles} aria-hidden>
+              <Typography variant="h3" component="span">
+                {date.day}
+              </Typography>
+              <Typography variant="labelS" component="span">
+                {date.month}
+              </Typography>
+            </Box>
+            <Box sx={textColumnStyles}>
+              <Typography variant="labelM" sx={dateStyles}>
+                {date.isoDate}
+              </Typography>
+              <Typography variant="bodyM" sx={clientStyles}>
+                {formatClientNames(event.clientContacts)}
+              </Typography>
+            </Box>
+            <ChevronRightRoundedIcon aria-hidden sx={chevronStyles} />
+          </Box>
+        );
+      })}
     </Stack>
   );
 };

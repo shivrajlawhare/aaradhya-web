@@ -1,29 +1,66 @@
 import type { SxProps, Theme } from '@mui/material';
-import { colorTokens, spaceTokens } from '../../theme/tokens';
+import { paletteVar, scaleTokens, shadowTokens } from '../../theme/tokens';
 
+const { radius, space, stroke } = scaleTokens;
+
+export type StatTileTone = 'orange' | 'espresso' | 'custard' | 'tonal';
+
+// 4 across on desktop, a 2×2 grid on mobile (Figma Stat Tile Desktop 254×160
+// / Mobile 171×128).
 export const rowStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space16}px`,
-  flexWrap: 'wrap',
+  display: 'grid',
+  gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
+  gap: { xs: `${space[16]}px`, md: `${space[24]}px` },
 };
 
-// accent-tint (count tile emphasis), per this story's own Tokens line.
-// Explicit column flex — labelS/titleL are custom Typography variants with
-// no entry in MUI's own variantMapping, so unlike h1..h6/body1/body2 they
-// fall back to an inline <span> rather than a block element (STORY-054's
-// own reported bug: label and value rendering beside each other instead of
-// stacked). A flex column forces both into a column regardless of that
-// inline default.
-export const tileStyles: SxProps<Theme> = {
+interface ToneColors {
+  background: string;
+  text: string;
+}
+
+const TONE_COLORS: Record<StatTileTone, ToneColors> = {
+  orange: { background: 'primary.main', text: 'primary.contrastText' },
+  espresso: { background: paletteVar('brand-inverse'), text: paletteVar('brand-onInverse') },
+  custard: { background: 'background.paper', text: 'text.primary' },
+  tonal: { background: paletteVar('brand-tonal'), text: paletteVar('brand-onTonal') },
+};
+
+const TILE_HEIGHT_DESKTOP = 160;
+const TILE_HEIGHT_MOBILE = 128;
+
+export const tileStyles = (tone: StatTileTone): SxProps<Theme> => ({
+  position: 'relative',
+  overflow: 'hidden',
   display: 'flex',
   flexDirection: 'column',
-  gap: `${spaceTokens.space4}px`,
-  bgcolor: colorTokens.accentTint,
-  p: `${spaceTokens.space16}px`,
-  minWidth: 140,
-  flex: '1 1 140px',
+  justifyContent: 'space-between',
+  height: { xs: TILE_HEIGHT_MOBILE, md: TILE_HEIGHT_DESKTOP },
+  p: { xs: `${space[16]}px`, md: `${space[24]}px` },
+  bgcolor: TONE_COLORS[tone].background,
+  color: TONE_COLORS[tone].text,
+  border: `${stroke.bold}px solid ${paletteVar('brand-borderStrong')}`,
+  borderRadius: `${radius.lg}px`,
+  boxShadow: shadowTokens.hardMd,
+});
+
+// Label and count sit above the corner decor.
+export const tileTextStyles: SxProps<Theme> = {
+  position: 'relative',
 };
 
-// tabular-nums, per this story's own Tokens line.
 export const tileValueStyles: SxProps<Theme> = {
+  position: 'relative',
   fontVariantNumeric: 'tabular-nums',
+};
+
+// Decor/Stat Tile, flipped vertically and pinned to the bottom-right corner
+// (Figma: 150×120 on desktop, 96×77 on mobile).
+export const decorStyles: SxProps<Theme> = {
+  position: 'absolute',
+  right: 0,
+  bottom: 0,
+  width: { xs: 96, md: 150 },
+  height: { xs: 77, md: 120 },
+  transform: 'scaleY(-1)',
+  pointerEvents: 'none',
 };

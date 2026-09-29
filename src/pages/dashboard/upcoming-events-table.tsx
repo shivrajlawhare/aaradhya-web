@@ -1,12 +1,22 @@
-import { Box, Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import type { z } from 'zod';
+import EmptyState from '../../components/ui/empty-state';
 import { createEventRowActivation } from '../../components/ui/event-row-activation';
 import { formatSetup } from '../../components/ui/format-setup';
 import StatusChip from '../../components/ui/status-chip';
 import type { dashboardUpcomingEventResultSchema } from '../../contract';
 import { toDateInputValue } from '../event-detail/date-input';
-import { emptyStateStyles, numericCellStyles, rowStyles, tableCardStyles } from './upcoming-events-table.styles';
+import { getDateBlockParts } from './dashboard-dates';
+import {
+  clientTextStyles,
+  dateDayStyles,
+  dateMetaStyles,
+  eventIdStyles,
+  numericCellStyles,
+  rowStyles,
+  tableCardStyles,
+} from './upcoming-events-table.styles';
 
 type UpcomingEvent = z.infer<typeof dashboardUpcomingEventResultSchema>;
 
@@ -87,9 +97,7 @@ const UpcomingEventsTable = ({ events }: UpcomingEventsTableProps) => {
   if (events.length === 0) {
     return (
       <Paper sx={tableCardStyles}>
-        <Box sx={emptyStateStyles}>
-          <Typography variant="bodyM">No upcoming Events</Typography>
-        </Box>
+        <EmptyState illustration="no-upcoming-events" title="No upcoming Events" />
       </Paper>
     );
   }
@@ -135,52 +143,72 @@ const UpcomingEventsTable = ({ events }: UpcomingEventsTableProps) => {
           </TableRow>
         </TableHead>
         <TableBody>
-          {events.map((event) => (
-            <TableRow
-              key={event.id}
-              hover
-              tabIndex={0}
-              role="link"
-              aria-label={`Open Event ${event.eventId}`}
-              {...createEventRowActivation(navigate, event.id)}
-              sx={rowStyles}
-            >
-              <TableCell sx={numericCellStyles}>
-                <Typography variant="bodyM">{toDateInputValue(event.date)}</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="bodyM">{event.eventFamilyType}</Typography>
-                <Typography variant="labelS">{event.eventId}</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="bodyM">{formatClientNames(event.clientContacts)}</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="bodyM">{event.venue}</Typography>
-              </TableCell>
-              <TableCell sx={numericCellStyles}>
-                <Typography variant="bodyM">{event.pax}</Typography>
-              </TableCell>
-              <TableCell>
-                <StatusChip status={event.status} />
-              </TableCell>
-              {showMealsColumn && (
-                <TableCell>
-                  <Typography variant="bodyM">{formatMeals(event.meals ?? [])}</Typography>
+          {events.map((event) => {
+            const date = getDateBlockParts(event.date);
+            return (
+              <TableRow
+                key={event.id}
+                hover
+                tabIndex={0}
+                role="link"
+                aria-label={`Open Event ${event.eventId}`}
+                {...createEventRowActivation(navigate, event.id)}
+                sx={rowStyles}
+              >
+                <TableCell sx={numericCellStyles}>
+                  <Typography variant="labelL" component="p" sx={dateDayStyles}>
+                    {date.day} {date.month}
+                  </Typography>
+                  <Typography variant="bodyS" component="p" sx={dateMetaStyles}>
+                    <span>{date.isoDate}</span> · {date.weekday}
+                  </Typography>
                 </TableCell>
-              )}
-              {showSetupColumn && (
                 <TableCell>
-                  <Typography variant="bodyM">{formatSetup(event.setup)}</Typography>
+                  <Typography variant="bodyM" component="p">
+                    {event.eventFamilyType}
+                  </Typography>
+                  <Typography variant="labelM" component="p" sx={eventIdStyles}>
+                    {event.eventId}
+                  </Typography>
                 </TableCell>
-              )}
-              {showRoomsColumn && (
                 <TableCell>
-                  <Typography variant="bodyM">{formatRooms(event.accommodation)}</Typography>
+                  <Typography
+                    variant="bodyM"
+                    component="p"
+                    title={formatClientNames(event.clientContacts)}
+                    noWrap
+                    sx={clientTextStyles}
+                  >
+                    {formatClientNames(event.clientContacts)}
+                  </Typography>
                 </TableCell>
-              )}
-            </TableRow>
-          ))}
+                <TableCell>
+                  <Typography variant="bodyM">{event.venue}</Typography>
+                </TableCell>
+                <TableCell sx={numericCellStyles}>
+                  <Typography variant="bodyM">{event.pax}</Typography>
+                </TableCell>
+                <TableCell>
+                  <StatusChip status={event.status} />
+                </TableCell>
+                {showMealsColumn && (
+                  <TableCell>
+                    <Typography variant="bodyM">{formatMeals(event.meals ?? [])}</Typography>
+                  </TableCell>
+                )}
+                {showSetupColumn && (
+                  <TableCell>
+                    <Typography variant="bodyM">{formatSetup(event.setup)}</Typography>
+                  </TableCell>
+                )}
+                {showRoomsColumn && (
+                  <TableCell>
+                    <Typography variant="bodyM">{formatRooms(event.accommodation)}</Typography>
+                  </TableCell>
+                )}
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </Paper>

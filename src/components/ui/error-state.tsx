@@ -1,8 +1,8 @@
 import { Box, Link, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { errorStateStyles, illustrationStyles, messageStyles } from './error-state.styles';
-import type { IllustrationName } from './illustrations';
-import ThemedIllustration from './themed-illustration';
+import { type IllustrationName, ILLUSTRATIONS } from './illustrations';
+import ThemedImage from './themed-image';
 
 export interface ErrorStateLink {
   label: string;
@@ -17,7 +17,7 @@ interface ErrorStateProps {
 
 const ErrorState = ({ illustration, message, link }: ErrorStateProps) => (
   <Box sx={errorStateStyles}>
-    <ThemedIllustration name={illustration} sx={illustrationStyles} />
+    <ThemedImage {...ILLUSTRATIONS[illustration]} sx={illustrationStyles} />
     <Typography variant="h3" component="p" sx={messageStyles}>
       {message}
     </Typography>

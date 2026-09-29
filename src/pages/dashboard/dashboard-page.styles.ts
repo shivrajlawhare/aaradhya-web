@@ -1,9 +1,34 @@
 import type { SxProps, Theme } from '@mui/material';
-import { spaceTokens } from '../../theme/tokens';
+import { scaleTokens } from '../../theme/tokens';
 
+const { space } = scaleTokens;
+
+// Figma Main: padding 32/40 and a 32 gap on desktop; 16 (40 at the bottom)
+// and a 24 gap on mobile.
 export const pageStyles: SxProps<Theme> = {
   display: 'flex',
   flexDirection: 'column',
-  gap: { xs: `${spaceTokens.space16}px`, md: `${spaceTokens.space24}px` },
-  p: { xs: `${spaceTokens.space16}px`, md: `${spaceTokens.space24}px` },
+  gap: { xs: `${space[24]}px`, md: `${space[32]}px` },
+  px: { xs: `${space[16]}px`, md: `${space[40]}px` },
+  pt: { xs: `${space[16]}px`, md: `${space[32]}px` },
+  pb: `${space[40]}px`,
+};
+
+export const sectionStyles: SxProps<Theme> = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: `${space[16]}px`,
+};
+
+// Announced to screen readers while the skeletons stand in for content.
+export const visuallyHiddenStyles: SxProps<Theme> = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  p: 0,
+  margin: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
 };

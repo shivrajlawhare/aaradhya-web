@@ -1,0 +1,78 @@
+<svg width="520" height="200" viewBox="0 0 520 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g>
+<g id="page-header-dark" clip-path="url(#clip0_1_12)">
+<g id="Motif/Dot Grid">
+<circle id="Dot" cx="23" cy="123" r="3" fill="#FFF9EB"/>
+<circle id="Dot_2" cx="43" cy="123" r="3" fill="#FFF9EB"/>
+<circle id="Dot_3" cx="63" cy="123" r="3" fill="#FFF9EB"/>
+<circle id="Dot_4" cx="83" cy="123" r="3" fill="#FFF9EB"/>
+<circle id="Dot_5" cx="103" cy="123" r="3" fill="#FFF9EB"/>
+<circle id="Dot_6" cx="123" cy="123" r="3" fill="#FFF9EB"/>
+<circle id="Dot_7" cx="143" cy="123" r="3" fill="#FFF9EB"/>
+<circle id="Dot_8" cx="163" cy="123" r="3" fill="#FFF9EB"/>
+<circle id="Dot_9" cx="183" cy="123" r="3" fill="#FFF9EB"/>
+<circle id="Dot_10" cx="203" cy="123" r="3" fill="#FFF9EB"/>
+<circle id="Dot_11" cx="23" cy="143" r="3" fill="#FFF9EB"/>
+<circle id="Dot_12" cx="43" cy="143" r="3" fill="#FFF9EB"/>
+<circle id="Dot_13" cx="63" cy="143" r="3" fill="#FFF9EB"/>
+<circle id="Dot_14" cx="83" cy="143" r="3" fill="#FFF9EB"/>
+<circle id="Dot_15" cx="103" cy="143" r="3" fill="#FFF9EB"/>
+<circle id="Dot_16" cx="123" cy="143" r="3" fill="#FFF9EB"/>
+<circle id="Dot_17" cx="143" cy="143" r="3" fill="#FFF9EB"/>
+<circle id="Dot_18" cx="163" cy="143" r="3" fill="#FFF9EB"/>
+<circle id="Dot_19" cx="183" cy="143" r="3" fill="#FFF9EB"/>
+<circle id="Dot_20" cx="203" cy="143" r="3" fill="#FFF9EB"/>
+<circle id="Dot_21" cx="23" cy="163" r="3" fill="#FFF9EB"/>
+<circle id="Dot_22" cx="43" cy="163" r="3" fill="#FFF9EB"/>
+<circle id="Dot_23" cx="63" cy="163" r="3" fill="#FFF9EB"/>
+<circle id="Dot_24" cx="83" cy="163" r="3" fill="#FFF9EB"/>
+<circle id="Dot_25" cx="103" cy="163" r="3" fill="#FFF9EB"/>
+<circle id="Dot_26" cx="123" cy="163" r="3" fill="#FFF9EB"/>
+<circle id="Dot_27" cx="143" cy="163" r="3" fill="#FFF9EB"/>
+<circle id="Dot_28" cx="163" cy="163" r="3" fill="#FFF9EB"/>
+<circle id="Dot_29" cx="183" cy="163" r="3" fill="#FFF9EB"/>
+<circle id="Dot_30" cx="203" cy="163" r="3" fill="#FFF9EB"/>
+<circle id="Dot_31" cx="23" cy="183" r="3" fill="#FFF9EB"/>
+<circle id="Dot_32" cx="43" cy="183" r="3" fill="#FFF9EB"/>
+<circle id="Dot_33" cx="63" cy="183" r="3" fill="#FFF9EB"/>
+<circle id="Dot_34" cx="83" cy="183" r="3" fill="#FFF9EB"/>
+<circle id="Dot_35" cx="103" cy="183" r="3" fill="#FFF9EB"/>
+<circle id="Dot_36" cx="123" cy="183" r="3" fill="#FFF9EB"/>
+<circle id="Dot_37" cx="143" cy="183" r="3" fill="#FFF9EB"/>
+<circle id="Dot_38" cx="163" cy="183" r="3" fill="#FFF9EB"/>
+<circle id="Dot_39" cx="183" cy="183" r="3" fill="#FFF9EB"/>
+<circle id="Dot_40" cx="203" cy="183" r="3" fill="#FFF9EB"/>
+</g>
+<g id="Motif/Arch">
+<path id="Arch" d="M330 242.25V111C330 69.585 363.585 36 405 36C446.415 36 480 69.585 480 111V242.25H330Z" fill="#FFF9EB"/>
+</g>
+<g id="Motif/Arch_2">
+<path id="Arch_2" d="M351.375 226.562V130.312C351.375 100.701 375.388 76.6875 405 76.6875C434.612 76.6875 458.625 100.701 458.625 130.312V226.562H351.375Z" stroke="#F77331" stroke-width="1.375" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.38 5.5"/>
+</g>
+<g id="Sun" filter="url(#filter0_d_1_12)">
+<circle cx="326" cy="68" r="56" fill="#F77331"/>
+<circle cx="326" cy="68" r="55" stroke="#FFF9EB" stroke-width="2"/>
+</g>
+<g id="Motif/Sparkle">
+<path id="Sparkle" d="M490 20C491.562 32.5 497.5 38.4375 510 40C497.5 41.5625 491.562 47.5 490 60C488.438 47.5 482.5 41.5625 470 40C482.5 38.4375 488.438 32.5 490 20Z" fill="#F77331"/>
+</g>
+<g id="Motif/Sparkle_2">
+<path id="Sparkle_2" d="M247 150C247.859 156.875 251.125 160.141 258 161C251.125 161.859 247.859 165.125 247 172C246.141 165.125 242.875 161.859 236 161C242.875 160.141 246.141 156.875 247 150Z" fill="#F77331"/>
+</g>
+</g>
+</g>
+<defs>
+<filter id="filter0_d_1_12" x="270" y="12" width="115" height="115" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dx="3" dy="3"/>
+<feComposite in2="hardAlpha" operator="out"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.54902 0 0 0 0 0.2 0 0 0 0 0.0627451 0 0 0 1 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_12"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_12" result="shape"/>
+</filter>
+<clipPath id="clip0_1_12">
+<rect width="520" height="200" fill="white"/>
+</clipPath>
+</defs>
+</svg>

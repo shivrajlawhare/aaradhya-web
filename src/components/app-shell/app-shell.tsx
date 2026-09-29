@@ -34,12 +34,15 @@ interface AppShellProps {
   // above the page content — only for the screens whose own component no
   // longer renders one (Dashboard, Events, Calendar, User Management).
   title?: string;
+  // Set by pages with their own PageHeader h1 (Dashboard): the title then
+  // only feeds the mobile top bar.
+  isDesktopTitleHidden?: boolean;
   children: ReactNode;
 }
 
 // Wraps every authenticated route (app.tsx): a fixed dark sidebar from `md`
 // up, a sticky top bar with a slide-in nav overlay below it.
-const AppShell = ({ title, children }: AppShellProps) => {
+const AppShell = ({ title, isDesktopTitleHidden = false, children }: AppShellProps) => {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { user, logout } = useAuth();
@@ -72,7 +75,7 @@ const AppShell = ({ title, children }: AppShellProps) => {
           </Box>
         </Box>
         <Box component="main" sx={desktopContentStyles}>
-          {title && (
+          {title && !isDesktopTitleHidden && (
             <Typography variant="titleL" component="h1" sx={desktopTitleStyles}>
               {title}
             </Typography>
