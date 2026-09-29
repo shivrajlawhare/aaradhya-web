@@ -750,6 +750,9 @@ export const calendarEventSummarySchema = z.object({
   eventFamilyType: z.string(),
   status: z.nativeEnum(EventStatus),
   eventManager: z.string(),
+  // The tile label (D7: POC name → first client contact → family type),
+  // computed server-side so no role needs clientContacts to label a tile.
+  displayName: z.string(),
 });
 
 export const calendarSessionResultSchema = sessionResultSchema.extend({

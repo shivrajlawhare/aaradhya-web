@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import { Menu, MenuItem } from '@mui/material';
 import FilterChip from './filter-chip';
+import { menuCheckStyles, menuItemStyles, menuPaperStyles } from './picker-filter-chip.styles';
 
 export interface PickerOption {
   value: string;
@@ -38,19 +40,28 @@ const PickerFilterChip = ({ label, options, selectedValue, onSelect, allLabel }:
       <FilterChip
         label={selectedOption?.label ?? label}
         active={selectedOption !== null}
+        isOpen={anchorEl !== null}
         onClick={(event) => setAnchorEl(event.currentTarget)}
       />
-      <Menu anchorEl={anchorEl} open={anchorEl !== null} onClose={() => setAnchorEl(null)}>
-        <MenuItem selected={selectedValue === null} onClick={() => handleSelect(null)}>
+      <Menu
+        anchorEl={anchorEl}
+        open={anchorEl !== null}
+        onClose={() => setAnchorEl(null)}
+        slotProps={{ paper: { sx: menuPaperStyles } }}
+      >
+        <MenuItem selected={selectedValue === null} onClick={() => handleSelect(null)} sx={menuItemStyles}>
           {allLabel ?? `All ${label}s`}
+          {selectedValue === null && <CheckRoundedIcon aria-hidden sx={menuCheckStyles} />}
         </MenuItem>
         {options.map((option) => (
           <MenuItem
             key={option.value}
             selected={option.value === selectedValue}
             onClick={() => handleSelect(option.value)}
+            sx={menuItemStyles}
           >
             {option.label}
+            {option.value === selectedValue && <CheckRoundedIcon aria-hidden sx={menuCheckStyles} />}
           </MenuItem>
         ))}
       </Menu>

@@ -70,7 +70,7 @@ const App = () => {
       <Route
         path={EVENT_LIST_PATH}
         element={
-          <AppShell title="Events">
+          <AppShell title="Events" isDesktopTitleHidden>
             <EventListPage />
           </AppShell>
         }
@@ -190,7 +190,7 @@ const App = () => {
       <Route
         path={CALENDAR_PATH}
         element={
-          <AppShell title="Calendar">
+          <AppShell title="Calendar" isDesktopTitleHidden>
             <CalendarPage />
           </AppShell>
         }

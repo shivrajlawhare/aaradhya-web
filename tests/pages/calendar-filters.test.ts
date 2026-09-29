@@ -34,7 +34,7 @@ interface MockCalendarSession {
     notes: string | null;
   };
   items: unknown[];
-  event: { id: string; eventFamilyType: string; status: EventStatus; eventManager: string };
+  event: { id: string; eventFamilyType: string; status: EventStatus; eventManager: string; displayName: string };
 }
 
 const makeSession = (overrides: Partial<MockCalendarSession> = {}): MockCalendarSession => ({
@@ -62,7 +62,13 @@ const makeSession = (overrides: Partial<MockCalendarSession> = {}): MockCalendar
     notes: null,
   },
   items: [],
-  event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-1' },
+  event: {
+    id: 'event-1',
+    eventFamilyType: 'Wedding',
+    status: EventStatus.Tentative,
+    eventManager: 'manager-1',
+    displayName: 'Wedding',
+  },
   ...overrides,
 });
 
@@ -75,11 +81,23 @@ describe('filterCalendarSessions', () => {
 
   it('narrows by status, excluding a session whose Event has a different status', () => {
     const tentative = makeSession({
-      event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-1' },
+      event: {
+        id: 'event-1',
+        eventFamilyType: 'Wedding',
+        status: EventStatus.Tentative,
+        eventManager: 'manager-1',
+        displayName: 'Wedding',
+      },
     });
     const confirmed = makeSession({
       id: 'session-2',
-      event: { id: 'event-2', eventFamilyType: 'Wedding', status: EventStatus.Confirmed, eventManager: 'manager-1' },
+      event: {
+        id: 'event-2',
+        eventFamilyType: 'Wedding',
+        status: EventStatus.Confirmed,
+        eventManager: 'manager-1',
+        displayName: 'Wedding',
+      },
     });
     const filters: CalendarFilters = { ...DEFAULT_CALENDAR_FILTERS, status: EventStatus.Confirmed };
 
@@ -91,11 +109,23 @@ describe('filterCalendarSessions', () => {
   it('"All" clears the status filter — every status matches again', () => {
     const sessions = [
       makeSession({
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-1' },
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: EventStatus.Tentative,
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
       makeSession({
         id: 'session-2',
-        event: { id: 'event-2', eventFamilyType: 'Wedding', status: EventStatus.Confirmed, eventManager: 'manager-1' },
+        event: {
+          id: 'event-2',
+          eventFamilyType: 'Wedding',
+          status: EventStatus.Confirmed,
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
     ];
     const filters: CalendarFilters = { ...DEFAULT_CALENDAR_FILTERS, status: 'All' };
@@ -113,11 +143,23 @@ describe('filterCalendarSessions', () => {
 
   it('narrows by eventManagerId', () => {
     const managerA = makeSession({
-      event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-a' },
+      event: {
+        id: 'event-1',
+        eventFamilyType: 'Wedding',
+        status: EventStatus.Tentative,
+        eventManager: 'manager-a',
+        displayName: 'Wedding',
+      },
     });
     const managerB = makeSession({
       id: 'session-2',
-      event: { id: 'event-2', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-b' },
+      event: {
+        id: 'event-2',
+        eventFamilyType: 'Wedding',
+        status: EventStatus.Tentative,
+        eventManager: 'manager-b',
+        displayName: 'Wedding',
+      },
     });
     const filters: CalendarFilters = { ...DEFAULT_CALENDAR_FILTERS, eventManagerId: 'manager-a' };
 
@@ -126,7 +168,13 @@ describe('filterCalendarSessions', () => {
 
   it('narrows by eventFamilyType', () => {
     const wedding = makeSession({
-      event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-1' },
+      event: {
+        id: 'event-1',
+        eventFamilyType: 'Wedding',
+        status: EventStatus.Tentative,
+        eventManager: 'manager-1',
+        displayName: 'Wedding',
+      },
     });
     const corporate = makeSession({
       id: 'session-2',
@@ -135,6 +183,7 @@ describe('filterCalendarSessions', () => {
         eventFamilyType: 'Corporate Offsite',
         status: EventStatus.Tentative,
         eventManager: 'manager-1',
+        displayName: 'Corporate Offsite',
       },
     });
     const filters: CalendarFilters = { ...DEFAULT_CALENDAR_FILTERS, eventFamilyType: 'Wedding' };
@@ -147,7 +196,13 @@ describe('filterCalendarSessions', () => {
   // direction, not a search-by-specific-Event selector).
   it('narrows by event (the same dimension as eventFamilyType, offered as its own filter)', () => {
     const wedding = makeSession({
-      event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-1' },
+      event: {
+        id: 'event-1',
+        eventFamilyType: 'Wedding',
+        status: EventStatus.Tentative,
+        eventManager: 'manager-1',
+        displayName: 'Wedding',
+      },
     });
     const corporate = makeSession({
       id: 'session-2',
@@ -156,6 +211,7 @@ describe('filterCalendarSessions', () => {
         eventFamilyType: 'Corporate Offsite',
         status: EventStatus.Tentative,
         eventManager: 'manager-1',
+        displayName: 'Corporate Offsite',
       },
     });
     const filters: CalendarFilters = { ...DEFAULT_CALENDAR_FILTERS, event: 'Wedding' };
@@ -165,7 +221,13 @@ describe('filterCalendarSessions', () => {
 
   it('AND-combines event with eventFamilyType — a session matching only one of two different values matches neither', () => {
     const wedding = makeSession({
-      event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-1' },
+      event: {
+        id: 'event-1',
+        eventFamilyType: 'Wedding',
+        status: EventStatus.Tentative,
+        eventManager: 'manager-1',
+        displayName: 'Wedding',
+      },
     });
     const filters: CalendarFilters = {
       ...DEFAULT_CALENDAR_FILTERS,
@@ -179,12 +241,24 @@ describe('filterCalendarSessions', () => {
   it('combines multiple filter dimensions with AND semantics', () => {
     const matches = makeSession({
       venue: 'Lawn',
-      event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Confirmed, eventManager: 'manager-1' },
+      event: {
+        id: 'event-1',
+        eventFamilyType: 'Wedding',
+        status: EventStatus.Confirmed,
+        eventManager: 'manager-1',
+        displayName: 'Wedding',
+      },
     });
     const wrongVenue = makeSession({
       id: 'session-2',
       venue: 'Poolside',
-      event: { id: 'event-2', eventFamilyType: 'Wedding', status: EventStatus.Confirmed, eventManager: 'manager-1' },
+      event: {
+        id: 'event-2',
+        eventFamilyType: 'Wedding',
+        status: EventStatus.Confirmed,
+        eventManager: 'manager-1',
+        displayName: 'Wedding',
+      },
     });
     const filters: CalendarFilters = { ...DEFAULT_CALENDAR_FILTERS, venue: 'Lawn', status: EventStatus.Confirmed };
 
@@ -215,7 +289,13 @@ describe('getDistinctEventFamilyTypes', () => {
   it('returns each distinct eventFamilyType once, sorted', () => {
     const sessions = [
       makeSession({
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-1' },
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: EventStatus.Tentative,
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
       makeSession({
         id: 'session-2',
@@ -224,11 +304,18 @@ describe('getDistinctEventFamilyTypes', () => {
           eventFamilyType: 'Corporate Offsite',
           status: EventStatus.Tentative,
           eventManager: 'manager-1',
+          displayName: 'Corporate Offsite',
         },
       }),
       makeSession({
         id: 'session-3',
-        event: { id: 'event-3', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-1' },
+        event: {
+          id: 'event-3',
+          eventFamilyType: 'Wedding',
+          status: EventStatus.Tentative,
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
     ];
 

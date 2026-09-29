@@ -33,7 +33,7 @@ interface MockCalendarSession {
     notes: string | null;
   };
   items: unknown[];
-  event: { id: string; eventFamilyType: string; status: string; eventManager: string };
+  event: { id: string; eventFamilyType: string; status: string; eventManager: string; displayName: string };
 }
 
 const makeSession = (overrides: Partial<MockCalendarSession> = {}): MockCalendarSession => ({
@@ -61,7 +61,13 @@ const makeSession = (overrides: Partial<MockCalendarSession> = {}): MockCalendar
     notes: null,
   },
   items: [],
-  event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+  event: {
+    id: 'event-1',
+    eventFamilyType: 'Wedding',
+    status: 'Tentative',
+    eventManager: 'manager-1',
+    displayName: 'Wedding',
+  },
   ...overrides,
 });
 
@@ -187,14 +193,26 @@ describe('CalendarPage', () => {
         sessionType: 'Haldi',
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
       makeSession({
         id: 'session-2',
         sessionType: 'Vendor Setup',
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
     ]);
     renderPage();
@@ -210,13 +228,25 @@ describe('CalendarPage', () => {
         id: 'session-1',
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
       makeSession({
         id: 'session-2',
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-2', eventFamilyType: 'Corporate Offsite', status: 'Confirmed', eventManager: 'manager-1' },
+        event: {
+          id: 'event-2',
+          eventFamilyType: 'Corporate Offsite',
+          status: 'Confirmed',
+          eventManager: 'manager-1',
+          displayName: 'Corporate Offsite',
+        },
       }),
     ]);
     renderPage();
@@ -243,7 +273,7 @@ describe('CalendarPage', () => {
       makeSession({
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status, eventManager: 'manager-1' },
+        event: { id: 'event-1', eventFamilyType: 'Wedding', status, eventManager: 'manager-1', displayName: 'Wedding' },
       }),
     ]);
     renderPage();
@@ -258,12 +288,40 @@ describe('CalendarPage', () => {
     expect(eventCard).toHaveAttribute('data-palette', expectedPalette);
   });
 
+  it('labels a pill with the D7 display name (the client name), not the family type', async () => {
+    mockCalendarApi([
+      makeSession({
+        startDate: '2026-09-12T00:00:00.000Z',
+        endDate: '2026-09-12T00:00:00.000Z',
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          eventManager: 'manager-1',
+          displayName: 'Suresh Kulkarni',
+        },
+      }),
+    ]);
+    renderPage();
+
+    await navigateToSeptember2026();
+
+    expect(await screen.findByText('Suresh Kulkarni')).toBeInTheDocument();
+    expect(screen.queryByText('Wedding')).not.toBeInTheDocument();
+  });
+
   it("navigates to the Event's detail screen when its chip is tapped", async () => {
     mockCalendarApi([
       makeSession({
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-42', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+        event: {
+          id: 'event-42',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
     ]);
     renderPage();
@@ -343,7 +401,13 @@ describe('CalendarPage', () => {
         id: 'session-1',
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
       makeSession({
         id: 'session-2',
@@ -354,6 +418,7 @@ describe('CalendarPage', () => {
           eventFamilyType: 'Corporate Offsite',
           status: 'Confirmed',
           eventManager: 'manager-1',
+          displayName: 'Corporate Offsite',
         },
       }),
     ]);
@@ -379,7 +444,13 @@ describe('CalendarPage', () => {
         id: 'session-1',
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
       makeSession({
         id: 'session-2',
@@ -390,6 +461,7 @@ describe('CalendarPage', () => {
           eventFamilyType: 'Corporate Offsite',
           status: 'Confirmed',
           eventManager: 'manager-1',
+          displayName: 'Corporate Offsite',
         },
       }),
     ]);
@@ -418,7 +490,13 @@ describe('CalendarPage', () => {
         venue: 'Lawn',
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
       makeSession({
         id: 'session-2',
@@ -430,6 +508,7 @@ describe('CalendarPage', () => {
           eventFamilyType: 'Corporate Offsite',
           status: 'Tentative',
           eventManager: 'manager-1',
+          displayName: 'Corporate Offsite',
         },
       }),
     ]);
@@ -449,7 +528,13 @@ describe('CalendarPage', () => {
         venue: 'Lawn',
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
       makeSession({
         id: 'session-2',
@@ -461,6 +546,7 @@ describe('CalendarPage', () => {
           eventFamilyType: 'Corporate Offsite',
           status: 'Tentative',
           eventManager: 'manager-1',
+          displayName: 'Corporate Offsite',
         },
       }),
     ]);
@@ -481,7 +567,13 @@ describe('CalendarPage', () => {
         makeSession({
           startDate: '2026-09-12T00:00:00.000Z',
           endDate: '2026-09-12T00:00:00.000Z',
-          event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+          event: {
+            id: 'event-1',
+            eventFamilyType: 'Wedding',
+            status: 'Tentative',
+            eventManager: 'manager-1',
+            displayName: 'Wedding',
+          },
         }),
       ],
       [
@@ -505,7 +597,13 @@ describe('CalendarPage', () => {
           id: 'session-1',
           startDate: '2026-09-12T00:00:00.000Z',
           endDate: '2026-09-12T00:00:00.000Z',
-          event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+          event: {
+            id: 'event-1',
+            eventFamilyType: 'Wedding',
+            status: 'Tentative',
+            eventManager: 'manager-1',
+            displayName: 'Wedding',
+          },
         }),
         makeSession({
           id: 'session-2',
@@ -516,6 +614,7 @@ describe('CalendarPage', () => {
             eventFamilyType: 'Corporate Offsite',
             status: 'Tentative',
             eventManager: 'manager-2',
+            displayName: 'Corporate Offsite',
           },
         }),
       ],
@@ -539,7 +638,13 @@ describe('CalendarPage', () => {
         id: 'session-1',
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
       makeSession({
         id: 'session-2',
@@ -550,6 +655,7 @@ describe('CalendarPage', () => {
           eventFamilyType: 'Corporate Offsite',
           status: 'Tentative',
           eventManager: 'manager-1',
+          displayName: 'Corporate Offsite',
         },
       }),
     ]);
@@ -570,7 +676,13 @@ describe('CalendarPage', () => {
         id: 'session-1',
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
       makeSession({
         id: 'session-2',
@@ -581,6 +693,7 @@ describe('CalendarPage', () => {
           eventFamilyType: 'Corporate Offsite',
           status: 'Tentative',
           eventManager: 'manager-1',
+          displayName: 'Corporate Offsite',
         },
       }),
     ]);
@@ -604,7 +717,13 @@ describe('CalendarPage', () => {
         venue: 'Lawn',
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Tentative', eventManager: 'manager-1' },
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: 'Tentative',
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
     ]);
     renderPage();
@@ -628,7 +747,13 @@ describe('CalendarPage', () => {
         venue: 'Lawn',
         startDate: '2026-09-12T00:00:00.000Z',
         endDate: '2026-09-12T00:00:00.000Z',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: 'Confirmed', eventManager: 'manager-1' },
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: 'Confirmed',
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
     ]);
     renderPage();

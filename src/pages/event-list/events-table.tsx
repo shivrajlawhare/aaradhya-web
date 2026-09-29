@@ -1,10 +1,12 @@
-import { Box, Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import type { z } from 'zod';
+import EmptyState from '../../components/ui/empty-state';
 import { createEventRowActivation } from '../../components/ui/event-row-activation';
 import StatusChip from '../../components/ui/status-chip';
+import { useEventManagerName } from '../../components/ui/use-event-manager-name';
 import { ClientContactRole, type eventResultSchema } from '../../contract';
-import { emptyStateStyles, familyTypeCellStyles, rowStyles, tableCardStyles } from './events-table.styles';
+import { familyTypeCellStyles, rowStyles, tableCardStyles } from './events-table.styles';
 
 type PublicEvent = z.infer<typeof eventResultSchema>;
 
@@ -32,13 +34,12 @@ export const getBrideGroomNames = (clientContacts: PublicEvent['clientContacts']
 
 const EventsTable = ({ events }: EventsTableProps) => {
   const navigate = useNavigate();
+  const getManagerName = useEventManagerName();
 
   if (events.length === 0) {
     return (
       <Paper sx={tableCardStyles}>
-        <Box sx={emptyStateStyles}>
-          <Typography variant="bodyM">No Events yet</Typography>
-        </Box>
+        <EmptyState illustration="no-events-yet" title="No Events yet" />
       </Paper>
     );
   }
@@ -88,7 +89,7 @@ const EventsTable = ({ events }: EventsTableProps) => {
                 <StatusChip status={event.status} />
               </TableCell>
               <TableCell>
-                <Typography variant="bodyM">{event.eventManager}</Typography>
+                <Typography variant="bodyM">{getManagerName(event.eventManager)}</Typography>
               </TableCell>
               <TableCell>
                 <Typography variant="bodyM">{getBrideGroomNames(event.clientContacts)}</Typography>

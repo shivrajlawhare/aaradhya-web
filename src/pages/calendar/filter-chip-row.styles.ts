@@ -1,14 +1,20 @@
 import type { SxProps, Theme } from '@mui/material';
-import { spaceTokens } from '../../theme/tokens';
+import { scaleTokens } from '../../theme/tokens';
 
-// Below `md` (this story's own AC): a single horizontally-scrollable row,
-// not wrapped chips eating vertical space above the grid — desktop keeps
-// wrapping since there's width to spare there.
+const { space } = scaleTokens;
+
+// Below `md`: a single horizontally-scrollable row that runs to the screen
+// edge (so the next chip peeks), not wrapped chips eating vertical space
+// above the grid. Desktop keeps the chips right-aligned beside the month nav.
 export const rowStyles: SxProps<Theme> = {
   display: 'flex',
   flexWrap: { xs: 'nowrap', md: 'wrap' },
+  justifyContent: { xs: 'flex-start', md: 'flex-end' },
   overflowX: { xs: 'auto', md: 'visible' },
-  gap: `${spaceTokens.space8}px`,
+  gap: `${space[8]}px`,
+  mx: { xs: `-${space[16]}px`, md: 0 },
+  px: { xs: `${space[16]}px`, md: 0 },
+  scrollbarWidth: 'none',
   // Chips shouldn't compress to fit the scroll container — each keeps its
   // own natural width and the row simply scrolls past what doesn't fit.
   '& > *': {

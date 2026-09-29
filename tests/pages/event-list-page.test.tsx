@@ -48,13 +48,20 @@ const makeEvent = (overrides: Partial<MockEvent> = {}): MockEvent => ({
 const jsonResponse = (status: number, body: unknown) =>
   Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
 
-const mockEventsApi = (events: MockEvent[]) => {
+// DEV-05: the Manager column/meta line resolves ids through GET
+// /event-managers; 'manager-1' is Priya Joshi.
+const EVENT_MANAGERS = [{ id: 'manager-1', name: 'Priya Joshi' }];
+
+const mockEventsApi = (events: MockEvent[], eventManagers = EVENT_MANAGERS) => {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith('/events')) {
         return jsonResponse(200, events);
+      }
+      if (url.endsWith('/event-managers')) {
+        return jsonResponse(200, eventManagers);
       }
       throw new Error(`Unhandled request: ${url}`);
     })
@@ -106,7 +113,8 @@ describe('EventListPage', () => {
         throw new Error('expected a row to render');
       }
       expect(within(row).getByText('Wedding')).toBeInTheDocument();
-      expect(within(row).getByText('manager-1')).toBeInTheDocument();
+      expect(await within(row).findByText('Priya Joshi')).toBeInTheDocument();
+      expect(within(row).queryByText('manager-1')).not.toBeInTheDocument();
       expect(within(row).getByText('Priya Nair & Rohan Nair')).toBeInTheDocument();
     });
 
@@ -186,7 +194,7 @@ describe('EventListPage', () => {
       }
       expect(within(card).getByText('Wedding')).toBeInTheDocument();
       expect(within(card).getByText('Tentative', { selector: '.MuiChip-label' })).toBeInTheDocument();
-      expect(within(card).getByText('Priya Nair & Rohan Nair · manager-1')).toBeInTheDocument();
+      expect(await within(card).findByText('Priya Nair & Rohan Nair · Priya Joshi')).toBeInTheDocument();
     });
 
     it('renders "—" for Bride/Groom when neither role is present, same helper as the desktop table', async () => {
@@ -198,7 +206,7 @@ describe('EventListPage', () => {
       ]);
       renderPage();
 
-      expect(await screen.findByText('— · manager-1')).toBeInTheDocument();
+      expect(await screen.findByText('— · Priya Joshi')).toBeInTheDocument();
     });
 
     it('renders a plain empty-state card, not a blank screen, when there are no Events', async () => {
@@ -236,7 +244,7 @@ describe('EventListPage', () => {
       mockEventsApi([makeEvent({ clientContacts: [{ name: longName, contactNumber: '9000000000', role: 'Bride' }] })]);
       renderPage();
 
-      const line = await screen.findByText(`${longName} · manager-1`);
+      const line = await screen.findByText(`${longName} · Priya Joshi`);
       expect(line).toHaveStyle({ overflowWrap: 'anywhere' });
     });
 
@@ -289,6 +297,51 @@ describe('EventListPage', () => {
 
       const button = await screen.findByRole('link', { name: 'New Event' });
       expect(button).toHaveAttribute('href', '/events/new');
+    });
+  });
+
+  describe('redesign (DEV-05)', () => {
+    it('falls back to the manager id when that manager is not in GET /event-managers', async () => {
+      mockMatchMedia(true);
+      mockEventsApi([makeEvent({ eventManager: 'manager-gone' })]);
+      renderPage();
+
+      const row = (await screen.findByText('ARD-EVT-2026-001')).closest('tr');
+      if (!row) {
+        throw new Error('expected a row to render');
+      }
+      await waitFor(() => expect(within(row).getByText('manager-gone')).toBeInTheDocument());
+    });
+
+    it('renders the page header with the event count and the Events h1', async () => {
+      mockMatchMedia(true);
+      mockEventsApi([makeEvent(), makeEvent({ id: 'event-2', eventId: 'ARD-EVT-2026-002' })]);
+      renderPage();
+
+      expect(await screen.findByText('2 events')).toBeInTheDocument();
+      expect(screen.getByText('All events')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Events' })).toBeInTheDocument();
+    });
+
+    it('shows skeleton rows with a loading status while Events load', async () => {
+      mockMatchMedia(true);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() => new Promise<Response>(() => undefined))
+      );
+      renderPage();
+
+      expect(await screen.findByRole('status')).toHaveTextContent('Loading events');
+      expect(document.querySelectorAll('.MuiSkeleton-root').length).toBeGreaterThan(6);
+    });
+
+    it('uses the No Events Yet illustration for the empty state', async () => {
+      mockMatchMedia(true);
+      mockEventsApi([]);
+      renderPage();
+
+      await screen.findByText('No Events yet');
+      expect(document.querySelector('img[data-scheme="light"][src*="no-events-yet"]')).toBeInTheDocument();
     });
   });
 });

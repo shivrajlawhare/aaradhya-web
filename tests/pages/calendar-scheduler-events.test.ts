@@ -8,7 +8,7 @@ interface MockCalendarSession {
   endDate: string;
   startTime: string | null;
   endTime: string | null;
-  event: { id: string; eventFamilyType: string; status: EventStatus; eventManager: string };
+  event: { id: string; eventFamilyType: string; status: EventStatus; eventManager: string; displayName: string };
 }
 
 const makeSession = (overrides: Partial<MockCalendarSession> = {}): MockCalendarSession => ({
@@ -17,11 +17,33 @@ const makeSession = (overrides: Partial<MockCalendarSession> = {}): MockCalendar
   endDate: '2026-09-12T00:00:00.000Z',
   startTime: null,
   endTime: null,
-  event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-1' },
+  event: {
+    id: 'event-1',
+    eventFamilyType: 'Wedding',
+    status: EventStatus.Tentative,
+    eventManager: 'manager-1',
+    displayName: 'Wedding',
+  },
   ...overrides,
 });
 
 describe('mapSessionsToSchedulerEvents', () => {
+  it('titles each tile with the server-computed D7 display name, not the family type', () => {
+    const [event] = mapSessionsToSchedulerEvents([
+      makeSession({
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: EventStatus.Tentative,
+          eventManager: 'manager-1',
+          displayName: 'Suresh Kulkarni',
+        },
+      }),
+    ]);
+
+    expect(event?.title).toBe('Suresh Kulkarni');
+  });
+
   it('maps a single-day, timed session to one all-fields-set SchedulerEvent', () => {
     const [event] = mapSessionsToSchedulerEvents([makeSession({ startTime: '10:00', endTime: '14:00' })]);
 
@@ -74,7 +96,13 @@ describe('mapSessionsToSchedulerEvents', () => {
     const events = mapSessionsToSchedulerEvents([
       makeSession({
         id: 'session-1',
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Tentative, eventManager: 'manager-1' },
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: EventStatus.Tentative,
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
       makeSession({
         id: 'session-2',
@@ -83,6 +111,7 @@ describe('mapSessionsToSchedulerEvents', () => {
           eventFamilyType: 'Corporate Offsite',
           status: EventStatus.Confirmed,
           eventManager: 'manager-1',
+          displayName: 'Corporate Offsite',
         },
       }),
     ]);
@@ -94,7 +123,13 @@ describe('mapSessionsToSchedulerEvents', () => {
   it("sets resource to the Event's current status", () => {
     const [event] = mapSessionsToSchedulerEvents([
       makeSession({
-        event: { id: 'event-1', eventFamilyType: 'Wedding', status: EventStatus.Cancelled, eventManager: 'manager-1' },
+        event: {
+          id: 'event-1',
+          eventFamilyType: 'Wedding',
+          status: EventStatus.Cancelled,
+          eventManager: 'manager-1',
+          displayName: 'Wedding',
+        },
       }),
     ]);
 

@@ -1,4 +1,5 @@
 import { Box, Skeleton } from '@mui/material';
+import TableSkeleton from '../../components/ui/table-skeleton';
 import { rowStyles } from './count-tiles.styles';
 import {
   cardClientBarStyles,
@@ -6,10 +7,7 @@ import {
   cardListSkeletonStyles,
   cardSkeletonStyles,
   cardSkeletonTextStyles,
-  chipBarStyles,
   dateBlockBarStyles,
-  tableRowSkeletonStyles,
-  tableSkeletonStyles,
   tileCaptionBarStyles,
   tileCountBarStyles,
   tileLabelBarStyles,
@@ -18,7 +16,7 @@ import {
 
 const TILE_COUNT = 4;
 const ROW_COUNT = 5;
-const TABLE_COLUMN_COUNT = 5;
+const TABLE_TEXT_COLUMN_COUNT = 5;
 
 const placeholders = (count: number) => Array.from({ length: count }, (_, index) => index);
 
@@ -35,16 +33,7 @@ export const CountTilesSkeleton = () => (
 );
 
 export const UpcomingTableSkeleton = () => (
-  <Box sx={tableSkeletonStyles}>
-    {placeholders(ROW_COUNT).map((row) => (
-      <Box key={row} sx={tableRowSkeletonStyles}>
-        {placeholders(TABLE_COLUMN_COUNT).map((column) => (
-          <Skeleton key={column} variant="text" />
-        ))}
-        <Skeleton variant="rounded" sx={chipBarStyles} />
-      </Box>
-    ))}
-  </Box>
+  <TableSkeleton rowCount={ROW_COUNT} textColumnCount={TABLE_TEXT_COLUMN_COUNT} />
 );
 
 export const UpcomingCardsSkeleton = () => (

@@ -19,16 +19,3 @@ export const sectionStyles: SxProps<Theme> = {
   flexDirection: 'column',
   gap: `${space[16]}px`,
 };
-
-// Announced to screen readers while the skeletons stand in for content.
-export const visuallyHiddenStyles: SxProps<Theme> = {
-  position: 'absolute',
-  width: '1px',
-  height: '1px',
-  p: 0,
-  margin: '-1px',
-  overflow: 'hidden',
-  clip: 'rect(0 0 0 0)',
-  whiteSpace: 'nowrap',
-  border: 0,
-};

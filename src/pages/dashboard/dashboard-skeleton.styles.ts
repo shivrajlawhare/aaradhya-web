@@ -21,26 +21,6 @@ export const tileSkeletonStyles: SxProps<Theme> = {
   borderRadius: `${radius.lg}px`,
 };
 
-export const tableSkeletonStyles: SxProps<Theme> = {
-  ...outlinedCard,
-  borderRadius: `${radius.md}px`,
-  overflow: 'hidden',
-};
-
-// Same 56 px body row height as the real table (MuiTableCell override).
-const TABLE_ROW_HEIGHT = 56;
-
-// Figma Skeleton/Table Row: bars roughly in the table's column rhythm.
-export const tableRowSkeletonStyles: SxProps<Theme> = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 2fr 2fr 1.5fr 1fr 1fr',
-  alignItems: 'center',
-  gap: `${space[16]}px`,
-  px: `${space[16]}px`,
-  height: TABLE_ROW_HEIGHT,
-  '&:not(:last-of-type)': { borderBottom: `${stroke.hair}px solid ${paletteVar('divider')}` },
-};
-
 // Figma Skeleton/Event Card for the mobile list.
 export const cardSkeletonStyles: SxProps<Theme> = {
   ...outlinedCard,
@@ -68,11 +48,6 @@ export const cardListSkeletonStyles: SxProps<Theme> = {
 export const tileLabelBarStyles: SxProps<Theme> = { width: 64 };
 export const tileCountBarStyles: SxProps<Theme> = { width: 100, height: 32 };
 export const tileCaptionBarStyles: SxProps<Theme> = { width: 78 };
-
-export const chipBarStyles: SxProps<Theme> = {
-  height: 20,
-  borderRadius: `${radius.pill}px`,
-};
 
 export const dateBlockBarStyles: SxProps<Theme> = {
   flexShrink: 0,

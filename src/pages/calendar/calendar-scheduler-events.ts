@@ -130,7 +130,8 @@ export const mapSessionsToSchedulerEvents = (sessions: SchedulableSession[]): Ma
       events.push({
         id: ranges.length > 1 ? `${eventId}-${index}` : eventId,
         aaradhyaEventId: eventId,
-        title: event.eventFamilyType,
+        // D7: the client-facing name, not the family type.
+        title: event.displayName,
         start: isAllDay ? range.startDate : toWallTime(range.startDate, range.startTime),
         end: isAllDay ? range.endDate : toWallTime(range.endDate, range.endTime ?? range.startTime),
         allDay: isAllDay,

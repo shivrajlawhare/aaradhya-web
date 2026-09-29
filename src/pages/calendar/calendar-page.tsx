@@ -1,10 +1,15 @@
-import { useMemo } from 'react';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import { Box, CircularProgress, IconButton, ThemeProvider, Typography } from '@mui/material';
+import { type ReactNode, useMemo } from 'react';
+import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
+import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
+import { Box, IconButton, ThemeProvider, Typography } from '@mui/material';
 import { StandaloneMonthView } from '@mui/x-scheduler/month-view';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { tsr } from '../../api/client';
+import { ILLUSTRATIONS } from '../../components/ui/illustrations';
+import PageHeader from '../../components/ui/page-header';
+import PageLoader from '../../components/ui/page-loader';
+import ThemedImage from '../../components/ui/themed-image';
+import { EVENT_MANAGERS_QUERY_KEY } from '../../components/ui/use-event-manager-name';
 import { eventDetailPath } from '../../routes';
 import { withSchedulerSpacing } from '../../theme/theme';
 import { formatMonthLabel, type MonthShift, shiftMonth } from './calendar-dates';
@@ -16,11 +21,18 @@ import {
   isCalendarFiltered,
 } from './calendar-filters';
 import {
+  gridFrameStyles,
   gridStyles,
+  loaderFrameStyles,
   mobileWeekdayHeaderCellStyles,
   mobileWeekdayHeaderStyles,
+  monthNavButtonStyles,
   monthNavStyles,
+  noResultsArtStyles,
+  noResultsBannerStyles,
+  pageHeaderFrameStyles,
   pageStyles,
+  toolbarStyles,
 } from './calendar-page.styles';
 import { mapSessionsToSchedulerEvents, STATUS_RESOURCES } from './calendar-scheduler-events';
 import { buildCalendarSearchParams, parseCalendarSearchParams } from './calendar-url-state';
@@ -53,7 +65,7 @@ const CalendarPage = () => {
     queryKey: ['calendar', month, year],
     queryData: { query: { month, year } },
   });
-  const eventManagersQuery = tsr.listEventManagers.useQuery({ queryKey: ['event-managers'] });
+  const eventManagersQuery = tsr.listEventManagers.useQuery({ queryKey: EVENT_MANAGERS_QUERY_KEY });
 
   const monthSessions = calendarQuery.data?.body ?? [];
   const filteredSessions = filterCalendarSessions(monthSessions, filters);
@@ -85,31 +97,27 @@ const CalendarPage = () => {
     setSearchParams(buildCalendarSearchParams(monthShift, next), { replace: true });
   };
 
-  return (
-    <Box sx={pageStyles}>
-      <Box sx={monthNavStyles}>
-        <IconButton aria-label="Previous month" onClick={() => updateMonthShift(shiftMonth(monthShift, -1))}>
-          <ChevronLeftIcon />
-        </IconButton>
-        <Typography variant="titleM">{formatMonthLabel(month, year)}</Typography>
-        <IconButton aria-label="Next month" onClick={() => updateMonthShift(shiftMonth(monthShift, 1))}>
-          <ChevronRightIcon />
-        </IconButton>
-      </Box>
-      <FilterChipRow
-        filters={filters}
-        onFiltersChange={updateFilters}
-        venueOptions={getDistinctVenues(monthSessions)}
-        eventFamilyTypeOptions={getDistinctEventFamilyTypes(monthSessions)}
-        eventManagerOptions={eventManagerOptions}
-      />
-      {calendarQuery.isPending ? (
-        <CircularProgress aria-label="Loading calendar" />
-      ) : (
-        <>
-          {isCalendarFiltered(filters) && filteredSessions.length === 0 && (
-            <Typography variant="bodyM">No Events match the selected filters.</Typography>
-          )}
+  let gridContent: ReactNode = (
+    <Box sx={loaderFrameStyles}>
+      <PageLoader caption="Loading calendar" />
+    </Box>
+  );
+  if (!calendarQuery.isPending) {
+    let noResultsBanner: ReactNode = null;
+    if (isCalendarFiltered(filters) && filteredSessions.length === 0) {
+      noResultsBanner = (
+        <Box sx={noResultsBannerStyles}>
+          <ThemedImage {...ILLUSTRATIONS['no-filter-results']} sx={noResultsArtStyles} />
+          <Typography variant="titleS" component="p">
+            No Events match the selected filters.
+          </Typography>
+        </Box>
+      );
+    }
+    gridContent = (
+      <>
+        {noResultsBanner}
+        <Box sx={gridFrameStyles}>
           <Box sx={mobileWeekdayHeaderStyles}>
             {MOBILE_WEEKDAY_LABELS.map((label, index) => (
               // index as key — two repeated "S"/"T" labels have no other
@@ -146,8 +154,45 @@ const CalendarPage = () => {
               }}
             />
           </ThemeProvider>
-        </>
-      )}
+        </Box>
+      </>
+    );
+  }
+
+  return (
+    <Box sx={pageStyles}>
+      <Box sx={pageHeaderFrameStyles}>
+        <PageHeader eyebrow="Schedule" title="Calendar" />
+      </Box>
+      <Box sx={toolbarStyles}>
+        <Box sx={monthNavStyles}>
+          <IconButton
+            aria-label="Previous month"
+            onClick={() => updateMonthShift(shiftMonth(monthShift, -1))}
+            sx={monthNavButtonStyles}
+          >
+            <ChevronLeftRoundedIcon />
+          </IconButton>
+          <Typography variant="h2" component="p">
+            {formatMonthLabel(month, year)}
+          </Typography>
+          <IconButton
+            aria-label="Next month"
+            onClick={() => updateMonthShift(shiftMonth(monthShift, 1))}
+            sx={monthNavButtonStyles}
+          >
+            <ChevronRightRoundedIcon />
+          </IconButton>
+        </Box>
+        <FilterChipRow
+          filters={filters}
+          onFiltersChange={updateFilters}
+          venueOptions={getDistinctVenues(monthSessions)}
+          eventFamilyTypeOptions={getDistinctEventFamilyTypes(monthSessions)}
+          eventManagerOptions={eventManagerOptions}
+        />
+      </Box>
+      {gridContent}
     </Box>
   );
 };
