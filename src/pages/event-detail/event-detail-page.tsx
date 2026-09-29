@@ -1,9 +1,12 @@
 import { type ReactNode, useState } from 'react';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { Box, Button, CircularProgress, Link, Tab, Tabs, Typography } from '@mui/material';
-import { Link as RouterLink, useParams } from 'react-router-dom';
+import { Box, Button, Tab, Tabs, Typography } from '@mui/material';
+import { useParams } from 'react-router-dom';
 import { tsr } from '../../api/client';
 import ActivityTab from '../../components/ui/activity-tab';
+import ErrorState from '../../components/ui/error-state';
+import type { IllustrationName } from '../../components/ui/illustrations';
+import PageLoader from '../../components/ui/page-loader';
 import StatusChip from '../../components/ui/status-chip';
 import { Role } from '../../contract';
 import { EVENT_LIST_PATH } from '../../routes';
@@ -126,22 +129,18 @@ const EventDetailPage = () => {
 
   let content: ReactNode;
   if (!id || eventQuery.isPending) {
-    content = <CircularProgress aria-label="Loading event" />;
+    content = <PageLoader caption="Loading event" />;
   } else if (eventQuery.isError) {
     const error = eventQuery.error;
-    const message =
-      !(error instanceof Error) && error.status === 404
-        ? 'No Event with that id.'
-        : 'Something went wrong. Please try again.';
+    const isNotFound = !(error instanceof Error) && error.status === 404;
+    const illustration: IllustrationName = isNotFound ? 'not-found' : 'something-went-wrong';
+    const message = isNotFound ? 'No Event with that id.' : 'Something went wrong. Please try again.';
     content = (
-      <Box>
-        <Typography variant="bodyM">{message}</Typography>
-        <Typography variant="bodyM">
-          <Link component={RouterLink} to={EVENT_LIST_PATH}>
-            Back to Events
-          </Link>
-        </Typography>
-      </Box>
+      <ErrorState
+        illustration={illustration}
+        message={message}
+        link={{ label: 'Back to Events', to: EVENT_LIST_PATH }}
+      />
     );
   } else {
     const event = eventQuery.data.body;

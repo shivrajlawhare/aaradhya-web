@@ -1,16 +1,22 @@
-import { Box, CircularProgress, Paper, Stack, Typography } from '@mui/material';
+import { Avatar, Box, CircularProgress, Paper, Stack, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import { type changeLogEntryResultSchema, SeatingArrangement } from '../../contract';
 import { SEATING_ARRANGEMENT_LABELS } from '../../pages/event-detail/session-form-options';
+import { getInitials } from '../../utils/initials';
 import {
+  avatarStyles,
+  bodyStyles,
   changeListStyles,
-  emptyStateStyles,
-  groupDividerStyles,
+  loadingStyles,
   metaRowStyles,
-  rowStyles,
+  railLineStyles,
+  railStyles,
+  timelineCardStyles,
+  timelineItemStyles,
   timestampStyles,
 } from './activity-tab.styles';
+import EmptyState from './empty-state';
 import { formatRelativeTime } from './format-relative-time';
 
 interface ActivityTabProps {
@@ -253,7 +259,7 @@ const ActivityTab = ({ entityType, entityId }: ActivityTabProps) => {
   if (activityQuery.isPending) {
     return (
       <Paper>
-        <Box sx={emptyStateStyles}>
+        <Box sx={loadingStyles}>
           <CircularProgress aria-label="Loading activity" size={24} />
         </Box>
       </Paper>
@@ -263,36 +269,48 @@ const ActivityTab = ({ entityType, entityId }: ActivityTabProps) => {
   if (groups.length === 0) {
     return (
       <Paper>
-        <Box sx={emptyStateStyles}>
-          <Typography variant="bodyM">No changes yet</Typography>
-        </Box>
+        <EmptyState illustration="no-activity" title="No changes yet" />
       </Paper>
     );
   }
 
   return (
-    <Paper>
+    <Paper sx={timelineCardStyles}>
       <Stack>
-        {groups.map((group, index) => (
-          <Stack key={group.key} sx={index < groups.length - 1 ? groupDividerStyles : rowStyles}>
-            <Box sx={metaRowStyles}>
-              <Typography variant="bodyM">{resolveChangedBy(group.changedBy)}</Typography>
-              <Typography variant="bodyM" sx={timestampStyles}>
-                {formatRelativeTime(new Date(group.timestamp))}
-              </Typography>
-            </Box>
-            <Box component="ul" sx={changeListStyles}>
-              {group.entries.map((entry) => {
-                const parsed = parseField(entry.field);
-                return (
-                  <Typography key={entry.id} component="li" variant="bodyM">
-                    {parsed.label}: {formatChangeDetail(parsed, entry, menuItemsById)}
+        {groups.map((group, index) => {
+          const actorName = resolveChangedBy(group.changedBy);
+          const hasNext = index < groups.length - 1;
+          return (
+            <Box key={group.key} sx={timelineItemStyles}>
+              <Box sx={railStyles}>
+                <Avatar sx={avatarStyles}>
+                  <Typography variant="labelM" component="span" aria-hidden>
+                    {getInitials(actorName)}
                   </Typography>
-                );
-              })}
+                </Avatar>
+                <Box sx={railLineStyles(hasNext)} />
+              </Box>
+              <Stack sx={bodyStyles(hasNext)}>
+                <Box sx={metaRowStyles}>
+                  <Typography variant="labelL">{actorName}</Typography>
+                  <Typography variant="bodyS" sx={timestampStyles}>
+                    {formatRelativeTime(new Date(group.timestamp))}
+                  </Typography>
+                </Box>
+                <Box component="ul" sx={changeListStyles}>
+                  {group.entries.map((entry) => {
+                    const parsed = parseField(entry.field);
+                    return (
+                      <Typography key={entry.id} component="li" variant="bodyM">
+                        {parsed.label}: {formatChangeDetail(parsed, entry, menuItemsById)}
+                      </Typography>
+                    );
+                  })}
+                </Box>
+              </Stack>
             </Box>
-          </Stack>
-        ))}
+          );
+        })}
       </Stack>
     </Paper>
   );

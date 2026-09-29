@@ -1,13 +1,14 @@
 import { createContext, type ReactNode, useCallback, useContext, useRef, useState } from 'react';
 import { Alert, Portal, Stack } from '@mui/material';
-import { errorAlertStyles, successAlertStyles, toastStackStyles } from './toast-provider.styles';
-
-type ToastSeverity = 'success' | 'error';
+import { EXIT_DURATION_MS, type ToastSeverity, toastStackStyles, toastStyles } from './toast-provider.styles';
 
 interface Toast {
   id: number;
   message: string;
   severity: ToastSeverity;
+  // Set when the toast starts its exit animation; it is removed from state
+  // once that animation has had time to finish.
+  isLeaving: boolean;
 }
 
 interface ToastContextValue {
@@ -17,9 +18,8 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-// Long enough to read a short sentence, short enough not to pile up if
-// several mutations resolve in quick succession.
-const AUTO_DISMISS_MS = 4000;
+// The redesign's toast timing (Motion spec: visible for 2500 ms, then exit).
+export const AUTO_DISMISS_MS = 2500;
 
 interface ToastProviderProps {
   children: ReactNode;
@@ -36,13 +36,16 @@ export const ToastProvider = ({ children }: ToastProviderProps) => {
   const nextId = useRef(0);
 
   const dismiss = useCallback((id: number) => {
-    setToasts((current) => current.filter((toast) => toast.id !== id));
+    setToasts((current) => current.map((toast) => (toast.id === id ? { ...toast, isLeaving: true } : toast)));
+    setTimeout(() => {
+      setToasts((current) => current.filter((toast) => toast.id !== id));
+    }, EXIT_DURATION_MS);
   }, []);
 
   const show = useCallback(
     (message: string, severity: ToastSeverity) => {
       const id = nextId.current++;
-      setToasts((current) => [...current, { id, message, severity }]);
+      setToasts((current) => [...current, { id, message, severity, isLeaving: false }]);
       setTimeout(() => dismiss(id), AUTO_DISMISS_MS);
     },
     [dismiss]
@@ -66,7 +69,7 @@ export const ToastProvider = ({ children }: ToastProviderProps) => {
               key={toast.id}
               severity={toast.severity}
               onClose={() => dismiss(toast.id)}
-              sx={toast.severity === 'success' ? successAlertStyles : errorAlertStyles}
+              sx={toastStyles(toast.severity, toast.isLeaving)}
             >
               {toast.message}
             </Alert>

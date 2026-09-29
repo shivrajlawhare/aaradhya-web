@@ -1,0 +1,9 @@
+<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g>
+<g id="ring">
+<circle id="Ring 1" cx="120" cy="120" r="119" stroke="#200F07" stroke-width="2"/>
+<circle id="Ring 2" cx="120" cy="120" r="89" stroke="#F77331" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 8"/>
+<circle id="Ring 3" cx="120" cy="120" r="59" stroke="#FCC0A0" stroke-width="2"/>
+</g>
+</g>
+</svg>

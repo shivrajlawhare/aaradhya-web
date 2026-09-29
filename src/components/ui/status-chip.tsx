@@ -1,6 +1,6 @@
-import { Chip } from '@mui/material';
+import { Box, Chip } from '@mui/material';
 import type { EventStatus } from '../../contract';
-import { STATUS_CHIP_COLORS } from './status-chip.styles';
+import { STATUS_CHIP_COLORS, statusChipStyles, statusDotStyles } from './status-chip.styles';
 
 interface StatusChipProps {
   status: EventStatus;
@@ -10,7 +10,13 @@ interface StatusChipProps {
 // (STORY-017) — hoisted here once a second consumer needed the exact same
 // status-to-color mapping, per "extract once a pattern genuinely repeats."
 const StatusChip = ({ status }: StatusChipProps) => (
-  <Chip label={status} size="small" style={STATUS_CHIP_COLORS[status]} />
+  <Chip
+    label={status}
+    size="small"
+    icon={<Box component="span" aria-hidden sx={statusDotStyles} />}
+    style={STATUS_CHIP_COLORS[status]}
+    sx={statusChipStyles}
+  />
 );
 
 export default StatusChip;

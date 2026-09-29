@@ -1,0 +1,126 @@
+<svg width="792" height="1000" viewBox="0 0 792 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_1_12)">
+<g id="login" clip-path="url(#clip1_1_12)">
+<g id="Motif/Toran">
+<path id="String" d="M-24 42C11 74.6667 46 74.6667 81 42C116 74.6667 151 74.6667 186 42C221 74.6667 256 74.6667 291 42C326 74.6667 361 74.6667 396 42C431 74.6667 466 74.6667 501 42C536 74.6667 571 74.6667 606 42C641 74.6667 676 74.6667 711 42C746 74.6667 781 74.6667 816 42" stroke="#FFF9EB" stroke-width="5.25"/>
+<path id="Drop 1" d="M28.5 45.5C53 80.5 53 122.5 28.5 147C4 122.5 4 80.5 28.5 45.5Z" fill="#FCC0A0"/>
+<circle id="Bead 2" cx="81" cy="21" r="14" fill="#F77331"/>
+<path id="Drop 2" d="M133.5 45.5C158 80.5 158 122.5 133.5 168C109 122.5 109 80.5 133.5 45.5Z" fill="#F77331"/>
+<circle id="Bead 3" cx="186" cy="21" r="14" fill="#F77331"/>
+<path id="Drop 3" d="M238.5 45.5C263 80.5 263 122.5 238.5 147C214 122.5 214 80.5 238.5 45.5Z" fill="#FCC0A0"/>
+<circle id="Bead 4" cx="291" cy="21" r="14" fill="#F77331"/>
+<path id="Drop 4" d="M343.5 45.5C368 80.5 368 122.5 343.5 168C319 122.5 319 80.5 343.5 45.5Z" fill="#F77331"/>
+<circle id="Bead 5" cx="396" cy="21" r="14" fill="#F77331"/>
+<path id="Drop 5" d="M448.5 45.5C473 80.5 473 122.5 448.5 147C424 122.5 424 80.5 448.5 45.5Z" fill="#FCC0A0"/>
+<circle id="Bead 6" cx="501" cy="21" r="14" fill="#F77331"/>
+<path id="Drop 6" d="M553.5 45.5C578 80.5 578 122.5 553.5 168C529 122.5 529 80.5 553.5 45.5Z" fill="#F77331"/>
+<circle id="Bead 7" cx="606" cy="21" r="14" fill="#F77331"/>
+<path id="Drop 7" d="M658.5 45.5C683 80.5 683 122.5 658.5 147C634 122.5 634 80.5 658.5 45.5Z" fill="#FCC0A0"/>
+<circle id="Bead 8" cx="711" cy="21" r="14" fill="#F77331"/>
+<path id="Drop 8" d="M763.5 45.5C788 80.5 788 122.5 763.5 168C739 122.5 739 80.5 763.5 45.5Z" fill="#F77331"/>
+</g>
+<g id="Motif/Arch">
+<path id="Arch" d="M171.75 889.625V487.125C171.75 363.294 272.169 262.875 396 262.875C519.831 262.875 620.25 363.294 620.25 487.125V889.625H171.75Z" stroke="#FCC0A0" stroke-width="5.75" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5.75 23"/>
+</g>
+<circle id="Sun" cx="590" cy="270" r="120" fill="#F77331"/>
+<g id="Motif/Dot Grid">
+<circle id="Dot" cx="64.1936" cy="194.194" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_2" cx="92.1506" cy="194.194" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_3" cx="120.108" cy="194.194" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_4" cx="148.064" cy="194.194" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_5" cx="176.021" cy="194.194" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_6" cx="203.978" cy="194.194" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_7" cx="231.935" cy="194.194" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_8" cx="259.893" cy="194.194" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_9" cx="287.85" cy="194.194" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_10" cx="315.806" cy="194.194" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_11" cx="64.1936" cy="222.151" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_12" cx="92.1506" cy="222.151" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_13" cx="120.108" cy="222.151" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_14" cx="148.064" cy="222.151" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_15" cx="176.021" cy="222.151" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_16" cx="203.978" cy="222.151" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_17" cx="231.935" cy="222.151" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_18" cx="259.893" cy="222.151" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_19" cx="287.85" cy="222.151" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_20" cx="315.806" cy="222.151" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_21" cx="64.1936" cy="250.107" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_22" cx="92.1506" cy="250.107" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_23" cx="120.108" cy="250.107" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_24" cx="148.064" cy="250.107" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_25" cx="176.021" cy="250.107" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_26" cx="203.978" cy="250.107" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_27" cx="231.935" cy="250.107" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_28" cx="259.893" cy="250.107" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_29" cx="287.85" cy="250.107" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_30" cx="315.806" cy="250.107" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_31" cx="64.1936" cy="278.065" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_32" cx="92.1506" cy="278.065" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_33" cx="120.108" cy="278.065" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_34" cx="148.064" cy="278.065" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_35" cx="176.021" cy="278.065" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_36" cx="203.978" cy="278.065" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_37" cx="231.935" cy="278.065" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_38" cx="259.893" cy="278.065" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_39" cx="287.85" cy="278.065" r="4.19355" fill="#FFF9EB"/>
+<circle id="Dot_40" cx="315.806" cy="278.065" r="4.19355" fill="#FFF9EB"/>
+</g>
+<g id="Motif/Rosette">
+<ellipse id="Petal 1" cx="120" cy="811.5" rx="16.5" ry="28.5" fill="#F77331"/>
+<ellipse id="Petal 2" cx="140.153" cy="819.847" rx="16.5" ry="28.5" transform="rotate(45 140.153 819.847)" fill="#FCC0A0"/>
+<ellipse id="Petal 3" cx="148.5" cy="840" rx="16.5" ry="28.5" transform="rotate(90 148.5 840)" fill="#F77331"/>
+<ellipse id="Petal 4" cx="140.153" cy="860.153" rx="16.5" ry="28.5" transform="rotate(135 140.153 860.153)" fill="#FCC0A0"/>
+<ellipse id="Petal 5" cx="120" cy="868.5" rx="16.5" ry="28.5" transform="rotate(180 120 868.5)" fill="#F77331"/>
+<ellipse id="Petal 6" cx="99.8473" cy="860.153" rx="16.5" ry="28.5" transform="rotate(-135 99.8473 860.153)" fill="#FCC0A0"/>
+<ellipse id="Petal 7" cx="91.5" cy="840" rx="16.5" ry="28.5" transform="rotate(-90 91.5 840)" fill="#F77331"/>
+<ellipse id="Petal 8" cx="99.8474" cy="819.847" rx="16.5" ry="28.5" transform="rotate(-45 99.8474 819.847)" fill="#FCC0A0"/>
+<circle id="Centre" cx="120" cy="840" r="16.5" fill="#200F07"/>
+<circle id="Centre Dot" cx="120" cy="840" r="6" fill="#F77331"/>
+</g>
+<g id="Motif/Rosette_2">
+<ellipse id="Petal 1_2" cx="680" cy="721" rx="11" ry="19" fill="#F77331"/>
+<ellipse id="Petal 2_2" cx="693.435" cy="726.565" rx="11" ry="19" transform="rotate(45 693.435 726.565)" fill="#FCC0A0"/>
+<ellipse id="Petal 3_2" cx="699" cy="740" rx="11" ry="19" transform="rotate(90 699 740)" fill="#F77331"/>
+<ellipse id="Petal 4_2" cx="693.435" cy="753.435" rx="11" ry="19" transform="rotate(135 693.435 753.435)" fill="#FCC0A0"/>
+<ellipse id="Petal 5_2" cx="680" cy="759" rx="11" ry="19" transform="rotate(180 680 759)" fill="#F77331"/>
+<ellipse id="Petal 6_2" cx="666.565" cy="753.435" rx="11" ry="19" transform="rotate(-135 666.565 753.435)" fill="#FCC0A0"/>
+<ellipse id="Petal 7_2" cx="661" cy="740" rx="11" ry="19" transform="rotate(-90 661 740)" fill="#F77331"/>
+<ellipse id="Petal 8_2" cx="666.565" cy="726.565" rx="11" ry="19" transform="rotate(-45 666.565 726.565)" fill="#FCC0A0"/>
+<circle id="Centre_2" cx="680" cy="740" r="11" fill="#200F07"/>
+<circle id="Centre Dot_2" cx="680" cy="740" r="4" fill="#F77331"/>
+</g>
+<g id="Motif/Sparkle">
+<path id="Sparkle" d="M718 120C720.188 137.5 728.5 145.812 746 148C728.5 150.188 720.188 158.5 718 176C715.812 158.5 707.5 150.188 690 148C707.5 145.812 715.812 137.5 718 120Z" fill="#F77331"/>
+</g>
+<g id="Motif/Sparkle_2">
+<path id="Sparkle_2" d="M136 140C137.25 150 142 154.75 152 156C142 157.25 137.25 162 136 172C134.75 162 130 157.25 120 156C130 154.75 134.75 150 136 140Z" fill="#FFF9EB"/>
+</g>
+<g id="Motif/Confetti">
+<circle id="Dot 1" cx="502.1" cy="892.5" r="6.5" fill="#F77331"/>
+<rect id="Dash 2" x="558" y="870.4" width="28.6" height="7.8" rx="3.9" transform="rotate(-30 558 870.4)" fill="#FFF9EB"/>
+<circle id="Dot 3" cx="629.5" cy="905.5" r="6.5" fill="#FCC0A0"/>
+<rect id="Dash 4" x="688" y="878.2" width="28.6" height="7.8" rx="3.9" transform="rotate(35 688 878.2)" fill="#F77331"/>
+<rect id="Dash 5" x="519" y="951" width="28.6" height="7.8" rx="3.9" transform="rotate(-60 519 951)" fill="#FCC0A0"/>
+<circle id="Dot 6" cx="600.9" cy="970.5" r="6.5" fill="#FFF9EB"/>
+<rect id="Dash 7" x="662" y="951" width="28.6" height="7.8" rx="3.9" transform="rotate(-15 662 951)" fill="#FFF9EB"/>
+<circle id="Dot 8" cx="720.5" cy="996.5" r="6.5" fill="#F77331"/>
+</g>
+<g id="Motif/Ring" opacity="0.5">
+<circle id="Ring 1" cy="970" r="208.25" stroke="#FFF9EB" stroke-width="3.5"/>
+<circle id="Ring 2" cy="970" r="155.75" stroke="#F77331" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="3.5 14"/>
+<circle id="Ring 3" cy="970" r="103.25" stroke="#FCC0A0" stroke-width="3.5"/>
+</g>
+<g id="Motif/Squiggle">
+<path id="Squiggle" d="M92.9509 1001.39C107.705 986.639 122.459 986.639 137.213 1001.39C151.967 1016.15 166.721 1016.15 181.476 1001.39C196.23 986.639 210.984 986.639 225.738 1001.39C240.492 1016.15 255.246 1016.15 270 1001.39" stroke="#F77331" stroke-width="4.42623"/>
+</g>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_1_12">
+<rect width="4806" height="2400" fill="white" transform="translate(-3614 -1400)"/>
+</clipPath>
+<clipPath id="clip1_1_12">
+<rect width="792" height="1024" fill="white"/>
+</clipPath>
+</defs>
+</svg>

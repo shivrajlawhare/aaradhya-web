@@ -1,0 +1,20 @@
+<svg width="240" height="200" viewBox="0 0 240 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g>
+<g id="something-went-wrong">
+<path id="Vector" d="M120 180C164.183 180 200 144.183 200 100C200 55.8172 164.183 20 120 20C75.8172 20 40 55.8172 40 100C40 144.183 75.8172 180 120 180Z" fill="#F8E3BC"/>
+<path id="Vector_2" d="M120 190C166.392 190 204 187.314 204 184C204 180.686 166.392 178 120 178C73.6081 178 36 180.686 36 184C36 187.314 73.6081 190 120 190Z" fill="#EDE3D6"/>
+<path id="Vector_3" d="M150 184C176.51 184 198 181.314 198 178C198 174.686 176.51 172 150 172C123.49 172 102 174.686 102 178C102 181.314 123.49 184 150 184Z" fill="#FCC0A0"/>
+<g id="Group">
+<path id="Vector_4" d="M81.0305 109.514C95.0791 156.635 124.313 169.651 168.731 148.561L81.0305 109.514Z" fill="#F77331" stroke="#200F07" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_5" d="M162.236 143.48L198.177 146.346L166.491 158.51L162.236 143.48Z" fill="#F77331" stroke="#200F07" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_6" d="M121.627 136.346C145.845 147.128 166.934 152.597 168.731 148.561C170.528 144.524 152.352 132.512 128.135 121.729C103.917 110.947 82.8276 105.478 81.0305 109.514C79.2335 113.55 97.409 125.563 121.627 136.346Z" fill="#FCC0A0" stroke="#200F07" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<path id="Vector_7" d="M200 138C210 150 208 164 200 166C192 164 190 150 200 138Z" fill="#F77331" stroke="#200F07" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_8" d="M200 150C204 156 203 162 200 163C197 162 196 156 200 150Z" fill="#FFF9EB"/>
+<path id="Vector_9" d="M70.0001 70C62.0001 62 78.0001 56 70.0001 46C62.0001 36 78.0001 32 70.0001 24" stroke="#7A6152" stroke-width="2" stroke-linecap="round"/>
+<path id="Vector_10" d="M206 104C206 109.333 208.667 112 214 112C208.667 112 206 114.667 206 120C206 114.667 203.333 112 198 112C203.333 112 206 109.333 206 104Z" fill="#F77331"/>
+<path id="Vector_11" d="M186 108L180 102M214 108L220 102M200 100V92" stroke="#200F07" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_12" d="M48 114C48 118 50 120 54 120C50 120 48 122 48 126C48 122 46 120 42 120C46 120 48 118 48 114Z" fill="#200F07"/>
+</g>
+</g>
+</svg>

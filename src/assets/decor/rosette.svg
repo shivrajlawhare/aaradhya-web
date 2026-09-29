@@ -1,0 +1,16 @@
+<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g>
+<g id="rosette">
+<ellipse id="Petal 1" cx="80" cy="42" rx="22" ry="38" fill="#F77331"/>
+<ellipse id="Petal 2" cx="106.87" cy="53.1299" rx="22" ry="38" transform="rotate(45 106.87 53.1299)" fill="#FCC0A0"/>
+<ellipse id="Petal 3" cx="118" cy="80" rx="22" ry="38" transform="rotate(90 118 80)" fill="#F77331"/>
+<ellipse id="Petal 4" cx="106.87" cy="106.87" rx="22" ry="38" transform="rotate(135 106.87 106.87)" fill="#FCC0A0"/>
+<ellipse id="Petal 5" cx="80" cy="118" rx="22" ry="38" transform="rotate(180 80 118)" fill="#F77331"/>
+<ellipse id="Petal 6" cx="53.13" cy="106.87" rx="22" ry="38" transform="rotate(-135 53.13 106.87)" fill="#FCC0A0"/>
+<ellipse id="Petal 7" cx="42" cy="80" rx="22" ry="38" transform="rotate(-90 42 80)" fill="#F77331"/>
+<ellipse id="Petal 8" cx="53.1299" cy="53.13" rx="22" ry="38" transform="rotate(-45 53.1299 53.13)" fill="#FCC0A0"/>
+<circle id="Centre" cx="80" cy="80" r="22" fill="#200F07"/>
+<circle id="Centre Dot" cx="80" cy="80" r="8" fill="#F77331"/>
+</g>
+</g>
+</svg>

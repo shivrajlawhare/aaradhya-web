@@ -1,5 +1,6 @@
 import { Avatar, Box, Chip, Typography } from '@mui/material';
 import type { AuthUser } from '../../stores/auth-context';
+import { getInitials } from '../../utils/initials';
 import { getRoleLabel } from '../../utils/role-labels';
 import {
   avatarStyles,
@@ -12,14 +13,6 @@ import {
 interface NavUserCardProps {
   user: AuthUser;
 }
-
-const getInitials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join('');
 
 const NavUserCard = ({ user }: NavUserCardProps) => (
   <Box sx={userCardStyles}>

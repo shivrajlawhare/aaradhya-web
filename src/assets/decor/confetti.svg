@@ -1,0 +1,16 @@
+<svg width="200" height="143" viewBox="0 0 200 143" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g>
+<g id="confetti">
+<circle id="Dot 1" cx="17" cy="26.9025" r="5" fill="#F77331"/>
+<rect id="Dash 2" x="60" y="9.90247" width="22" height="6" rx="3" transform="rotate(-30 60 9.90247)" fill="#200F07"/>
+<circle id="Dot 3" cx="115" cy="36.9025" r="5" fill="#FCC0A0"/>
+<rect id="Dash 4" x="160" y="15.9025" width="22" height="6" rx="3" transform="rotate(35 160 15.9025)" fill="#F77331"/>
+<rect id="Dash 5" x="30" y="71.9025" width="22" height="6" rx="3" transform="rotate(-60 30 71.9025)" fill="#FCC0A0"/>
+<circle id="Dot 6" cx="93" cy="86.9025" r="5" fill="#200F07"/>
+<rect id="Dash 7" x="140" y="71.9025" width="22" height="6" rx="3" transform="rotate(-15 140 71.9025)" fill="#200F07"/>
+<circle id="Dot 8" cx="185" cy="106.902" r="5" fill="#F77331"/>
+<circle id="Dot 9" cx="55" cy="124.902" r="5" fill="#FCC0A0"/>
+<rect id="Dash 10" x="120" y="121.902" width="22" height="6" rx="3" transform="rotate(60 120 121.902)" fill="#F77331"/>
+</g>
+</g>
+</svg>

@@ -1,0 +1,24 @@
+<svg width="496" height="110" viewBox="0 0 496 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g>
+<g id="toran">
+<path id="String" d="M8 24C28 42.6667 48 42.6667 68 24C88 42.6667 108 42.6667 128 24C148 42.6667 168 42.6667 188 24C208 42.6667 228 42.6667 248 24C268 42.6667 288 42.6667 308 24C328 42.6667 348 42.6667 368 24C388 42.6667 408 42.6667 428 24C448 42.6667 468 42.6667 488 24" stroke="#200F07" stroke-width="3"/>
+<circle id="Bead 1" cx="8" cy="12" r="8" fill="#F77331"/>
+<path id="Drop 1" d="M38 26C52 46 52 70 38 84C24 70 24 46 38 26Z" fill="#FCC0A0"/>
+<circle id="Bead 2" cx="68" cy="12" r="8" fill="#F77331"/>
+<path id="Drop 2" d="M98 26C112 46 112 70 98 96C84 70 84 46 98 26Z" fill="#F77331"/>
+<circle id="Bead 3" cx="128" cy="12" r="8" fill="#F77331"/>
+<path id="Drop 3" d="M158 26C172 46 172 70 158 84C144 70 144 46 158 26Z" fill="#FCC0A0"/>
+<circle id="Bead 4" cx="188" cy="12" r="8" fill="#F77331"/>
+<path id="Drop 4" d="M218 26C232 46 232 70 218 96C204 70 204 46 218 26Z" fill="#F77331"/>
+<circle id="Bead 5" cx="248" cy="12" r="8" fill="#F77331"/>
+<path id="Drop 5" d="M278 26C292 46 292 70 278 84C264 70 264 46 278 26Z" fill="#FCC0A0"/>
+<circle id="Bead 6" cx="308" cy="12" r="8" fill="#F77331"/>
+<path id="Drop 6" d="M338 26C352 46 352 70 338 96C324 70 324 46 338 26Z" fill="#F77331"/>
+<circle id="Bead 7" cx="368" cy="12" r="8" fill="#F77331"/>
+<path id="Drop 7" d="M398 26C412 46 412 70 398 84C384 70 384 46 398 26Z" fill="#FCC0A0"/>
+<circle id="Bead 8" cx="428" cy="12" r="8" fill="#F77331"/>
+<path id="Drop 8" d="M458 26C472 46 472 70 458 96C444 70 444 46 458 26Z" fill="#F77331"/>
+<circle id="Bead 9" cx="488" cy="12" r="8" fill="#F77331"/>
+</g>
+</g>
+</svg>

@@ -1,52 +1,86 @@
 import type { SxProps, Theme } from '@mui/material';
-import { spaceTokens } from '../../theme/tokens';
+import { paletteVar, scaleTokens } from '../../theme/tokens';
 
-// STORY-081 — one of these per grouped edit action, replacing the old flat
-// per-field ListItem. A plain Stack, not a MUI List/ListItem: the inner
-// bulleted list of field changes (changeListStyles below) is the only
-// content here with genuine ARIA list semantics — nesting a real <ul>/<li>
-// inside a MuiListItem's own <li> made `getByRole('listitem')` match both
-// levels indistinguishably in tests, so the outer "card per group" level
-// deliberately isn't list-semantic at all.
-export const rowStyles: SxProps<Theme> = {
+const { controlSize, radius, space, stroke } = scaleTokens;
+
+const AVATAR_SIZE = controlSize.s;
+const RAIL_LINE_WIDTH = 2;
+
+export const timelineCardStyles: SxProps<Theme> = {
+  p: { xs: `${space[16]}px`, md: `${space[24]}px` },
+};
+
+// Figma `Timeline/Activity Item`: a rail (avatar + connecting line) beside
+// the body (actor/time header over a tinted box of changes). One item per
+// grouped save (STORY-081 groupId). The outer level deliberately isn't a
+// list: the inner <ul> of field changes (changeListStyles below) is the only
+// content with list semantics — nesting a <ul>/<li> inside another <li> made
+// `getByRole('listitem')` match both levels indistinguishably in tests.
+export const timelineItemStyles: SxProps<Theme> = {
+  display: 'flex',
+  gap: `${space[16]}px`,
+};
+
+export const railStyles: SxProps<Theme> = {
+  display: 'flex',
   flexDirection: 'column',
-  alignItems: 'flex-start',
-  gap: `${spaceTokens.space4}px`,
-  px: `${spaceTokens.space16}px`,
-  py: `${spaceTokens.space12}px`,
+  alignItems: 'center',
+  flexShrink: 0,
+  width: AVATAR_SIZE,
 };
 
-// Every group but the last gets this instead of rowStyles — a bottom
-// border replacing the old MuiListItem `divider` prop's own visual.
-export const groupDividerStyles: SxProps<Theme> = {
-  ...rowStyles,
-  borderBottom: '1px solid',
-  borderColor: 'divider',
+export const avatarStyles: SxProps<Theme> = {
+  width: AVATAR_SIZE,
+  height: AVATAR_SIZE,
+  bgcolor: 'primary.main',
+  color: 'primary.contrastText',
+  border: `${stroke.default}px solid ${paletteVar('brand-borderStrong')}`,
 };
+
+// The line joins this item to the next one; the last item has none.
+export const railLineStyles = (hasNext: boolean): SxProps<Theme> => ({
+  display: hasNext ? 'block' : 'none',
+  flex: 1,
+  width: RAIL_LINE_WIDTH,
+  bgcolor: 'divider',
+});
+
+export const bodyStyles = (hasNext: boolean): SxProps<Theme> => ({
+  flex: 1,
+  minWidth: 0,
+  gap: `${space[8]}px`,
+  pb: hasNext ? `${space[24]}px` : 0,
+});
 
 export const metaRowStyles: SxProps<Theme> = {
   display: 'flex',
-  gap: `${spaceTokens.space8}px`,
+  flexWrap: 'wrap',
+  alignItems: 'baseline',
+  columnGap: `${space[8]}px`,
+  minHeight: AVATAR_SIZE,
+  alignContent: 'center',
 };
 
 export const timestampStyles: SxProps<Theme> = {
-  color: 'text.disabled', // text-faint (timestamps) — wired in theme.ts
+  color: paletteVar('brand-tertiary'),
 };
 
-export const emptyStateStyles: SxProps<Theme> = {
-  p: 6, // space-24
+export const loadingStyles: SxProps<Theme> = {
+  display: 'flex',
+  justifyContent: 'center',
+  p: `${space[24]}px`,
 };
 
-// STORY-081 — a real bulleted list of humanized field changes underneath
-// each grouped edit action's own actor/timestamp header. A margin/padding
-// reset since MUI's own Typography/Box defaults would otherwise carry
-// interactive-UI body-copy spacing into this fixed list, same "pinned, not
-// inherited" reasoning quotation-document.styles.ts's own footerListStyles
-// already documents for an unrelated fixed list on this app.
+// The grouped field changes on a tinted panel. A margin/padding reset since
+// the browser's own <ul> defaults would otherwise leak in.
 export const changeListStyles: SxProps<Theme> = {
-  margin: 0,
-  paddingLeft: `${spaceTokens.space16}px`,
+  m: 0,
+  p: `${space[12]}px`,
+  listStyle: 'none',
   display: 'flex',
   flexDirection: 'column',
-  gap: `${spaceTokens.space4}px`,
+  gap: 1.5, // theme.spacing → 6 px, the Figma gap between changes
+  borderRadius: `${radius.md}px`,
+  bgcolor: paletteVar('brand-subtle'),
+  overflowWrap: 'anywhere',
 };
