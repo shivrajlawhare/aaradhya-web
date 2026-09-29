@@ -1,6 +1,7 @@
 import type { SxProps, Theme } from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import { colorTokens, radiusTokens, spaceTokens } from '../../theme/tokens';
+
+const tint = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, transparent)`;
 
 export const navContentStyles: SxProps<Theme> = {
   display: 'flex',
@@ -55,7 +56,7 @@ export const navRowStyles = (selected: boolean): SxProps<Theme> => ({
   px: `${spaceTokens.space12}px`,
   py: `${spaceTokens.space12}px`,
   borderRadius: `${radiusTokens.radiusSm}px`,
-  bgcolor: selected ? alpha(colorTokens.accent, 0.18) : 'transparent',
+  bgcolor: selected ? tint(colorTokens.accent, 18) : 'transparent',
   color: selected ? colorTokens.accent : colorTokens.drawerTextMuted,
   textDecoration: 'none',
   cursor: 'pointer',
@@ -64,7 +65,7 @@ export const navRowStyles = (selected: boolean): SxProps<Theme> => ({
   textAlign: 'left',
   font: 'inherit',
   '&:hover': {
-    bgcolor: selected ? alpha(colorTokens.accent, 0.18) : alpha(colorTokens.drawerText, 0.06),
+    bgcolor: selected ? tint(colorTokens.accent, 18) : tint(colorTokens.drawerText, 6),
   },
 });
 

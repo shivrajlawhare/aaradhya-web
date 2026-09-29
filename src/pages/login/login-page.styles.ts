@@ -7,7 +7,7 @@ export const pageStyles: SxProps<Theme> = {
   alignItems: 'center',
   justifyContent: 'center',
   bgcolor: 'background.default', // bg token
-  px: 2, // space-16
+  px: 4, // space-16
 };
 
 // 360 is a layout constraint for the card's max width — the token table has
@@ -15,11 +15,11 @@ export const pageStyles: SxProps<Theme> = {
 export const cardStyles: SxProps<Theme> = {
   width: '100%',
   maxWidth: 360,
-  p: 3, // space-24
+  p: 6, // space-24
 };
 
 export const fieldStackStyles: SxProps<Theme> = {
-  gap: 2, // space-16
+  gap: 4, // space-16
 };
 
 export const wordmarkStyles: SxProps<Theme> = {

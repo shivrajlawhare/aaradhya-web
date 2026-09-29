@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import { Box, CircularProgress, IconButton, Typography } from '@mui/material';
+import { Box, CircularProgress, IconButton, ThemeProvider, Typography } from '@mui/material';
 import { StandaloneMonthView } from '@mui/x-scheduler/month-view';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { tsr } from '../../api/client';
 import { eventDetailPath } from '../../routes';
+import { withSchedulerSpacing } from '../../theme/theme';
 import { formatMonthLabel, type MonthShift, shiftMonth } from './calendar-dates';
 import {
   type CalendarFilters,
@@ -123,26 +124,28 @@ const CalendarPage = () => {
               view's *initial* visible month, so without this the chevrons
               above would only ever change the underlying query, not what
               StandaloneMonthView itself displays. */}
-          <StandaloneMonthView
-            key={`${year}-${month}`}
-            events={mappedEvents}
-            resources={STATUS_RESOURCES}
-            defaultVisibleDate={new Date(year, month - 1, 1)}
-            // No in-grid editing at all (every event is `readOnly`, and
-            // eventCreation is off below) — nothing ever changes this
-            // app's own copy of the data, so there's nothing to sync back.
-            onEventsChange={() => {}}
-            readOnly
-            eventCreation={false}
-            sx={gridStyles}
-            onEventEditingStart={(occurrence, eventDetails) => {
-              // No built-in view/edit dialog — every Event's own Detail
-              // page is the one source of truth (this story's own AC).
-              eventDetails.cancel();
-              const realEventId = aaradhyaEventIdByOccurrenceId.get(String(occurrence.id)) ?? String(occurrence.id);
-              navigate(eventDetailPath(realEventId));
-            }}
-          />
+          <ThemeProvider theme={withSchedulerSpacing}>
+            <StandaloneMonthView
+              key={`${year}-${month}`}
+              events={mappedEvents}
+              resources={STATUS_RESOURCES}
+              defaultVisibleDate={new Date(year, month - 1, 1)}
+              // No in-grid editing at all (every event is `readOnly`, and
+              // eventCreation is off below) — nothing ever changes this
+              // app's own copy of the data, so there's nothing to sync back.
+              onEventsChange={() => {}}
+              readOnly
+              eventCreation={false}
+              sx={gridStyles}
+              onEventEditingStart={(occurrence, eventDetails) => {
+                // No built-in view/edit dialog — every Event's own Detail
+                // page is the one source of truth (this story's own AC).
+                eventDetails.cancel();
+                const realEventId = aaradhyaEventIdByOccurrenceId.get(String(occurrence.id)) ?? String(occurrence.id);
+                navigate(eventDetailPath(realEventId));
+              }}
+            />
+          </ThemeProvider>
         </>
       )}
     </Box>

@@ -8,6 +8,8 @@ import { WIZARD_STEPS } from '../../src/pages/event-creation/wizard-steps';
 import { EVENT_LIST_PATH } from '../../src/routes';
 import { WIZARD_STORAGE_KEY } from '../../src/stores/event-wizard-context';
 import { theme } from '../../src/theme/theme';
+import { colorTokens } from '../../src/theme/tokens';
+import { emittedRuleFor } from '../support/emitted-css';
 import { mockMatchMedia } from '../support/match-media';
 
 // Mirrors app.tsx's own wizard route registration (5 step routes, one
@@ -86,13 +88,15 @@ describe('EventWizardShell — desktop (>=900px) stepper', () => {
     const currentPill = screen.getByText('3. Accommodation').closest('div');
     const upcomingPill = screen.getByText('5. Review & Quotation').closest('div');
 
-    expect(completedPill).toHaveStyle({ backgroundColor: '#FBE3D0', color: '#B84607' });
-    expect(currentPill).toHaveStyle({ backgroundColor: '#E4630C' });
+    expect(completedPill).toHaveStyle({ backgroundColor: colorTokens.accentTint, color: colorTokens.accentDeep });
+    expect(currentPill).toHaveStyle({ backgroundColor: colorTokens.accent });
     // "Outlined only" (this story's own AC wording) — asserted via its
     // border color rather than its background, since jsdom's CSSOM
     // normalizes a literal `background-color: transparent` declaration
     // away from the string 'transparent' on read-back.
-    expect(upcomingPill).toHaveStyle({ borderColor: '#E6DAC4' });
+    // jsdom drops a `border` shorthand whose colour is a CSS variable, so the
+    // outline is asserted on the emitted rule for the pill's own class.
+    expect(emittedRuleFor(upcomingPill)).toContain(`border:1px solid ${colorTokens.line}`);
   });
 
   it('deep-links directly to a later step without forcing replay of earlier ones', () => {

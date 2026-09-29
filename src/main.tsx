@@ -10,7 +10,7 @@ import { handleAuthError } from './api/handle-auth-error';
 import App from './app';
 import { ToastProvider } from './components/ui/toast-provider';
 import { AuthProvider } from './stores/auth-context';
-import { theme } from './theme/theme';
+import { theme, THEME_MODE_STORAGE_KEY } from './theme/theme';
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({ onError: handleAuthError }),
@@ -26,7 +26,9 @@ createRoot(rootElement).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <tsr.ReactQueryProvider>
-        <ThemeProvider theme={theme}>
+        {/* Light / dark via useColorScheme(); the chosen mode persists in
+            localStorage under THEME_MODE_STORAGE_KEY. */}
+        <ThemeProvider theme={theme} defaultMode="light" modeStorageKey={THEME_MODE_STORAGE_KEY}>
           <CssBaseline />
           {/* Every DatePicker/StaticTimePicker in the app (STORY-057) reads
               from this one adapter — dayjs, the lightest of the date libs

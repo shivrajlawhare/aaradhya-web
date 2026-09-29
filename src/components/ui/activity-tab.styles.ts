@@ -34,7 +34,7 @@ export const timestampStyles: SxProps<Theme> = {
 };
 
 export const emptyStateStyles: SxProps<Theme> = {
-  p: 3, // space-24
+  p: 6, // space-24
 };
 
 // STORY-081 — a real bulleted list of humanized field changes underneath

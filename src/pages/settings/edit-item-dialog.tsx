@@ -64,7 +64,7 @@ const EditItemDialog = ({ section, row, isPending, errorMessage, onClose, onSave
     <Dialog open onClose={onClose} component="form" onSubmit={handleSubmit(handleEdit)}>
       <DialogTitle>Edit {section.label.replace(/s$/, '')}</DialogTitle>
       <DialogContent>
-        <Stack sx={{ gap: 2, pt: 1, minWidth: 280 }}>
+        <Stack sx={{ gap: 4, pt: 2, minWidth: 280 }}>
           <TextField label="Name" fullWidth autoFocus {...register('name')} />
           {section.costLabel && (
             <TextField

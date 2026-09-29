@@ -2,10 +2,10 @@ import type { SxProps, Theme } from '@mui/material';
 import { spaceTokens } from '../../theme/tokens';
 
 export const shellStyles: SxProps<Theme> = {
-  p: 3, // space-24
+  p: 6, // space-24
   display: 'flex',
   flexDirection: 'column',
-  gap: 3, // space-24
+  gap: 6, // space-24
 };
 
 export const headerRowStyles: SxProps<Theme> = {
