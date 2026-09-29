@@ -1,37 +1,61 @@
 import type { SxProps, Theme } from '@mui/material';
-import { colorTokens, spaceTokens } from '../../theme/tokens';
+import { paletteVar, scaleTokens } from '../../theme/tokens';
+import { navFocusRing } from './app-shell-nav.styles';
 
-// AC: "a persistent, non-collapsible left rail, 280px wide".
-export const DRAWER_WIDTH = 280;
-// AC: "a top bar (56px)" — dark drawer-bg background, not the original
-// surface/line recipe (see topBarStyles below).
-export const TOP_BAR_HEIGHT = 56;
+const { controlSize, space, stroke } = scaleTokens;
+
+export const SIDEBAR_WIDTH = 272;
+export const TOP_BAR_HEIGHT = 64;
+// Nav/Mobile Overlay: slides in from the left (slow), leaves faster (base).
+export const OVERLAY_TRANSITION = { enter: 320, exit: 220 };
 
 export const rootStyles: SxProps<Theme> = {
   display: 'flex',
   minHeight: '100vh',
 };
 
-export const railStyles: SxProps<Theme> = {
-  width: DRAWER_WIDTH,
+export const sidebarStyles: SxProps<Theme> = {
+  width: SIDEBAR_WIDTH,
   flexShrink: 0,
-  bgcolor: colorTokens.drawerBg,
+  bgcolor: paletteVar('nav-bg'),
   position: 'fixed',
   insetBlock: 0,
   left: 0,
+  overflowX: 'hidden',
   overflowY: 'auto',
+  px: `${space[16]}px`,
+  py: `${space[24]}px`,
+};
+
+// Motif/Quarter Circle in the sidebar's top-right corner.
+export const sidebarDecorStyles: SxProps<Theme> = {
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  width: 132,
+  height: 132,
+  borderBottomLeftRadius: '100%',
+  bgcolor: paletteVar('nav-hover'),
+  pointerEvents: 'none',
+};
+
+export const sidebarContentStyles: SxProps<Theme> = {
+  position: 'relative',
+  minHeight: '100%',
+  display: 'flex',
+  flexDirection: 'column',
 };
 
 export const desktopContentStyles: SxProps<Theme> = {
   flexGrow: 1,
   minWidth: 0,
-  ml: `${DRAWER_WIDTH}px`,
+  ml: `${SIDEBAR_WIDTH}px`,
 };
 
 export const desktopTitleStyles: SxProps<Theme> = {
   textAlign: 'center',
-  pt: `${spaceTokens.space24}px`,
-  px: `${spaceTokens.space24}px`,
+  pt: `${space[24]}px`,
+  px: `${space[24]}px`,
 };
 
 export const mobileRootStyles: SxProps<Theme> = {
@@ -39,9 +63,6 @@ export const mobileRootStyles: SxProps<Theme> = {
   minWidth: 0,
 };
 
-// Dark, matching the rail/overlay — previously colorTokens.surface (white),
-// the one place in the mobile layout that didn't match the rest of the
-// shell's own dark-drawer branding.
 export const topBarStyles: SxProps<Theme> = {
   position: 'sticky',
   top: 0,
@@ -49,48 +70,56 @@ export const topBarStyles: SxProps<Theme> = {
   height: TOP_BAR_HEIGHT,
   display: 'flex',
   alignItems: 'center',
-  bgcolor: colorTokens.drawerBg,
-  px: `${spaceTokens.space8}px`,
+  gap: `${space[8]}px`,
+  px: `${space[12]}px`,
+  bgcolor: paletteVar('background-default'),
+  borderBottom: `${stroke.hair}px solid ${paletteVar('divider')}`,
 };
 
-// Same reasoning as topBarTitleStyles above — the hamburger icon's own
-// inherited dark color would be invisible against the now-dark topBarStyles
-// background.
-export const menuButtonStyles: SxProps<Theme> = {
-  color: colorTokens.drawerText,
+export const topBarTitleSlotStyles: SxProps<Theme> = {
+  flexGrow: 1,
+  minWidth: 0,
 };
 
 export const topBarTitleStyles: SxProps<Theme> = {
-  flexGrow: 1,
   textAlign: 'center',
-  // Balances the hamburger IconButton's own width so the title sits
-  // centered in the bar instead of shifted right by it.
-  mr: '40px',
-  // Inherited dark text.primary is unreadable against the now-dark
-  // topBarStyles background — set explicitly, same fix closeButtonStyles
-  // below already applies to the overlay's own icon.
-  color: colorTokens.drawerText,
+  color: paletteVar('text-primary'),
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 };
 
-export const mobileOverlayStyles: SxProps<Theme> = {
-  position: 'fixed',
-  inset: 0,
-  zIndex: (theme) => theme.zIndex.modal,
-  bgcolor: colorTokens.drawerBg,
-  overflowY: 'auto',
+// Keeps the title centred opposite the menu button.
+export const topBarSpacerStyles: SxProps<Theme> = {
+  width: controlSize.m,
+  flexShrink: 0,
 };
 
-export const mobileOverlayHeaderStyles: SxProps<Theme> = {
-  height: TOP_BAR_HEIGHT,
+export const overlayPaperStyles: SxProps<Theme> = {
+  width: '100%',
+  bgcolor: paletteVar('nav-bg'),
+  backgroundImage: 'none',
+  pt: `${space[12]}px`,
+  px: `${space[16]}px`,
+  pb: `${space[24]}px`,
+};
+
+export const overlayHeaderStyles: SxProps<Theme> = {
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'flex-end',
-  px: `${spaceTokens.space8}px`,
+  gap: `${space[12]}px`,
 };
 
-// IconButton's own default icon color (near-black, for the light surface
-// elsewhere in the app) reads as almost invisible against drawer-bg's dark
-// charcoal — set explicitly rather than left to inherit.
+export const overlayLogoStyles: SxProps<Theme> = {
+  display: 'block',
+  width: 180,
+  height: 'auto',
+};
+
+// Icon Button, Variant=Inverse: a light disc on the dark overlay.
 export const closeButtonStyles: SxProps<Theme> = {
-  color: colorTokens.drawerText,
+  bgcolor: paletteVar('nav-text'),
+  color: paletteVar('nav-activeText'),
+  '&:hover': { bgcolor: paletteVar('nav-textMuted') },
+  '&.Mui-focusVisible': navFocusRing,
 };

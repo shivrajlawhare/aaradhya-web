@@ -7,6 +7,9 @@ export default defineConfig({
     include: ['tests/**/*.test.tsx', 'tests/**/*.test.ts'],
     environment: 'jsdom',
     setupFiles: ['./tests/support/setup.ts'],
+    // The wizard form tests type through whole Sessions with user-event;
+    // under the full parallel run they can pass the 5s default.
+    testTimeout: 15000,
     css: true,
     server: {
       deps: {

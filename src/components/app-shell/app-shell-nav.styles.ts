@@ -1,73 +1,67 @@
 import type { SxProps, Theme } from '@mui/material';
-import { colorTokens, radiusTokens, spaceTokens } from '../../theme/tokens';
+import { motionTokens, paletteVar, scaleTokens } from '../../theme/tokens';
 
-const tint = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, transparent)`;
+const { radius, controlSize, space } = scaleTokens;
+
+// Focus ring drawn against the nav's own dark surface (Nav/Sidebar Row,
+// State=Focused): a nav-bg gap, then the focus colour.
+export const navFocusRing = {
+  outline: 'none',
+  boxShadow: `0 0 0 2px ${paletteVar('nav-bg')}, 0 0 0 4px ${paletteVar('brand-focus')}`,
+};
 
 export const navContentStyles: SxProps<Theme> = {
   display: 'flex',
   flexDirection: 'column',
-  height: '100%',
-  gap: `${spaceTokens.space8}px`,
-  p: `${spaceTokens.space16}px`,
+  gap: `${space[24]}px`,
+  minHeight: '100%',
 };
 
-// aaradhya-mark-white.svg is a white/orange crown-mark variant, drawn
-// specifically for a dark surface (unlike header-text.svg, which was
-// designed against the Quotation's white page and needed a light backing
-// chip to stay legible on the drawer's own dark background) — no backing
-// chip needed here, it reads cleanly straight against colorTokens.drawerBg.
-// Centered rather than left-aligned like the old text label — a standalone
-// crest reads better centered than pinned to one edge. Same outer
-// position/padding the original text-only wordmark used (px: space-8,
-// py: space-16).
-export const wordmarkStyles: SxProps<Theme> = {
-  display: 'flex',
-  justifyContent: 'center',
-  px: `${spaceTokens.space8}px`,
-  py: `${spaceTokens.space16}px`,
-};
-
-// height fixed, width auto — preserves the asset's own ~1.16:1 aspect
-// ratio. A compact crest size, not a full-width banner.
-export const wordmarkImageStyles: SxProps<Theme> = {
+export const logoStyles: SxProps<Theme> = {
   display: 'block',
-  height: 64,
-  width: 'auto',
+  width: 200,
+  height: 'auto',
 };
 
 export const navRowsStyles: SxProps<Theme> = {
   display: 'flex',
   flexDirection: 'column',
-  gap: `${spaceTokens.space4}px`,
+  gap: `${space[4]}px`,
 };
 
-// Always at the bottom of the column, however many rows precede it — a
-// role with only Dashboard/Events/Calendar/Logout doesn't pull Logout
-// upward oddly, since `mt: auto` pins it against the Stack's own height
-// (100%) rather than against its sibling rows.
-export const logoutRowWrapperStyles: SxProps<Theme> = {
+export const navFooterStyles: SxProps<Theme> = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: `${space[12]}px`,
   mt: 'auto',
 };
 
-export const navRowStyles = (selected: boolean): SxProps<Theme> => ({
+export const navRowStyles = (isSelected: boolean): SxProps<Theme> => ({
   display: 'flex',
   alignItems: 'center',
-  gap: `${spaceTokens.space12}px`,
-  px: `${spaceTokens.space12}px`,
-  py: `${spaceTokens.space12}px`,
-  borderRadius: `${radiusTokens.radiusSm}px`,
-  bgcolor: selected ? tint(colorTokens.accent, 18) : 'transparent',
-  color: selected ? colorTokens.accent : colorTokens.drawerTextMuted,
+  gap: `${space[12]}px`,
+  height: controlSize.l,
+  px: `${space[16]}px`,
+  borderRadius: `${radius.pill}px`,
+  bgcolor: isSelected ? paletteVar('nav-activeBg') : 'transparent',
+  color: isSelected ? paletteVar('nav-activeText') : paletteVar('nav-text'),
   textDecoration: 'none',
   cursor: 'pointer',
   border: 'none',
   width: '100%',
   textAlign: 'left',
   font: 'inherit',
+  transition: `background-color ${motionTokens.duration.fast}ms ${motionTokens.easing.fast}`,
   '&:hover': {
-    bgcolor: selected ? tint(colorTokens.accent, 18) : tint(colorTokens.drawerText, 6),
+    bgcolor: isSelected ? paletteVar('nav-activeBg') : paletteVar('nav-hover'),
   },
+  '&:focus-visible': navFocusRing,
 });
+
+export const logoutRowStyles: SxProps<Theme> = {
+  ...navRowStyles(false),
+  color: paletteVar('nav-textMuted'),
+};
 
 export const navRowIconStyles: SxProps<Theme> = {
   display: 'flex',
@@ -75,7 +69,6 @@ export const navRowIconStyles: SxProps<Theme> = {
   '& svg': { fontSize: 20 },
 };
 
-export const navRowLabelStyles = (selected: boolean): SxProps<Theme> => ({
+export const navRowLabelStyles: SxProps<Theme> = {
   color: 'inherit',
-  fontWeight: selected ? 600 : 400,
-});
+};

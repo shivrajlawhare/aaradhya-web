@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import { CssBaseline, ThemeProvider } from '@mui/material';
+import { CssBaseline } from '@mui/material';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -10,7 +10,7 @@ import { handleAuthError } from './api/handle-auth-error';
 import App from './app';
 import { ToastProvider } from './components/ui/toast-provider';
 import { AuthProvider } from './stores/auth-context';
-import { theme, THEME_MODE_STORAGE_KEY } from './theme/theme';
+import AppThemeProvider from './theme/app-theme-provider';
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({ onError: handleAuthError }),
@@ -26,9 +26,7 @@ createRoot(rootElement).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <tsr.ReactQueryProvider>
-        {/* Light / dark via useColorScheme(); the chosen mode persists in
-            localStorage under THEME_MODE_STORAGE_KEY. */}
-        <ThemeProvider theme={theme} defaultMode="light" modeStorageKey={THEME_MODE_STORAGE_KEY}>
+        <AppThemeProvider>
           <CssBaseline />
           {/* Every DatePicker/StaticTimePicker in the app (STORY-057) reads
               from this one adapter — dayjs, the lightest of the date libs
@@ -45,7 +43,7 @@ createRoot(rootElement).render(
               </AuthProvider>
             </ToastProvider>
           </LocalizationProvider>
-        </ThemeProvider>
+        </AppThemeProvider>
       </tsr.ReactQueryProvider>
     </QueryClientProvider>
   </StrictMode>

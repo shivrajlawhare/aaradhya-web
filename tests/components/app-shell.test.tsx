@@ -1,5 +1,5 @@
-import { ThemeProvider } from '@mui/material';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 import AppShell from '../../src/components/app-shell/app-shell';
@@ -14,8 +14,16 @@ import {
   USER_MANAGEMENT_PATH,
 } from '../../src/routes';
 import { AuthProvider, SESSION_STORAGE_KEY } from '../../src/stores/auth-context';
-import { theme } from '../../src/theme/theme';
+import AppThemeProvider from '../../src/theme/app-theme-provider';
+import { THEME_MODE_STORAGE_KEY } from '../../src/theme/theme';
 import { mockMatchMedia } from '../support/match-media';
+
+const ROLE_NAV_ITEMS: [string, string, string[]][] = [
+  ['EventManager', 'Event Manager', ['Dashboard', 'Events', 'Calendar', 'New Event', 'User Management', 'Settings']],
+  ['FnBHead', 'F&B Head', ['Dashboard', 'Events', 'Calendar']],
+  ['Housekeeping', 'Housekeeping', ['Dashboard', 'Events', 'Calendar']],
+  ['Reception', 'Reception', ['Dashboard', 'Events', 'Calendar']],
+];
 
 const seedSession = (role = 'EventManager') => {
   localStorage.setItem(
@@ -29,7 +37,7 @@ const seedSession = (role = 'EventManager') => {
 // component this story doesn't touch.
 const renderShell = (initialPath: string) =>
   render(
-    <ThemeProvider theme={theme}>
+    <AppThemeProvider>
       <AuthProvider>
         <MemoryRouter initialEntries={[initialPath]}>
           <Routes>
@@ -86,11 +94,12 @@ const renderShell = (initialPath: string) =>
           </Routes>
         </MemoryRouter>
       </AuthProvider>
-    </ThemeProvider>
+    </AppThemeProvider>
   );
 
 afterEach(() => {
   localStorage.clear();
+  document.documentElement.removeAttribute('data-theme');
 });
 
 describe('AppShell', () => {
@@ -159,6 +168,57 @@ describe('AppShell', () => {
       expect(screen.getByText('calendar content')).toBeInTheDocument();
     });
 
+    it.each(ROLE_NAV_ITEMS)('shows %s exactly its nav items and a "%s" role chip', (role, roleLabel, expectedItems) => {
+      mockMatchMedia(true);
+      seedSession(role);
+      renderShell(DASHBOARD_PATH);
+
+      const rail = screen.getByRole('navigation', { name: 'Primary' });
+      const items = within(within(rail).getByRole('navigation', { name: 'Main' })).getAllByRole('link');
+      expect(items.map((item) => item.textContent)).toEqual(expectedItems);
+      expect(within(rail).getByText('Priya Nair')).toBeInTheDocument();
+      expect(within(rail).getByText(roleLabel)).toBeInTheDocument();
+    });
+
+    it('switches to dark with the theme toggle and keeps the choice after a reload', async () => {
+      mockMatchMedia(true);
+      seedSession('EventManager');
+      const { unmount } = renderShell(DASHBOARD_PATH);
+
+      const toggle = screen.getByRole('radiogroup', { name: 'Theme' });
+      expect(within(toggle).getByRole('radio', { name: 'Light' })).toHaveAttribute('aria-checked', 'true');
+
+      await userEvent.click(within(toggle).getByRole('radio', { name: 'Dark' }));
+
+      expect(within(toggle).getByRole('radio', { name: 'Dark' })).toHaveAttribute('aria-checked', 'true');
+      expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+      expect(localStorage.getItem(THEME_MODE_STORAGE_KEY)).toBe('dark');
+
+      unmount();
+      renderShell(DASHBOARD_PATH);
+
+      expect(screen.getByRole('radio', { name: 'Dark' })).toHaveAttribute('aria-checked', 'true');
+    });
+
+    it('reaches every row, the theme toggle and Logout with Tab, in order', async () => {
+      mockMatchMedia(true);
+      seedSession('Reception');
+      renderShell(DASHBOARD_PATH);
+
+      const expectedOrder = [
+        screen.getByRole('link', { name: 'Dashboard' }),
+        screen.getByRole('link', { name: 'Events' }),
+        screen.getByRole('link', { name: 'Calendar' }),
+        screen.getByRole('radio', { name: 'Light' }),
+        screen.getByRole('radio', { name: 'Dark' }),
+        screen.getByRole('button', { name: 'Logout' }),
+      ];
+      for (const element of expectedOrder) {
+        await userEvent.tab();
+        expect(element).toHaveFocus();
+      }
+    });
+
     it('logs out and navigates to Login when Logout is clicked', () => {
       mockMatchMedia(true);
       seedSession('EventManager');
@@ -218,6 +278,23 @@ describe('AppShell', () => {
       // Never unmounted, wizard state included — the overlay was drawn over
       // it, not routed over it.
       expect(screen.getByText('new event content')).toBeInTheDocument();
+    });
+
+    it('carries the user card, theme toggle and Logout in the overlay, and closes on Escape', async () => {
+      mockMatchMedia(false);
+      seedSession('FnBHead');
+      renderShell(DASHBOARD_PATH);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
+
+      const overlay = screen.getByRole('dialog', { name: 'Navigation' });
+      expect(within(overlay).getByText('F&B Head')).toBeInTheDocument();
+      expect(within(overlay).getByRole('radiogroup', { name: 'Theme' })).toBeInTheDocument();
+      expect(within(overlay).getByRole('button', { name: 'Logout' })).toBeInTheDocument();
+
+      await userEvent.keyboard('{Escape}');
+
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Navigation' })).not.toBeInTheDocument());
     });
 
     it('closes the nav and navigates when a row is tapped', async () => {
