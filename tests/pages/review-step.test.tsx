@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { ThemeProvider } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { tsr } from '../../src/api/client';
@@ -512,5 +512,52 @@ describe('ReviewStep', () => {
     expect(screen.getByText('21,000')).toBeInTheDocument();
     // Grand Total: 60,000 + 21,000 + 5,250 + 5,000 (manual) = 91,250.
     expect(screen.getByText('91,250')).toBeInTheDocument();
+  });
+
+  it('renders the summary as a label / caption / amount list on mobile, with the shaded Food Cost and Grand Total', async () => {
+    mockMatchMedia(false);
+    seedWizardData();
+    renderWizard(reviewPath);
+
+    const list = await screen.findByRole('list', { name: 'Total Cost Summary' });
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(within(list).getByText('Pax 50 · Cost per Plate 300')).toBeInTheDocument();
+    expect(within(list).getAllByText('Total Cost with GST').length).toBeGreaterThan(0);
+    expect(within(list).getByLabelText('GST %')).toHaveValue(5);
+    expect(within(list).getByText('Grand Total')).toBeInTheDocument();
+    expect(within(list).getByText('81,000')).toBeInTheDocument();
+  });
+
+  it('shows the Generating state while the Event is being created: a loading Generate Quotation and a note', async () => {
+    let resolveCreate: (() => void) | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes('/events') && init?.method === 'POST') {
+          return new Promise((resolve) => {
+            resolveCreate = () =>
+              resolve(
+                new Response(JSON.stringify({ id: 'evt-1' }), {
+                  status: 201,
+                  headers: { 'content-type': 'application/json' },
+                })
+              );
+          });
+        }
+        throw new Error(`Unhandled request: ${url}`);
+      })
+    );
+    seedWizardData();
+    renderWizard(reviewPath);
+    await screen.findByText('Poolside');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Quotation' }));
+
+    expect(await screen.findByText('Creating the Event…')).toBeInTheDocument();
+    const generateButton = screen.getByRole('button', { name: /Generate Quotation/ });
+    expect(generateButton).toBeDisabled();
+    expect(within(generateButton.parentElement!).getByRole('progressbar')).toBeInTheDocument();
+    resolveCreate?.();
   });
 });

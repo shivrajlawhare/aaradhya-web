@@ -1,21 +1,7 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import AddIcon from '@mui/icons-material/Add';
-import CloseIcon from '@mui/icons-material/Close';
-import {
-  Alert,
-  Button,
-  IconButton,
-  MenuItem,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, MenuItem, Paper, Stack, TextField, Typography, useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { tsr } from '../../api/client';
@@ -27,29 +13,17 @@ import { useEventWizard } from '../../stores/event-wizard-context';
 import { computeTotalNights } from '../../utils/accommodation-calculations';
 import { enumerateDates } from '../../utils/session-dates';
 import { computeWizardTotalCostSummary, type ManualLineItem } from '../../utils/total-cost-summary';
-import { formatAmount } from '../event-detail/format-amount';
 import type { WizardRoomLine } from './accommodation-step';
 import type { WizardContactRow } from './client-details-step';
 import { emptySetup, type WizardSessionRow } from './event-details-step';
+import ReviewCostSummary from './review-cost-summary';
 import {
   addButtonStyles,
-  amountFieldStyles,
-  dateBlockHeaderStyles,
-  eventTypeCardStyles,
-  gstFieldStyles,
-  inlineRowStyles,
-  manualItemAmountCellStyles,
-  manualItemNameCellStyles,
-  manualItemNoteStyles,
-  manualItemsCardStyles,
-  noteFieldStyles,
-  numericCellStyles,
-  optionFieldStyles,
-  optionRowStyles,
-  shadedCellStyles,
-  shadedRowStyles,
+  cardStyles,
+  eventTypeFieldStyles,
+  eventTypeRowStyles,
+  lineItemFieldsStyles,
   submittingNoteStyles,
-  summaryCardStyles,
   wrapperStyles,
 } from './review-step.styles';
 import type { WizardDateEntry } from './sessions-items-step';
@@ -66,6 +40,9 @@ const EVENT_FAMILY_TYPE_PRESETS = ['Wedding', 'Engagement', 'Corporate', 'Birthd
 const CUSTOM_EVENT_FAMILY_TYPE_OPTION = 'Custom…';
 
 const DEFAULT_GST_PERCENT = 5;
+
+// The label sits above the select, so the empty option shows its own text.
+const SHOW_EMPTY_OPTION = { select: { displayEmpty: true } };
 
 interface ClientDetailsShape {
   contacts: WizardContactRow[];
@@ -303,6 +280,8 @@ interface ReviewStepProps {
 // /events call, then navigates to the Quotation Preview screen for the
 // newly-created Event.
 const ReviewStep = ({ registerSubmit }: ReviewStepProps) => {
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { data, setStepData, clearWizard } = useEventWizard();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -486,17 +465,18 @@ const ReviewStep = ({ registerSubmit }: ReviewStepProps) => {
 
   return (
     <Stack sx={wrapperStyles}>
-      <Paper elevation={0} sx={eventTypeCardStyles}>
+      <Paper elevation={0} sx={cardStyles}>
         <Typography variant="titleM" component="h2">
           Event Type
         </Typography>
-        <Stack direction="row" sx={optionRowStyles}>
+        <Box sx={eventTypeRowStyles}>
           <TextField
             select
             label="Event Type"
             value={eventFamilyTypeOption}
             onChange={(event) => setEventFamilyTypeOption(event.target.value)}
-            sx={optionFieldStyles}
+            sx={eventTypeFieldStyles}
+            slotProps={SHOW_EMPTY_OPTION}
           >
             <MenuItem value="">Select an event type</MenuItem>
             {EVENT_FAMILY_TYPE_PRESETS.map((name) => (
@@ -511,156 +491,36 @@ const ReviewStep = ({ registerSubmit }: ReviewStepProps) => {
               label="Custom event type"
               value={eventFamilyTypeCustom}
               onChange={(event) => setEventFamilyTypeCustom(event.target.value)}
-              sx={optionFieldStyles}
+              sx={eventTypeFieldStyles}
             />
           )}
-        </Stack>
+        </Box>
       </Paper>
 
-      <Paper elevation={0} sx={summaryCardStyles}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>
-                <Typography variant="labelS">Sub Cost Item</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="labelS">Pax</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="labelS">Cost per Plate</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="labelS">Total Cost</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="labelS">Total Cost with GST</Typography>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {summary.dateBlocks.map((block) => (
-              <Fragment key={block.date}>
-                <TableRow sx={dateBlockHeaderStyles}>
-                  <TableCell colSpan={5}>
-                    <Typography variant="titleM" component="h3">
-                      {block.dateLabel}
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-                {block.venueRows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>{row.label}</TableCell>
-                    <TableCell />
-                    <TableCell />
-                    <TableCell />
-                    <TableCell sx={numericCellStyles}>{formatAmount(row.amount)}</TableCell>
-                  </TableRow>
-                ))}
-                {block.foodRows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>{row.label}</TableCell>
-                    <TableCell sx={numericCellStyles}>{row.paxDisplay}</TableCell>
-                    <TableCell sx={numericCellStyles}>{formatAmount(row.costPerPlate)}</TableCell>
-                    <TableCell sx={numericCellStyles}>{formatAmount(row.totalCost)}</TableCell>
-                    <TableCell />
-                  </TableRow>
-                ))}
-              </Fragment>
-            ))}
+      <ReviewCostSummary
+        summary={summary}
+        gstPercent={gstPercent}
+        isDesktop={isDesktop}
+        onGstPercentChange={setGstPercent}
+        onRemoveManualItem={handleRemoveManualItem}
+      />
 
-            <TableRow sx={shadedRowStyles}>
-              <TableCell>
-                <Stack direction="row" sx={inlineRowStyles}>
-                  <Typography variant="labelS" sx={shadedCellStyles}>
-                    Food Cost
-                  </Typography>
-                  <TextField
-                    label="GST %"
-                    type="number"
-                    size="small"
-                    value={gstPercent}
-                    onChange={(event) => setGstPercent(event.target.value === '' ? 0 : Number(event.target.value))}
-                    sx={gstFieldStyles}
-                    slotProps={{ htmlInput: { min: 0 } }}
-                  />
-                </Stack>
-              </TableCell>
-              <TableCell />
-              <TableCell />
-              <TableCell sx={shadedCellStyles}>{formatAmount(summary.foodCostTotal)}</TableCell>
-              <TableCell sx={shadedCellStyles}>{formatAmount(summary.foodCostWithGst)}</TableCell>
-            </TableRow>
-
-            <TableRow>
-              <TableCell>
-                <Typography variant="bodyM">Accommodation</Typography>
-              </TableCell>
-              <TableCell />
-              <TableCell />
-              <TableCell />
-              <TableCell sx={numericCellStyles}>{formatAmount(summary.accommodationTotal)}</TableCell>
-            </TableRow>
-
-            {summary.manualLineItems.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>
-                  <Stack sx={manualItemNameCellStyles}>
-                    <Typography variant="bodyM">{item.name}</Typography>
-                    {item.note && (
-                      <Typography variant="bodyM" sx={manualItemNoteStyles}>
-                        {item.note}
-                      </Typography>
-                    )}
-                  </Stack>
-                </TableCell>
-                <TableCell />
-                <TableCell />
-                <TableCell />
-                <TableCell sx={numericCellStyles}>
-                  <Stack direction="row" sx={manualItemAmountCellStyles}>
-                    {formatAmount(item.amount)}
-                    <IconButton
-                      aria-label={`Remove ${item.name} line item`}
-                      size="small"
-                      onClick={() => handleRemoveManualItem(item.id)}
-                    >
-                      <CloseIcon fontSize="small" />
-                    </IconButton>
-                  </Stack>
-                </TableCell>
-              </TableRow>
-            ))}
-
-            <TableRow sx={shadedRowStyles}>
-              <TableCell colSpan={3}>
-                <Typography variant="labelS" sx={shadedCellStyles}>
-                  Grand Total
-                </Typography>
-              </TableCell>
-              <TableCell />
-              <TableCell sx={shadedCellStyles}>{formatAmount(Math.round(summary.grandTotal))}</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </Paper>
-
-      <Paper elevation={0} component="form" onSubmit={handleAddManualItem} sx={manualItemsCardStyles}>
+      <Paper elevation={0} component="form" onSubmit={handleAddManualItem} sx={cardStyles}>
         <Typography variant="titleM" component="h2">
           Add Line Item
         </Typography>
-        <Stack direction="row" sx={optionRowStyles}>
-          <TextField {...manualItemForm.register('name')} label="Name" sx={optionFieldStyles} />
-          <TextField {...manualItemForm.register('note')} label="Note (optional)" sx={noteFieldStyles} />
+        <Box sx={lineItemFieldsStyles}>
+          <TextField {...manualItemForm.register('name')} label="Name" fullWidth />
+          <TextField {...manualItemForm.register('note')} label="Note (optional)" fullWidth />
           <TextField
             {...manualItemForm.register('amount', { valueAsNumber: true })}
             label="Total Cost with GST"
             type="number"
+            fullWidth
             slotProps={{ htmlInput: { min: 0 } }}
-            sx={amountFieldStyles}
           />
-        </Stack>
-        <Button type="submit" variant="contained" startIcon={<AddIcon />} sx={addButtonStyles}>
+        </Box>
+        <Button type="submit" variant="contained" fullWidth={!isDesktop} startIcon={<AddIcon />} sx={addButtonStyles}>
           Add Line Item
         </Button>
       </Paper>

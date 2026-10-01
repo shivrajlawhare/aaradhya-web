@@ -33,6 +33,7 @@ const ShellContent = ({ step, children, onNext, headerActions }: EventWizardShel
   // app.tsx, so a future step story only ever touches its own step
   // component plus its own entry in that registry.
   const nextDisabled = !isWizardStepReady(step, data[step]);
+  const isNextLoading = data[step]?.isSubmitting === true;
 
   // The AC's "explicit cancel" clearing trigger — a confirm() gate since
   // this discards real, already-entered data, same "confirm before a
@@ -62,7 +63,7 @@ const ShellContent = ({ step, children, onNext, headerActions }: EventWizardShel
       />
       <WizardStepper currentStep={step} />
       <Box sx={contentStyles}>{children}</Box>
-      <WizardFooter currentStep={step} nextDisabled={nextDisabled} onNext={onNext} />
+      <WizardFooter currentStep={step} nextDisabled={nextDisabled} isNextLoading={isNextLoading} onNext={onNext} />
     </Box>
   );
 };

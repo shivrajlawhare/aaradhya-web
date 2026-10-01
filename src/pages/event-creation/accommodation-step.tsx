@@ -3,7 +3,6 @@ import AddIcon from '@mui/icons-material/Add';
 import { Alert, Box, Button, CircularProgress, Paper, Stack, Typography, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import AccommodationTotals from '../../components/ui/accommodation-totals';
@@ -19,7 +18,7 @@ import {
   parseDiscountPercent,
 } from '../../utils/accommodation-calculations';
 import { formatEventDate, formatTimeOfDay } from '../../utils/quotation-formatting';
-import { fromPickerDate, fromPickerTime, toPickerDate, toPickerTime } from '../event-detail/date-input';
+import { fromPickerDate, toPickerDate } from '../event-detail/date-input';
 import { formatRupees } from '../event-detail/format-amount';
 import AccommodationRoomLines, { type RoomLineNumberField, type WizardRoomLine } from './accommodation-room-lines';
 import {
@@ -35,9 +34,9 @@ import {
   roomsCardStyles,
   roomsSectionStyles,
   summaryLineStyles,
-  timePickerCardStyles,
   wrapperStyles,
 } from './accommodation-step.styles';
+import TimePickerCard from './time-picker-card';
 
 export type { WizardRoomLine } from './accommodation-room-lines';
 
@@ -55,8 +54,6 @@ const DEFAULT_ROOM_COUNTS: Readonly<Record<string, number>> = {
   'Family Room': 2,
   [EXTRA_BEDS_ROOM_TYPE]: 0,
 };
-
-const HIDDEN_PICKER_ACTIONS = { actionBar: { actions: [] } };
 
 interface AccommodationStepData {
   checkInDate: string;
@@ -307,14 +304,7 @@ const AccommodationStep = () => {
               value={toPickerDate(checkInDate)}
               onChange={(date) => setCheckInDate(fromPickerDate(date))}
             />
-            <Box sx={timePickerCardStyles}>
-              <StaticTimePicker
-                ampm
-                slotProps={HIDDEN_PICKER_ACTIONS}
-                value={toPickerTime(checkInTime)}
-                onChange={(time) => setCheckInTime(fromPickerTime(time))}
-              />
-            </Box>
+            <TimePickerCard value={checkInTime} onChange={setCheckInTime} />
           </Stack>
           <Stack sx={dateColumnStyles}>
             <Typography variant="titleS" component="h3">
@@ -326,14 +316,7 @@ const AccommodationStep = () => {
               onChange={(date) => setCheckOutDate(fromPickerDate(date))}
               slotProps={{ textField: { error: isRangeInvalid } }}
             />
-            <Box sx={timePickerCardStyles}>
-              <StaticTimePicker
-                ampm
-                slotProps={HIDDEN_PICKER_ACTIONS}
-                value={toPickerTime(checkOutTime)}
-                onChange={(time) => setCheckOutTime(fromPickerTime(time))}
-              />
-            </Box>
+            <TimePickerCard value={checkOutTime} onChange={setCheckOutTime} />
           </Stack>
           {/* Never manually entered — always derived from the dates. The
               big count is desktop-only (Figma); mobile shows the line. */}

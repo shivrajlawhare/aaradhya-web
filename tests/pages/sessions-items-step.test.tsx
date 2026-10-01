@@ -125,6 +125,30 @@ const selectOption = async (labelText: string, optionName: string) => {
   fireEvent.click(await screen.findByRole('option', { name: optionName }));
 };
 
+// The sticky action row's buttons (D6) — distinct from the in-card submit
+// buttons, which can share a label ("Add Food/Dining Event").
+const actionButton = (name: 'Add Ceremony' | 'Add Food/Dining Event') =>
+  within(screen.getByRole('toolbar', { name: 'Add items' })).getByRole('button', { name });
+
+const openCeremonyCard = () => fireEvent.click(actionButton('Add Ceremony'));
+const openFoodCard = () => fireEvent.click(actionButton('Add Food/Dining Event'));
+
+const ceremonyCard = () => screen.getByRole('form', { name: 'Ceremony Events' });
+const foodCard = () => screen.getByRole('form', { name: 'Food/Dining Events' });
+const ceremonyGroup = () => screen.getByRole('region', { name: 'Ceremony events' });
+const foodGroup = () => screen.getByRole('region', { name: 'Food/dining events' });
+
+const submitCeremony = (name = 'Add Ceremony Event') =>
+  fireEvent.click(within(ceremonyCard()).getByRole('button', { name }));
+const submitFood = (name = 'Add Food/Dining Event') =>
+  fireEvent.click(within(foodCard()).getByRole('button', { name }));
+
+const addCeremony = async (eventName: string) => {
+  await selectOption('Event Name', eventName);
+  submitCeremony();
+  await within(ceremonyGroup()).findByText(eventName);
+};
+
 beforeEach(() => {
   sessionStorage.clear();
   mockMatchMedia(true);
@@ -154,52 +178,149 @@ describe('SessionsItemsStep', () => {
     ).toBeInTheDocument();
   });
 
+  describe('D6 action buttons', () => {
+    it('starts with no card open and both groups showing their empty text', async () => {
+      seedEventDetails([TWO_DAY_WEDDING]);
+      renderWizard(sessionsItemsPath);
+      await screen.findByRole('tab', { name: '12/09/2026' });
+
+      expect(screen.queryByRole('form')).not.toBeInTheDocument();
+      expect(actionButton('Add Ceremony')).toHaveAttribute('aria-expanded', 'false');
+      expect(actionButton('Add Food/Dining Event')).toHaveAttribute('aria-expanded', 'false');
+      expect(within(ceremonyGroup()).getByText('No ceremony events yet')).toBeInTheDocument();
+      expect(within(foodGroup()).getByText('No food/dining events yet')).toBeInTheDocument();
+    });
+
+    it('toggles each card open and closed from its own button, one card at a time', async () => {
+      seedEventDetails([TWO_DAY_WEDDING]);
+      renderWizard(sessionsItemsPath);
+      await screen.findByRole('tab', { name: '12/09/2026' });
+
+      openCeremonyCard();
+      expect(ceremonyCard()).toBeInTheDocument();
+      expect(actionButton('Add Ceremony')).toHaveAttribute('aria-expanded', 'true');
+
+      openFoodCard();
+      expect(foodCard()).toBeInTheDocument();
+      expect(screen.queryByRole('form', { name: 'Ceremony Events' })).not.toBeInTheDocument();
+      expect(actionButton('Add Ceremony')).toHaveAttribute('aria-expanded', 'false');
+      expect(actionButton('Add Food/Dining Event')).toHaveAttribute('aria-expanded', 'true');
+
+      openFoodCard();
+      expect(screen.queryByRole('form')).not.toBeInTheDocument();
+      expect(actionButton('Add Food/Dining Event')).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('keeps the action row in a sticky container above the groups as rows are added', async () => {
+      seedEventDetails([TWO_DAY_WEDDING]);
+      renderWizard(sessionsItemsPath);
+      await screen.findByRole('tab', { name: '12/09/2026' });
+      openCeremonyCard();
+      await addCeremony('Muhurta');
+      await addCeremony('Cake Cutting');
+      await addCeremony('Engagement Sangeet');
+
+      const toolbar = screen.getByRole('toolbar', { name: 'Add items' });
+      expect(toolbar).toHaveStyle({ position: 'sticky' });
+      expect(within(toolbar).getAllByRole('button')).toHaveLength(2);
+      expect(within(ceremonyGroup()).getAllByRole('button', { name: /^Remove / })).toHaveLength(3);
+      // Toolbar → open card → groups, in document order.
+      expect(toolbar.compareDocumentPosition(ceremonyGroup()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(within(ceremonyGroup()).getByText('Ceremony events · 3')).toBeInTheDocument();
+    });
+  });
+
   it('adds a Ceremony Event with every field blank, matching the reference quotations’ valid bare row', async () => {
     seedEventDetails([TWO_DAY_WEDDING]);
     renderWizard(sessionsItemsPath);
     await screen.findByRole('tab', { name: '12/09/2026' });
+    openCeremonyCard();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Ceremony Event' }));
+    submitCeremony();
 
-    expect(await screen.findByText('(blank ceremony row)')).toBeInTheDocument();
+    expect(await within(ceremonyGroup()).findByText('(blank ceremony row)')).toBeInTheDocument();
+    // The card stays open, ready for the next entry.
+    expect(ceremonyCard()).toBeInTheDocument();
   });
 
   it('adds a Ceremony Event with a preset name, and it can be removed', async () => {
     seedEventDetails([TWO_DAY_WEDDING]);
     renderWizard(sessionsItemsPath);
     await screen.findByRole('tab', { name: '12/09/2026' });
+    openCeremonyCard();
 
-    await selectOption('Event Name', 'Muhurta');
-    fireEvent.click(screen.getByRole('button', { name: 'Add Ceremony Event' }));
-    expect(await screen.findByText('Muhurta')).toBeInTheDocument();
+    await addCeremony('Muhurta');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Remove Muhurta row' }));
-    expect(screen.queryByText('Muhurta')).not.toBeInTheDocument();
+    fireEvent.click(within(ceremonyGroup()).getByRole('button', { name: 'Remove Muhurta row' }));
+    expect(within(ceremonyGroup()).queryByText('Muhurta')).not.toBeInTheDocument();
+    expect(within(ceremonyGroup()).getByText('No ceremony events yet')).toBeInTheDocument();
   });
 
-  it('clicking an added Ceremony row re-populates the form for editing, and saving replaces it rather than duplicating', async () => {
+  it('clicking an added Ceremony row opens its card for editing, and saving replaces it rather than duplicating', async () => {
     seedEventDetails([TWO_DAY_WEDDING]);
     renderWizard(sessionsItemsPath);
     await screen.findByRole('tab', { name: '12/09/2026' });
-    await selectOption('Event Name', 'Muhurta');
-    fireEvent.click(screen.getByRole('button', { name: 'Add Ceremony Event' }));
-    await screen.findByText('Muhurta');
+    openCeremonyCard();
+    await addCeremony('Muhurta');
+    // Close the card: clicking the row must reopen it.
+    openCeremonyCard();
+    expect(screen.queryByRole('form')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('Muhurta'));
-    expect(await screen.findByRole('button', { name: 'Save Ceremony Event' })).toBeInTheDocument();
+    const row = within(ceremonyGroup()).getByRole('button', { name: /^Muhurta/ });
+    fireEvent.click(row);
+
+    expect(ceremonyCard()).toBeInTheDocument();
+    expect(actionButton('Add Ceremony')).toHaveAttribute('aria-expanded', 'true');
+    expect(row).toHaveAttribute('aria-pressed', 'true');
+    expect(within(ceremonyCard()).getByRole('button', { name: 'Cancel edit' })).toBeInTheDocument();
 
     await selectOption('Event Name', 'Cake Cutting');
-    fireEvent.click(screen.getByRole('button', { name: 'Save Ceremony Event' }));
+    submitCeremony('Save Ceremony Event');
 
-    expect(await screen.findByText('Cake Cutting')).toBeInTheDocument();
-    expect(screen.queryByText('Muhurta')).not.toBeInTheDocument();
-    expect(screen.getAllByText(/Cake Cutting/)).toHaveLength(1);
+    expect(await within(ceremonyGroup()).findByText('Cake Cutting')).toBeInTheDocument();
+    expect(within(ceremonyGroup()).queryByText('Muhurta')).not.toBeInTheDocument();
+    expect(within(ceremonyGroup()).getAllByRole('button', { name: /^Remove / })).toHaveLength(1);
+    // Saved: the card stays open, empty, back in add mode.
+    expect(within(ceremonyCard()).getByRole('button', { name: 'Add Ceremony Event' })).toBeInTheDocument();
+    expect(within(ceremonyCard()).queryByRole('button', { name: 'Cancel edit' })).not.toBeInTheDocument();
+  });
+
+  it('Cancel edit empties the card and leaves the row unchanged', async () => {
+    seedEventDetails([TWO_DAY_WEDDING]);
+    renderWizard(sessionsItemsPath);
+    await screen.findByRole('tab', { name: '12/09/2026' });
+    openCeremonyCard();
+    await addCeremony('Muhurta');
+
+    fireEvent.click(within(ceremonyGroup()).getByRole('button', { name: /^Muhurta/ }));
+    fireEvent.click(within(ceremonyCard()).getByRole('button', { name: 'Cancel edit' }));
+
+    expect(within(ceremonyCard()).getByRole('button', { name: 'Add Ceremony Event' })).toBeInTheDocument();
+    expect(within(ceremonyGroup()).getByRole('button', { name: /^Muhurta/ })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('clicking a Food/Dining row while the Ceremony card is open switches to the Food card', async () => {
+    seedEventDetails([TWO_DAY_WEDDING]);
+    renderWizard(sessionsItemsPath);
+    await screen.findByRole('tab', { name: '12/09/2026' });
+    openFoodCard();
+    await selectOption('Meal Name', 'Dinner');
+    submitFood();
+    await within(foodGroup()).findByText('Dinner');
+    openCeremonyCard();
+
+    fireEvent.click(within(foodGroup()).getByRole('button', { name: /^Dinner/ }));
+
+    expect(foodCard()).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'Ceremony Events' })).not.toBeInTheDocument();
+    expect(within(foodCard()).getByRole('button', { name: 'Save Food/Dining Event' })).toBeInTheDocument();
   });
 
   it('the L.S. toggle relabels Cost per Plate to Flat Cost, and the preview line reflects the current toggle/pax', async () => {
     seedEventDetails([TWO_DAY_WEDDING]);
     renderWizard(sessionsItemsPath);
     await screen.findByRole('tab', { name: '12/09/2026' });
+    openFoodCard();
 
     expect(screen.getByLabelText('Cost per Plate')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Pax'), { target: { value: '200' } });
@@ -215,15 +336,16 @@ describe('SessionsItemsStep', () => {
     seedEventDetails([TWO_DAY_WEDDING]);
     renderWizard(sessionsItemsPath);
     await screen.findByRole('tab', { name: '12/09/2026' });
+    openFoodCard();
 
     await selectOption('Meal Name', 'Dinner');
     // Pax/Cost per Plate default to 0 already — clearing them (a cleared
     // number input's valueAsNumber is NaN, not 0) must not leak NaN/null
     // into the stored row or its "Shown on Quotation as" display.
     fireEvent.change(screen.getByLabelText('Pax'), { target: { value: '' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add Food/Dining Event' }));
+    submitFood();
 
-    await waitFor(() => expect(screen.getByText(/Dinner/)).toBeInTheDocument());
+    await within(foodGroup()).findByText('Dinner');
     expect(screen.queryByText(/null/)).not.toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
     const stored = JSON.parse(sessionStorage.getItem(WIZARD_STORAGE_KEY) ?? '{}');
@@ -236,13 +358,11 @@ describe('SessionsItemsStep', () => {
     seedEventDetails([TWO_DAY_WEDDING]);
     renderWizard(sessionsItemsPath);
     await screen.findByRole('tab', { name: '12/09/2026' });
+    openFoodCard();
     await selectOption('Meal Name', 'Lunch');
-    fireEvent.click(screen.getByRole('button', { name: 'Add Food/Dining Event' }));
-    // " · " disambiguates the added list row's own text ("Lunch · 0 · 0")
-    // from the Meal Name select, which also shows the bare word "Lunch" as
-    // its own selected value once chosen.
-    fireEvent.click(await screen.findByText(/Lunch · /));
-    await screen.findByRole('button', { name: 'Save Food/Dining Event' });
+    submitFood();
+    fireEvent.click(await within(foodGroup()).findByRole('button', { name: /^Lunch/ }));
+    await within(foodCard()).findByRole('button', { name: 'Save Food/Dining Event' });
 
     // The mock POST /menu-items otherwise resolves within the same tick,
     // leaving no real window to observe the pending state — held open here
@@ -279,13 +399,13 @@ describe('SessionsItemsStep', () => {
     await user.click(menuSearchInput);
     await user.type(menuSearchInput, 'Brand New Item');
     fireEvent.click(await screen.findByText('Add "Brand New Item" as a new menu item'));
-    fireEvent.click(screen.getByRole('button', { name: 'Save Food/Dining Event' }));
+    submitFood('Save Food/Dining Event');
 
     // The create-menu-item mutation is now in flight — Cancel edit must not
     // be clickable until it settles, or a click here could leave the
     // in-flight save silently re-applying to a row the user believed
     // they'd backed out of editing.
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel edit' })).toBeDisabled());
+    await waitFor(() => expect(within(foodCard()).getByRole('button', { name: 'Cancel edit' })).toBeDisabled());
 
     resolveCreate?.();
   });
@@ -294,21 +414,19 @@ describe('SessionsItemsStep', () => {
     seedEventDetails([TWO_DAY_WEDDING]);
     renderWizard(sessionsItemsPath);
     await screen.findByRole('tab', { name: '12/09/2026' });
+    openFoodCard();
 
     await selectOption('Meal Name', 'Lunch');
     fireEvent.change(screen.getByLabelText('Pax'), { target: { value: '150' } });
     fireEvent.click(screen.getByLabelText('Limited Seating'));
     fireEvent.change(screen.getByLabelText('Flat Cost'), { target: { value: '20000' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add Food/Dining Event' }));
+    submitFood();
 
-    // "20,000" (the list row's formatted Cost) only ever appears there, not
-    // in the form itself (a plain unformatted number input) — a safer
-    // anchor to wait on than the L.S. text, which the form's own live
-    // preview line already shows before Add is even clicked, and would
-    // therefore make waitFor succeed immediately without actually waiting
-    // for the async submit (menu item resolution) to finish.
-    await waitFor(() => expect(screen.getByText(/20,000/)).toBeInTheDocument());
-    expect(screen.getByText(/L\.S\. \(150pax\)/)).toBeInTheDocument();
+    // The row only appears once the async submit (menu item resolution)
+    // has finished.
+    expect(await within(foodGroup()).findByText('₹ 20,000')).toBeInTheDocument();
+    expect(within(foodGroup()).getByText('L.S. (150pax)')).toBeInTheDocument();
+    expect(within(foodGroup()).getByText('Food/dining events · 1')).toBeInTheDocument();
   });
 
   it('an existing Menu Item is attached by search without creating a duplicate', async () => {
@@ -316,15 +434,16 @@ describe('SessionsItemsStep', () => {
     seedEventDetails([TWO_DAY_WEDDING]);
     renderWizard(sessionsItemsPath);
     await screen.findByRole('tab', { name: '12/09/2026' });
+    openFoodCard();
     await selectOption('Meal Name', 'Lunch');
 
     const menuSearchInput = screen.getByLabelText('Menu items');
     await user.click(menuSearchInput);
     await user.type(menuSearchInput, 'Paneer');
     fireEvent.click(await screen.findByText('Paneer Tikka'));
-    fireEvent.click(screen.getByRole('button', { name: 'Add Food/Dining Event' }));
+    submitFood();
 
-    await waitFor(() => expect(screen.getByText(/Paneer Tikka/)).toBeInTheDocument());
+    expect(await within(foodGroup()).findByText('Paneer Tikka')).toBeInTheDocument();
     expect(menuItems).toHaveLength(1);
   });
 
@@ -333,15 +452,16 @@ describe('SessionsItemsStep', () => {
     seedEventDetails([TWO_DAY_WEDDING]);
     renderWizard(sessionsItemsPath);
     await screen.findByRole('tab', { name: '12/09/2026' });
+    openFoodCard();
     await selectOption('Meal Name', 'Lunch');
 
     const menuSearchInput = screen.getByLabelText('Menu items');
     await user.click(menuSearchInput);
     await user.type(menuSearchInput, 'Gulab Jamun');
     fireEvent.click(await screen.findByText('Add "Gulab Jamun" as a new menu item'));
-    fireEvent.click(screen.getByRole('button', { name: 'Add Food/Dining Event' }));
+    submitFood();
 
-    await waitFor(() => expect(screen.getByText(/Gulab Jamun/)).toBeInTheDocument());
+    expect(await within(foodGroup()).findByText('Gulab Jamun')).toBeInTheDocument();
     expect(menuItems.some((item) => item.name === 'Gulab Jamun')).toBe(true);
   });
 
@@ -349,23 +469,23 @@ describe('SessionsItemsStep', () => {
     seedEventDetails([TWO_DAY_WEDDING]);
     renderWizard(sessionsItemsPath);
     await screen.findByRole('tab', { name: '12/09/2026' });
-    await selectOption('Event Name', 'Muhurta');
-    fireEvent.click(screen.getByRole('button', { name: 'Add Ceremony Event' }));
-    await screen.findByText('Muhurta');
+    openCeremonyCard();
+    await addCeremony('Muhurta');
+    await selectOption('Event Name', 'Cake Cutting');
 
     fireEvent.click(screen.getByRole('tab', { name: '13/09/2026' }));
-    await waitFor(() => expect(screen.queryByText('Muhurta')).not.toBeInTheDocument());
+    await waitFor(() => expect(within(ceremonyGroup()).queryByText('Muhurta')).not.toBeInTheDocument());
 
     // Submitting immediately after switching (without re-selecting
-    // anything) produces a blank row, not a duplicate "Muhurta" — proof the
+    // anything) produces a blank row, not a "Cake Cutting" one — proof the
     // entry form itself was actually reset, not just that the list
     // re-filtered to this date.
-    fireEvent.click(screen.getByRole('button', { name: 'Add Ceremony Event' }));
-    expect(await screen.findByText('(blank ceremony row)')).toBeInTheDocument();
-    expect(screen.queryByText('Muhurta')).not.toBeInTheDocument();
+    submitCeremony();
+    expect(await within(ceremonyGroup()).findByText('(blank ceremony row)')).toBeInTheDocument();
+    expect(within(ceremonyGroup()).queryByText('Cake Cutting')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: '12/09/2026' }));
-    expect(await screen.findByText('Muhurta')).toBeInTheDocument();
+    expect(await within(ceremonyGroup()).findByText('Muhurta')).toBeInTheDocument();
   });
 
   it('Next is disabled until every date tab has been visited at least once, then enables', async () => {
@@ -410,14 +530,13 @@ describe('SessionsItemsStep', () => {
     );
     renderWizard(sessionsItemsPath);
     await screen.findByRole('tab', { name: '12/09/2026' });
-    await selectOption('Event Name', 'Muhurta');
-    fireEvent.click(screen.getByRole('button', { name: 'Add Ceremony Event' }));
-    await screen.findByText('Muhurta');
+    openCeremonyCard();
+    await addCeremony('Muhurta');
 
     fireEvent.click(screen.getByRole('button', { name: '← Back' }));
     expect(screen.getByText('Accommodation')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Next: Sessions & Items →' }));
-    expect(await screen.findByText('Muhurta')).toBeInTheDocument();
+    expect(await within(ceremonyGroup()).findByText('Muhurta')).toBeInTheDocument();
   });
 });

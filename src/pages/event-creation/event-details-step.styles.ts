@@ -85,15 +85,6 @@ export const timeFieldStyles: SxProps<Theme> = {
   width: { xs: '100%', md: 'auto' },
 };
 
-export const timePickerCardStyles: SxProps<Theme> = {
-  display: 'flex',
-  justifyContent: 'center',
-  border: `${stroke.default}px solid ${paletteVar('divider')}`,
-  borderRadius: `${radius.lg}px`,
-  overflow: 'hidden',
-  bgcolor: 'background.paper',
-};
-
 // The Setup sub-card nested inside the entry card — the subtle custard
 // panel, one level in. Shared in spirit with session-form.styles.ts's own
 // setupCardStyles: the same Setup card, reachable from two screens.

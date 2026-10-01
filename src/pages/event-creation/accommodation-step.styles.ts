@@ -43,15 +43,6 @@ export const dateColumnStyles: SxProps<Theme> = {
   gap: `${space[12]}px`,
 };
 
-export const timePickerCardStyles: SxProps<Theme> = {
-  display: 'flex',
-  justifyContent: 'center',
-  border: `${stroke.default}px solid ${paletteVar('divider')}`,
-  borderRadius: `${radius.lg}px`,
-  overflow: 'hidden',
-  bgcolor: 'background.paper',
-};
-
 // The custard Total Nights panel. Desktop: label, big count, summary line;
 // mobile: just the summary line in a compact box.
 export const nightsPanelStyles: SxProps<Theme> = {

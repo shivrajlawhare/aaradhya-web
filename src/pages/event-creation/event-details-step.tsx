@@ -24,14 +24,13 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
 import { Controller, useForm } from 'react-hook-form';
 import { tsr } from '../../api/client';
 import { SEATING_ARRANGEMENT_OPTIONS, SeatingArrangement } from '../../contract';
 import { useEventWizard } from '../../stores/event-wizard-context';
 import { formatEventDate, formatSessionDuration } from '../../utils/quotation-formatting';
 import { enumerateDates, getDistinctDates } from '../../utils/session-dates';
-import { fromPickerDate, fromPickerTime, toPickerDate, toPickerTime } from '../event-detail/date-input';
+import { fromPickerDate, toPickerDate } from '../event-detail/date-input';
 import { SEATING_ARRANGEMENT_LABELS } from '../event-detail/session-form-options';
 import {
   addedCardHeaderStyles,
@@ -62,11 +61,11 @@ import {
   summaryStyles,
   tableCardStyles,
   timeFieldStyles,
-  timePickerCardStyles,
   toggleRowStyles,
   venueFieldStyles,
   wrapperStyles,
 } from './event-details-step.styles';
+import TimePickerCard from './time-picker-card';
 
 // A distinct sentinel from any real Event Type Master name — this story's
 // own AC: "plus a free-text custom option," same "dropdown + custom"
@@ -84,10 +83,6 @@ interface SetupToggle {
 // The field label sits above the input, so an empty select shows its own
 // empty option ("Not set", "Select a venue", …) instead of a blank box.
 const SHOW_EMPTY_OPTION = { select: { displayEmpty: true } };
-
-// Figma Picker/Time Static (actions hidden): the clock commits on change,
-// so the Cancel/OK bar is noise here.
-const HIDDEN_PICKER_ACTIONS = { actionBar: { actions: [] } };
 
 const SETUP_TOGGLES: SetupToggle[] = [
   { key: 'stage', label: 'Stage' },
@@ -615,39 +610,21 @@ const EventDetailsStep = () => {
             <Typography variant="titleM" component="h3">
               Start time
             </Typography>
-            <Box sx={timePickerCardStyles}>
-              <Controller
-                name="startTime"
-                control={control}
-                render={({ field }) => (
-                  <StaticTimePicker
-                    ampm
-                    slotProps={HIDDEN_PICKER_ACTIONS}
-                    value={toPickerTime(field.value)}
-                    onChange={(time) => field.onChange(fromPickerTime(time))}
-                  />
-                )}
-              />
-            </Box>
+            <Controller
+              name="startTime"
+              control={control}
+              render={({ field }) => <TimePickerCard value={field.value} onChange={field.onChange} />}
+            />
           </Stack>
           <Stack sx={timeFieldStyles}>
             <Typography variant="titleM" component="h3">
               End time
             </Typography>
-            <Box sx={timePickerCardStyles}>
-              <Controller
-                name="endTime"
-                control={control}
-                render={({ field }) => (
-                  <StaticTimePicker
-                    ampm
-                    slotProps={HIDDEN_PICKER_ACTIONS}
-                    value={toPickerTime(field.value)}
-                    onChange={(time) => field.onChange(fromPickerTime(time))}
-                  />
-                )}
-              />
-            </Box>
+            <Controller
+              name="endTime"
+              control={control}
+              render={({ field }) => <TimePickerCard value={field.value} onChange={field.onChange} />}
+            />
           </Stack>
         </Box>
         {/* Setup — optional, not required to add a Session (this story's own

@@ -11,6 +11,9 @@ interface WizardFooterProps {
   // Each step's own readiness (wizard-step-readiness.ts); Next stays
   // enabled when omitted.
   nextDisabled?: boolean;
+  // Step 5's "Generating" state: Next shows a spinner while the Event is
+  // being created (Figma 5 Review — Generating).
+  isNextLoading?: boolean;
   // Only Step 5 (STORY-068) needs this — "Generate Quotation" submits
   // instead of navigating to a step 6 that doesn't exist. Every other step
   // falls back to the default: navigate to the next step's path.
@@ -21,7 +24,7 @@ interface WizardFooterProps {
 // "Generate Quotation" instead of "Next: <label> →". Back is a plain
 // navigate() — it never touches wizard state, so "Back never discards
 // already-entered data on the step being left" holds by construction.
-const WizardFooter = ({ currentStep, nextDisabled = false, onNext }: WizardFooterProps) => {
+const WizardFooter = ({ currentStep, nextDisabled = false, isNextLoading = false, onNext }: WizardFooterProps) => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
@@ -66,7 +69,14 @@ const WizardFooter = ({ currentStep, nextDisabled = false, onNext }: WizardFoote
     <Box sx={footerStyles}>
       {backControl}
       {isDesktop && <Box sx={spacerStyles} />}
-      <Button variant="contained" size={nextSize} fullWidth={!isDesktop} onClick={handleNext} disabled={nextDisabled}>
+      <Button
+        variant="contained"
+        size={nextSize}
+        fullWidth={!isDesktop}
+        onClick={handleNext}
+        disabled={nextDisabled}
+        loading={isNextLoading}
+      >
         {nextLabel}
       </Button>
     </Box>

@@ -1,112 +1,101 @@
 import type { SxProps, Theme } from '@mui/material';
-import { colorTokens, radiusTokens, spaceTokens } from '../../theme/tokens';
+import { paletteVar, scaleTokens } from '../../theme/tokens';
+
+const { radius, space, stroke } = scaleTokens;
+
+const FIELD_COLUMN_WIDTH = 404;
+const PAX_FIELD_WIDTH = 110;
 
 export const wrapperStyles: SxProps<Theme> = {
   display: 'flex',
   flexDirection: 'column',
-  gap: `${spaceTokens.space24}px`,
+  gap: { xs: `${space[16]}px`, md: `${space[24]}px` },
 };
 
-export const reminderStyles: SxProps<Theme> = {
-  color: colorTokens.textSoft,
+// The pill date tabs hug their content instead of stretching full width.
+export const dateTabsStyles: SxProps<Theme> = {
+  alignSelf: 'flex-start',
+  maxWidth: '100%',
 };
 
+export const reminderListStyles: SxProps<Theme> = {
+  gap: `${space[8]}px`,
+};
+
+// Figma 05 New Event / 4 Sessions & Items: the Ceremony / Food/Dining card —
+// title over a fields column (left) and the two clocks (right); stacked on
+// mobile.
 export const sectionCardStyles: SxProps<Theme> = {
-  bgcolor: colorTokens.surface,
-  border: `1px solid ${colorTokens.line}`,
-  borderRadius: `${radiusTokens.radiusMd}px`, // radius-md (cards)
-  p: `${spaceTokens.space24}px`,
+  bgcolor: 'background.paper',
+  border: `${stroke.default}px solid ${paletteVar('divider')}`,
+  borderRadius: `${radius.lg}px`,
+  p: { xs: `${space[16]}px`, md: `${space[24]}px` },
   display: 'flex',
   flexDirection: 'column',
-  gap: `${spaceTokens.space16}px`,
+  gap: `${space[16]}px`,
 };
 
-export const rowStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space12}px`,
-  flexWrap: 'wrap',
+export const sectionBodyStyles: SxProps<Theme> = {
+  display: 'grid',
+  gridTemplateColumns: { xs: '1fr', md: `minmax(0, ${FIELD_COLUMN_WIDTH}px) minmax(0, 1fr)` },
+  gap: { xs: `${space[16]}px`, md: `${space[24]}px` },
+  alignItems: 'start',
 };
 
-// The Event Name/Meal Name select and their own Custom text field siblings
-// — a fixed minimum width so the row doesn't visually jump narrow when a
-// short preset name is selected.
-export const optionFieldStyles: SxProps<Theme> = {
-  minWidth: 200,
+export const fieldColumnStyles: SxProps<Theme> = {
+  gap: `${space[16]}px`,
 };
 
-// rowStyles plus vertical centering — Pax/L.S./Cost sit at different
-// natural heights (a text field vs. a label+switch pair), so this row
-// needs it where the others don't.
-export const paxRowStyles: SxProps<Theme> = {
-  ...rowStyles,
-  alignItems: 'center',
-};
-
-export const lsToggleRowStyles: SxProps<Theme> = {
-  alignItems: 'center',
-  gap: `${spaceTokens.space8}px`,
+export const clockRowStyles: SxProps<Theme> = {
+  display: 'grid',
+  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+  gap: `${space[16]}px`,
 };
 
 export const timeFieldStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space8}px`,
+  gap: `${space[8]}px`,
+  minWidth: 0,
 };
 
-// type-label-s — this story's own Tokens line, for the Start/End time mini
-// headers above each StaticTimePicker (a smaller label than
-// event-details-step.tsx's own titleM section headers, a deliberate
-// per-story difference, not an inconsistency).
-export const miniFieldLabelStyles: SxProps<Theme> = {
-  color: colorTokens.textSoft,
+export const timeLabelStyles: SxProps<Theme> = {
+  color: 'text.secondary',
+};
+
+// Pax · L.S. · Cost per Plate.
+export const paxRowStyles: SxProps<Theme> = {
+  display: 'flex',
+  alignItems: 'flex-end',
+  gap: `${space[12]}px`,
+};
+
+export const paxFieldStyles: SxProps<Theme> = {
+  width: PAX_FIELD_WIDTH,
+  flexShrink: 0,
+};
+
+export const costFieldStyles: SxProps<Theme> = {
+  flex: 1,
+  minWidth: 0,
+};
+
+// The L.S. label sits over its switch, level with the fields' labels.
+export const lsToggleStyles: SxProps<Theme> = {
+  alignItems: 'center',
+  gap: `${space[8]}px`,
+  pb: `${space[12]}px`,
+};
+
+export const lsLabelStyles: SxProps<Theme> = {
+  color: 'text.secondary',
 };
 
 export const previewLineStyles: SxProps<Theme> = {
-  color: colorTokens.textSoft,
+  color: 'text.secondary',
 };
 
-export const addButtonStyles: SxProps<Theme> = {
-  alignSelf: 'flex-start',
-};
-
-// surface-2 (row card fill) — this story's own Tokens line, for each
-// already-added Ceremony/Food row, distinct from the white (surface)
-// section form card above it.
-export const rowCardStyles: SxProps<Theme> = {
-  bgcolor: colorTokens.surface2,
-  border: `1px solid ${colorTokens.line}`,
-  borderRadius: `${radiusTokens.radiusSm}px`,
-  p: `${spaceTokens.space12}px`,
+export const formActionsStyles: SxProps<Theme> = {
   display: 'flex',
-  flexDirection: 'row',
+  flexWrap: 'wrap',
   alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: `${spaceTokens.space12}px`,
-  cursor: 'pointer',
-};
-
-// The row currently loaded into the form above for editing (this story's
-// own AC: "clicking a row re-populates the form... for editing") — an
-// accent-colored border so it's visually distinguishable from the other
-// added rows while being edited.
-export const rowCardEditingStyles: SxProps<Theme> = {
-  ...rowCardStyles,
-  border: `1px solid ${colorTokens.accent}`,
-};
-
-export const rowListStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space8}px`,
-};
-
-// accent (on) / text-faint (off) — this story's own Tokens line, for the
-// L.S. toggle's own label.
-export const lsLabelStyles = (isOn: boolean): SxProps<Theme> => ({
-  color: isOn ? colorTokens.accent : colorTokens.textFaint,
-  fontWeight: 600,
-});
-
-export const lsSwitchStyles: SxProps<Theme> = {
-  '& .MuiSwitch-switchBase.Mui-checked': {
-    color: colorTokens.accent,
-  },
-  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-    backgroundColor: colorTokens.accent,
-  },
+  gap: `${space[12]}px`,
 };
