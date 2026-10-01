@@ -148,16 +148,15 @@ const findCalendarEventTitle = async (text: string): Promise<HTMLElement> => {
 };
 
 // Every fixture session in this file lands in September 2026 — clicks
-// "Next month" however many times that takes from whichever month the
-// suite actually starts on ("today"), so the tests stay correct regardless
-// of when they run.
+// "Next month" or "Previous month" however many times that takes from
+// whichever month the suite actually starts on ("today"), so the tests stay
+// correct regardless of when they run, before or after that month.
 const navigateToSeptember2026 = async () => {
-  const nextButton = await screen.findByRole('button', { name: 'Next month' });
   const now = new Date();
-  let monthsToAdvance = (2026 - now.getFullYear()) * 12 + (9 - 1 - now.getMonth());
-  while (monthsToAdvance > 0) {
-    fireEvent.click(nextButton);
-    monthsToAdvance -= 1;
+  const monthOffset = (2026 - now.getFullYear()) * 12 + (9 - 1 - now.getMonth());
+  const stepButton = await screen.findByRole('button', { name: monthOffset > 0 ? 'Next month' : 'Previous month' });
+  for (let step = 0; step < Math.abs(monthOffset); step += 1) {
+    fireEvent.click(stepButton);
   }
   await screen.findByText('September 2026');
 };
