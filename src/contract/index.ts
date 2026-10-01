@@ -162,6 +162,8 @@ export const updateEventBodySchema = z.object({
 // from here instead of a hand-declared duplicate.
 export const roomLineSchema = z.object({
   roomType: z.string().trim().min(1),
+  // Sent for completeness, but the server overwrites it with the Room Type
+  // master's occupancy at save time (DEV-07) — the UI shows it read-only.
   occupancy: z.number().min(0),
   tariff: z.number().min(0),
   // A no_of_rooms of 0 is a valid placeholder row (STORY-018's decision,
@@ -179,28 +181,34 @@ export const updateAccommodationBodySchema = z.object({
   checkIn: z.string().optional(),
   checkOut: z.string().optional(),
   roomLines: z.array(roomLineSchema).optional(),
+  // Whole-percent discount off Total Charges (DEV-07, D3).
+  discountPercent: z.number().int().min(0).max(100).optional(),
 });
 
 const roomLineResultSchema = roomLineSchema.extend({
-  // Derived (STORY-018) — never accepted as input, always present on output.
-  totalInclGst: z.number(),
+  // Derived — tariff × rooms × nights, no GST (DEV-07). Never accepted as
+  // input, always present on output.
+  totalTaxable: z.number(),
 });
 
-// checkIn/checkOut/totalDays are nullable, not just absent — an Event can
+// checkIn/checkOut/totalNights are nullable, not just absent — an Event can
 // genuinely have no accommodation entered yet. Wire-format strings, same
 // reasoning as every other date field in this file.
 export const accommodationResultSchema = z.object({
   checkIn: z.string().nullable(),
   checkOut: z.string().nullable(),
-  totalDays: z.number().nullable(),
+  totalNights: z.number().nullable(),
   roomLines: z.array(roomLineResultSchema),
   totalOccupancy: z.number(),
   totalCharges: z.number(),
+  discountPercent: z.number(),
+  discountAmount: z.number(),
+  finalAmount: z.number(),
 });
 
 // Role-filtered variants, mirroring aaradhya-api's own filteredRoomLineResultSchema/
-// filteredAccommodationResultSchema (STORY-046/050) — tariff/totalInclGst/
-// totalCharges are `.optional()` (undefined, not just missing from the
+// filteredAccommodationResultSchema (STORY-046/050) — tariff/totalTaxable/
+// totalCharges and the discount/final amount are `.optional()` (undefined, not just missing from the
 // type), since money is stripped from the accommodation block even for a
 // role permitted to see rooms-booked detail at all (Housekeeping/
 // Reception). Used by GET /events/:id's own filteredEventResultSchema
@@ -208,12 +216,15 @@ export const accommodationResultSchema = z.object({
 // relaxed shape either place a role-filtered accommodation object appears.
 export const filteredRoomLineResultSchema = roomLineSchema.extend({
   tariff: z.number().optional(),
-  totalInclGst: z.number().optional(),
+  totalTaxable: z.number().optional(),
 });
 
 export const filteredAccommodationResultSchema = accommodationResultSchema.extend({
   roomLines: z.array(filteredRoomLineResultSchema),
   totalCharges: z.number().optional(),
+  discountPercent: z.number().optional(),
+  discountAmount: z.number().optional(),
+  finalAmount: z.number().optional(),
 });
 
 // Every field optional (PATCH semantics). No cross-field validation between
@@ -307,12 +318,15 @@ export const manualLineItemResultSchema = z.object({
   amount: z.number(),
 });
 
-// The exact 6 fields aaradhya-api's computeTotalCostSummary produces
+// The fields aaradhya-api's computeTotalCostSummary produces
 // (STORY-039) — mirrors quotationSummaryResultSchema field-for-field.
 export const quotationSummaryResultSchema = z.object({
   venueTotal: z.number(),
   foodSubtotal: z.number(),
   foodTotalInclGst: z.number(),
+  // DEV-07: the accommodation Final Amount, its 5% GST, and their sum.
+  accommodationTaxable: z.number(),
+  accommodationGst: z.number(),
   accommodationTotal: z.number(),
   extrasTotal: z.number(),
   grandTotal: z.number(),
@@ -511,6 +525,7 @@ export const eventTypeIdParamsSchema = z.object({
 export const roomTypeResultSchema = z.object({
   id: z.string(),
   name: z.string(),
+  occupancy: z.number(),
   defaultTariff: z.number(),
   active: z.boolean(),
   createdAt: z.string(),
@@ -519,11 +534,13 @@ export const roomTypeResultSchema = z.object({
 
 export const createRoomTypeBodySchema = z.object({
   name: z.string().trim().min(1),
+  occupancy: z.number().int().min(0),
   defaultTariff: z.number().min(0),
 });
 
 export const updateRoomTypeBodySchema = z.object({
   name: z.string().trim().min(1).optional(),
+  occupancy: z.number().int().min(0).optional(),
   defaultTariff: z.number().min(0).optional(),
   active: z.boolean().optional(),
 });

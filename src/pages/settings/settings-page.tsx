@@ -188,7 +188,9 @@ const SettingsPage = () => {
         createEventTypeMutation.mutate({ body: { name: values.name } });
         break;
       case 'roomTypes':
-        createRoomTypeMutation.mutate({ body: { name: values.name, defaultTariff: values.cost ?? 0 } });
+        createRoomTypeMutation.mutate({
+          body: { name: values.name, occupancy: values.occupancy ?? 0, defaultTariff: values.cost ?? 0 },
+        });
         break;
       case 'menuItems':
         createMenuItemMutation.mutate({ body: { name: values.name, defaultCostPerPlate: values.cost } });
@@ -237,7 +239,10 @@ const SettingsPage = () => {
       updateEventTypeMutation.mutate({ params: { id: editingRow.id }, body: { name: values.name } }, { onSuccess });
     } else if (selectedSectionId === 'roomTypes') {
       updateRoomTypeMutation.mutate(
-        { params: { id: editingRow.id }, body: { name: values.name, defaultTariff: values.cost ?? 0 } },
+        {
+          params: { id: editingRow.id },
+          body: { name: values.name, occupancy: values.occupancy, defaultTariff: values.cost ?? 0 },
+        },
         { onSuccess }
       );
     } else if (selectedSectionId === 'menuItems') {
@@ -262,6 +267,7 @@ const SettingsPage = () => {
         id: venue.id,
         name: venue.name,
         cost: venue.defaultVenueCost,
+        occupancy: null,
         active: venue.active,
       }));
     }
@@ -270,6 +276,7 @@ const SettingsPage = () => {
         id: eventType.id,
         name: eventType.name,
         cost: null,
+        occupancy: null,
         active: eventType.active,
       }));
     }
@@ -278,6 +285,7 @@ const SettingsPage = () => {
         id: roomType.id,
         name: roomType.name,
         cost: roomType.defaultTariff,
+        occupancy: roomType.occupancy,
         active: roomType.active,
       }));
     }
@@ -287,6 +295,7 @@ const SettingsPage = () => {
       id: menuItem.id,
       name: menuItem.name,
       cost: menuItem.defaultCostPerPlate,
+      occupancy: null,
       active: true,
     }));
   })();

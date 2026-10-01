@@ -13,7 +13,7 @@ import {
   manualLineItemResultSchema,
   SessionStatus,
 } from '../../contract';
-import { roundToCurrency } from '../../utils/accommodation-calculations';
+import { computeAccommodationSummaryAmounts, roundToCurrency } from '../../utils/accommodation-calculations';
 import {
   formatAccommodationDate,
   formatEventDate,
@@ -202,13 +202,13 @@ export type QuotationDocumentSession = Pick<
   items: QuotationDocumentSessionItem[];
 };
 
-// tariff/totalInclGst/totalCharges stay `.optional()` (filteredAccommodation
+// tariff/totalTaxable/totalCharges/finalAmount stay `.optional()` (filteredAccommodation
 // ResultSchema's own shape for a non-EventManager caller) — defaulted to 0
 // inside this component, same reasoning QuotationDocumentSession's venueCost
 // already documents.
 export type QuotationDocumentAccommodation = Pick<
   z.infer<typeof filteredAccommodationResultSchema>,
-  'checkIn' | 'checkOut' | 'totalDays' | 'roomLines' | 'totalOccupancy' | 'totalCharges'
+  'checkIn' | 'checkOut' | 'totalNights' | 'roomLines' | 'totalOccupancy' | 'totalCharges' | 'finalAmount'
 >;
 
 // STORY-072 — the Total Cost Summary's own "manually-added rows" (SRS
@@ -324,10 +324,10 @@ const QuotationDocument = ({
       {ACCOMMODATION_CHECK_OUT_TIME}
     </>
   );
-  const totalDaysDisplay = accommodation?.totalDays ?? '—';
+  const totalNightsDisplay = accommodation?.totalNights ?? '—';
 
   // Extracted rather than an inline ternary in the JSX below (typescript-
-  // rules rule 5). Check-in/Check-out/Total Days are merged (rowSpan) down
+  // rules rule 5). Check-in/Check-out/Total Nights are merged (rowSpan) down
   // the full height of the Room Line rows — reproducing both reference
   // PDFs' layout exactly (this story's own AC) rather than repeating those
   // three values on every row.
@@ -340,7 +340,7 @@ const QuotationDocument = ({
       <TableRow>
         <TableCell>{checkInCellContent}</TableCell>
         <TableCell>{checkOutCellContent}</TableCell>
-        <TableCell sx={numericCellStyles}>{totalDaysDisplay}</TableCell>
+        <TableCell sx={numericCellStyles}>{totalNightsDisplay}</TableCell>
         <TableCell />
         <TableCell />
         <TableCell />
@@ -356,7 +356,7 @@ const QuotationDocument = ({
             <TableCell rowSpan={orderedRoomLines.length}>{checkInCellContent}</TableCell>
             <TableCell rowSpan={orderedRoomLines.length}>{checkOutCellContent}</TableCell>
             <TableCell rowSpan={orderedRoomLines.length} sx={numericCellStyles}>
-              {totalDaysDisplay}
+              {totalNightsDisplay}
             </TableCell>
           </>
         )}
@@ -364,7 +364,7 @@ const QuotationDocument = ({
         <TableCell sx={numericCellStyles}>{line.occupancy}</TableCell>
         <TableCell sx={numericCellStyles}>{line.tariff ?? 0}</TableCell>
         <TableCell sx={numericCellStyles}>{line.noOfRooms}</TableCell>
-        <TableCell sx={numericCellStyles}>{line.totalInclGst ?? 0}</TableCell>
+        <TableCell sx={numericCellStyles}>{line.totalTaxable ?? 0}</TableCell>
       </TableRow>
     ));
   }
@@ -525,7 +525,10 @@ const QuotationDocument = ({
   const computeFoodItemGst = (item: QuotationDocumentSessionItem): number =>
     roundToCurrency(computeFoodItemTotalCost(item) * (foodGstRatePercent / 100));
   const venueTotal = roundToCurrency(activeSessions.reduce((total, session) => total + (session.venueCost ?? 0), 0));
-  const accommodationTotal = accommodation?.totalCharges ?? 0;
+  // DEV-07: the Final Amount (after discount) plus 5% GST — room lines
+  // themselves carry no GST any more (D2). The document's own discount/
+  // Final Amount rows arrive with its DEV-09 rebuild.
+  const accommodationTotal = computeAccommodationSummaryAmounts(accommodation?.finalAmount ?? 0).total;
   const manualLineItemsTotal = roundToCurrency(extraLineItems.reduce((total, item) => total + item.amount, 0));
   // Deliberately excludes the older, fixed extras.decoration/photographer/
   // bhatji trio (STORY-042) — this story's own AC enumerates exactly four
@@ -663,12 +666,12 @@ const QuotationDocument = ({
               <TableRow>
                 <TableCell>Check in</TableCell>
                 <TableCell>Check out</TableCell>
-                <TableCell>Total Days</TableCell>
+                <TableCell>Total Nights</TableCell>
                 <TableCell>Room Type</TableCell>
                 <TableCell>Occ.</TableCell>
                 <TableCell>Tariff</TableCell>
                 <TableCell>No. Of Rooms</TableCell>
-                <TableCell>Total including GST</TableCell>
+                <TableCell>Total Taxable Amount</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>

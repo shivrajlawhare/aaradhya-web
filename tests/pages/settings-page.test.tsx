@@ -30,6 +30,7 @@ interface MockEventType {
 interface MockRoomType {
   id: string;
   name: string;
+  occupancy: number;
   defaultTariff: number;
   active: boolean;
   createdAt: string;
@@ -68,6 +69,7 @@ const makeEventType = (overrides: Partial<MockEventType> = {}): MockEventType =>
 const makeRoomType = (overrides: Partial<MockRoomType> = {}): MockRoomType => ({
   id: 'room-type-1',
   name: 'Deluxe',
+  occupancy: 2,
   defaultTariff: 2500,
   active: true,
   createdAt: NOW,
@@ -317,6 +319,63 @@ describe('SettingsPage', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
+    it('lists Room Types with an Occupancy column, names straight from the data (DEV-07)', async () => {
+      mockMatchMedia(true);
+      mockSettingsApi({
+        roomTypes: [makeRoomType({ id: 'rt-1', name: 'Family Room', occupancy: 6, defaultTariff: 6000 })],
+      });
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: 'Room Types' }));
+
+      const row = (await screen.findByText('Family Room')).closest('tr')!;
+      expect(screen.getByRole('columnheader', { name: 'Occupancy' })).toBeInTheDocument();
+      expect(
+        within(row)
+          .getAllByRole('cell')
+          .map((cell) => cell.textContent)
+          .slice(0, 3)
+      ).toEqual(['Family Room', '6', '6000']);
+    });
+
+    it('requires a whole-number Occupancy to add a Room Type, and sends it', async () => {
+      mockMatchMedia(true);
+      mockSettingsApi({ roomTypes: [] });
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: 'Room Types' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Add Room Type' }));
+
+      fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Suite' } });
+      fireEvent.change(screen.getByLabelText('Default Tariff'), { target: { value: '9000' } });
+      expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled();
+
+      fireEvent.change(screen.getByLabelText('Occupancy'), { target: { value: '2.5' } });
+      expect(screen.getByText('Enter a whole number of guests (0 or more).')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled();
+
+      fireEvent.change(screen.getByLabelText('Occupancy'), { target: { value: '4' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+      const row = (await screen.findByText('Suite')).closest('tr')!;
+      expect(within(row).getAllByRole('cell')[1]!.textContent).toBe('4');
+    });
+
+    it("edits a Room Type's Occupancy via the Edit dialog", async () => {
+      mockMatchMedia(true);
+      mockSettingsApi({ roomTypes: [makeRoomType({ name: 'Executive', occupancy: 3, defaultTariff: 3800 })] });
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: 'Room Types' }));
+      const row = (await screen.findByText('Executive')).closest('tr')!;
+
+      fireEvent.click(within(row).getByRole('button', { name: 'Edit Executive' }));
+      const occupancyField = await screen.findByLabelText('Occupancy');
+      expect(occupancyField).toHaveValue(3);
+      fireEvent.change(occupancyField, { target: { value: '4' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(within(screen.getByText('Executive').closest('tr')!).getAllByRole('cell')[1]!.textContent).toBe('4');
+    });
+
     it('renders the Menu Items section with no Status column or toggle, but WITH an Edit action', async () => {
       mockMatchMedia(true);
       mockSettingsApi({ menuItems: [makeMenuItem({ name: 'Paneer Tikka', defaultCostPerPlate: 250 })] });
@@ -385,7 +444,7 @@ describe('SettingsPage', () => {
       expect(screen.queryByRole('table')).not.toBeInTheDocument();
     });
 
-    it('shows name + default cost + status on each card', async () => {
+    it('shows name + occupancy + default cost + status on each card', async () => {
       mockMatchMedia(false);
       mockSettingsApi({ roomTypes: [makeRoomType({ name: 'Deluxe', defaultTariff: 2500, active: false })] });
       renderPage();
@@ -396,7 +455,7 @@ describe('SettingsPage', () => {
       if (!card) {
         throw new Error('expected a card to render');
       }
-      expect(within(card as HTMLElement).getByText(/2500/)).toBeInTheDocument();
+      expect(within(card as HTMLElement).getByText('Occupancy: 2 · Default Tariff: 2500')).toBeInTheDocument();
       expect(within(card as HTMLElement).getByText('Inactive')).toBeInTheDocument();
     });
 

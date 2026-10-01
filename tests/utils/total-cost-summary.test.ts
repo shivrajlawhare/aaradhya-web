@@ -84,7 +84,8 @@ describe('computeWizardTotalCostSummary', () => {
       sessions,
       byDate,
       roomLines,
-      accommodationTotalDays: 2,
+      accommodationTotalNights: 2,
+      accommodationDiscountPercent: 0,
       gstPercent: 5,
       manualLineItems: [
         {
@@ -99,6 +100,9 @@ describe('computeWizardTotalCostSummary', () => {
 
     expect(summary.foodCostTotal).toBe(597150);
     expect(summary.foodCostWithGst).toBe(627007.5);
+    // 104000 taxable (no discount) + 5% GST = 109200 — the printed figure.
+    expect(summary.accommodationTaxable).toBe(104000);
+    expect(summary.accommodationGst).toBe(5200);
     expect(summary.accommodationTotal).toBe(109200);
     expect(summary.dateBlocks).toHaveLength(2);
     expect(summary.dateBlocks[0]!.venueRows).toEqual([{ id: 's1', label: 'Poolside', amount: 60000 }]);
@@ -114,6 +118,30 @@ describe('computeWizardTotalCostSummary', () => {
     // story's own AC).
     expect(summary.grandTotal).toBe(60000 + 120000 + 627007.5 + 109200 + 150000 + 7000);
     expect(Math.round(summary.grandTotal)).toBe(1073208);
+  });
+
+  // DEV-07: example_quatation_3.pdf — 1,17,600 less 10% = 1,05,840, plus
+  // GST 5,292 = ₹ 1,11,132, identical to the server's summary.
+  it('applies the discount, then 5% GST, to the Accommodation row (example 3)', () => {
+    const summary = computeWizardTotalCostSummary({
+      sessions: [],
+      byDate: {},
+      roomLines: [
+        { occupancy: 2, tariff: 2800, noOfRooms: 14 },
+        { occupancy: 3, tariff: 3800, noOfRooms: 2 },
+        { occupancy: 6, tariff: 6000, noOfRooms: 2 },
+        { occupancy: 0, tariff: 700, noOfRooms: 0 },
+      ],
+      accommodationTotalNights: 2,
+      accommodationDiscountPercent: 10,
+      gstPercent: 5,
+      manualLineItems: [],
+    });
+
+    expect(summary.accommodationTaxable).toBe(105840);
+    expect(summary.accommodationGst).toBe(5292);
+    expect(summary.accommodationTotal).toBe(111132);
+    expect(summary.grandTotal).toBe(111132);
   });
 
   it('supports two same-date Sessions, each contributing its own venue row', () => {
@@ -140,7 +168,8 @@ describe('computeWizardTotalCostSummary', () => {
       sessions,
       byDate: {},
       roomLines: [],
-      accommodationTotalDays: 1,
+      accommodationTotalNights: 1,
+      accommodationDiscountPercent: 0,
       gstPercent: 5,
       manualLineItems: [],
     });
@@ -161,7 +190,8 @@ describe('computeWizardTotalCostSummary', () => {
       sessions,
       byDate: {},
       roomLines: [],
-      accommodationTotalDays: 1,
+      accommodationTotalNights: 1,
+      accommodationDiscountPercent: 0,
       gstPercent: 5,
       manualLineItems: [],
     });
@@ -184,7 +214,8 @@ describe('computeWizardTotalCostSummary', () => {
       sessions,
       byDate,
       roomLines: [],
-      accommodationTotalDays: 1,
+      accommodationTotalNights: 1,
+      accommodationDiscountPercent: 0,
       gstPercent: 5,
       manualLineItems: [],
     });
@@ -200,7 +231,8 @@ describe('computeWizardTotalCostSummary', () => {
       sessions,
       byDate: {},
       roomLines: [],
-      accommodationTotalDays: 1,
+      accommodationTotalNights: 1,
+      accommodationDiscountPercent: 0,
       gstPercent: 5,
       manualLineItems: [
         { id: 'm1', name: 'Decoration', note: '', amount: 15000 },
@@ -221,7 +253,8 @@ describe('computeWizardTotalCostSummary', () => {
       sessions,
       byDate,
       roomLines: [],
-      accommodationTotalDays: 1,
+      accommodationTotalNights: 1,
+      accommodationDiscountPercent: 0,
       gstPercent: 5,
       manualLineItems: [],
     });
@@ -229,7 +262,8 @@ describe('computeWizardTotalCostSummary', () => {
       sessions,
       byDate,
       roomLines: [],
-      accommodationTotalDays: 1,
+      accommodationTotalNights: 1,
+      accommodationDiscountPercent: 0,
       gstPercent: 18,
       manualLineItems: [],
     });
@@ -244,7 +278,8 @@ describe('computeWizardTotalCostSummary', () => {
       sessions: [],
       byDate: {},
       roomLines: [],
-      accommodationTotalDays: 1,
+      accommodationTotalNights: 1,
+      accommodationDiscountPercent: 0,
       gstPercent: 5,
       manualLineItems: [],
     });
@@ -253,6 +288,8 @@ describe('computeWizardTotalCostSummary', () => {
       dateBlocks: [],
       foodCostTotal: 0,
       foodCostWithGst: 0,
+      accommodationTaxable: 0,
+      accommodationGst: 0,
       accommodationTotal: 0,
       manualLineItems: [],
       grandTotal: 0,

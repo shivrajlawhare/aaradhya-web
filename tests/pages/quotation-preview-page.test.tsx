@@ -21,25 +21,31 @@ interface MockRoomLine {
   occupancy: number;
   tariff: number;
   noOfRooms: number;
-  totalInclGst: number;
+  totalTaxable: number;
 }
 
 interface MockAccommodation {
   checkIn: string | null;
   checkOut: string | null;
-  totalDays: number | null;
+  totalNights: number | null;
   roomLines: MockRoomLine[];
   totalOccupancy: number;
   totalCharges: number;
+  discountPercent: number;
+  discountAmount: number;
+  finalAmount: number;
 }
 
 const makeAccommodation = (overrides: Partial<MockAccommodation> = {}): MockAccommodation => ({
   checkIn: null,
   checkOut: null,
-  totalDays: null,
+  totalNights: null,
   roomLines: [],
   totalOccupancy: 0,
   totalCharges: 0,
+  discountPercent: 0,
+  discountAmount: 0,
+  finalAmount: 0,
   ...overrides,
 });
 
@@ -112,7 +118,8 @@ const computeQuotationSummary = (event: MockEvent) => {
     )
   );
   const foodTotalInclGst = roundToCurrency(foodSubtotal * (1 + GST_RATE / 100));
-  const accommodationTotal = event.accommodation.totalCharges;
+  // DEV-07: the Final Amount plus 5% GST.
+  const accommodationTotal = roundToCurrency(event.accommodation.finalAmount * 1.05);
   const extrasTotal = roundToCurrency(event.extras.decoration + event.extras.photographer + event.extras.bhatji);
   return {
     venueTotal,
@@ -233,8 +240,10 @@ describe('QuotationPreviewPage', () => {
         accommodation: makeAccommodation({
           checkIn: '2026-06-14T00:00:00.000Z',
           checkOut: '2026-06-16T00:00:00.000Z',
-          roomLines: [{ roomType: 'Double', occupancy: 2, tariff: 5000, noOfRooms: 1, totalInclGst: 5900 }],
-          totalCharges: 5900,
+          totalNights: 2,
+          roomLines: [{ roomType: 'Double', occupancy: 2, tariff: 5000, noOfRooms: 1, totalTaxable: 10000 }],
+          totalCharges: 10000,
+          finalAmount: 10000,
         }),
         sessions: [
           {
@@ -266,13 +275,16 @@ describe('QuotationPreviewPage', () => {
     expect(within(eventDetailsTable).getByText('Lawn')).toBeInTheDocument();
     expect(within(eventDetailsTable).getByText('5,000/-')).toBeInTheDocument();
     expect(screen.getByText('Double')).toBeInTheDocument();
-    // "5900" also appears in the new Total Cost Summary's own Accommodation
-    // row (STORY-072), so this one's scoped to Accommodation Details too.
+    // Scoped to Accommodation Details: the line's taxable 10000 (2 nights,
+    // no GST — DEV-07) and its Total Charges footer.
     const accommodationTable = screen.getByRole('table', { name: 'Accommodation Details' });
-    expect(within(accommodationTable).getByText('5900')).toBeInTheDocument();
-    expect(screen.getByText('Rs. 5,900 /-')).toBeInTheDocument();
-    // venueTotal 5000 + foodTotalInclGst (2000 × 1.18 = 2360) + accommodationTotal 5900 = 13260.
-    expect(await screen.findByText('13,260')).toBeInTheDocument();
+    expect(within(accommodationTable).getByText('10000')).toBeInTheDocument();
+    expect(within(accommodationTable).getByText('Rs. 10,000 /-')).toBeInTheDocument();
+    // The Total Cost Summary's Accommodation row adds 5% GST: 10500.
+    const totalCostSummaryTable = screen.getByRole('table', { name: 'Total Cost Summary' });
+    expect(within(totalCostSummaryTable).getByText('10500')).toBeInTheDocument();
+    // venueTotal 5000 + foodTotalInclGst (2000 × 1.18 = 2360) + accommodationTotal 10500 = 17860.
+    expect(await screen.findByText('17,860')).toBeInTheDocument();
   });
 
   it('renders the "Event Quotation" title and the Aaradhya wordmark', async () => {
@@ -326,7 +338,7 @@ describe('QuotationPreviewPage', () => {
   it("matches the PDF's grand total exactly for the same Event (cross-check against STORY-043)", async () => {
     seedSession();
     const event = makeEvent({
-      accommodation: makeAccommodation({ totalCharges: 5900 }),
+      accommodation: makeAccommodation({ totalCharges: 5900, finalAmount: 5900 }),
       sessions: [
         {
           id: 'session-1',

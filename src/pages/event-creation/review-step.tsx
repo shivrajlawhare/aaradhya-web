@@ -24,7 +24,7 @@ import { ClientContactRole, ItemType } from '../../contract';
 import { quotationPreviewPath } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
 import { useEventWizard } from '../../stores/event-wizard-context';
-import { computeTotalDays } from '../../utils/accommodation-calculations';
+import { computeTotalNights } from '../../utils/accommodation-calculations';
 import { enumerateDates } from '../../utils/session-dates';
 import { computeWizardTotalCostSummary, type ManualLineItem } from '../../utils/total-cost-summary';
 import { formatAmount } from '../event-detail/format-amount';
@@ -85,6 +85,8 @@ interface AccommodationShape {
   checkInDate: string;
   checkOutDate: string;
   roomLines: WizardRoomLine[];
+  // Optional: wizard data stored before DEV-07 has none (reads as 0).
+  discountPercent?: number;
 }
 
 const isAccommodationShape = (value: unknown): value is AccommodationShape =>
@@ -271,6 +273,7 @@ const mapAccommodationForSubmit = (accommodation: AccommodationShape | undefined
       tariff,
       noOfRooms,
     })),
+    discountPercent: accommodation.discountPercent ?? 0,
   };
 };
 
@@ -329,9 +332,9 @@ const ReviewStep = ({ registerSubmit }: ReviewStepProps) => {
     accommodation.checkOutDate &&
     accommodation.checkOutDate < accommodation.checkInDate
   );
-  const accommodationTotalDays =
+  const accommodationTotalNights =
     (accommodation && !isAccommodationRangeInvalid
-      ? computeTotalDays(accommodation.checkInDate, accommodation.checkOutDate)
+      ? computeTotalNights(accommodation.checkInDate, accommodation.checkOutDate)
       : null) ?? 1;
 
   const stored = data['review'];
@@ -380,7 +383,8 @@ const ReviewStep = ({ registerSubmit }: ReviewStepProps) => {
     sessions,
     byDate,
     roomLines: accommodation?.roomLines ?? [],
-    accommodationTotalDays,
+    accommodationTotalNights,
+    accommodationDiscountPercent: accommodation?.discountPercent ?? 0,
     gstPercent: Number.isFinite(gstPercent) ? gstPercent : 0,
     manualLineItems,
   });

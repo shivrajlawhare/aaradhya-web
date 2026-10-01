@@ -113,7 +113,7 @@ const makeRoomLine = (
   occupancy: 2,
   tariff: 2500,
   noOfRooms: 14,
-  totalInclGst: 73500,
+  totalTaxable: 70000,
   ...overrides,
 });
 
@@ -122,10 +122,11 @@ const makeAccommodation = (
 ): QuotationDocumentAccommodation => ({
   checkIn: '2026-12-10T00:00:00.000Z',
   checkOut: '2026-12-12T00:00:00.000Z',
-  totalDays: 2,
+  totalNights: 2,
   roomLines: [],
   totalOccupancy: 0,
   totalCharges: 0,
+  finalAmount: 0,
   ...overrides,
 });
 
@@ -254,17 +255,19 @@ describe('QuotationDocument', () => {
     expect(screen.queryByText('Engagement')).not.toBeInTheDocument();
   });
 
-  it('renders Accommodation Details exactly like example_quatation_1.pdf: Extra Beds last, merged Check-in/Check-out/Total Days, green/amber footer', () => {
+  it('renders Accommodation Details exactly like example_quatation_1.pdf: Extra Beds last, merged Check-in/Check-out/Total Nights, green/amber footer', () => {
     renderDocument({
       accommodation: makeAccommodation({
         roomLines: [
-          makeRoomLine({ roomType: 'Delux', occupancy: 2, tariff: 2500, noOfRooms: 14, totalInclGst: 73500 }),
-          makeRoomLine({ roomType: 'Executive', occupancy: 3, tariff: 3500, noOfRooms: 2, totalInclGst: 14700 }),
-          makeRoomLine({ roomType: 'Dormatory', occupancy: 6, tariff: 5000, noOfRooms: 2, totalInclGst: 21000 }),
-          makeRoomLine({ roomType: 'Extra Beds', occupancy: 0, tariff: 700, noOfRooms: 0, totalInclGst: 0 }),
+          makeRoomLine({ roomType: 'Delux', occupancy: 2, tariff: 2500, noOfRooms: 14, totalTaxable: 70000 }),
+          makeRoomLine({ roomType: 'Executive', occupancy: 3, tariff: 3500, noOfRooms: 2, totalTaxable: 14000 }),
+          makeRoomLine({ roomType: 'Dormatory', occupancy: 6, tariff: 5000, noOfRooms: 2, totalTaxable: 20000 }),
+          makeRoomLine({ roomType: 'Extra Beds', occupancy: 0, tariff: 700, noOfRooms: 0, totalTaxable: 0 }),
         ],
         totalOccupancy: 46,
-        totalCharges: 109200,
+        // DEV-07: room lines are taxable (no GST) — example 1's 1,09,200 is
+        // now 1,04,000 here, with the 5% added in the Total Cost Summary.
+        totalCharges: 104000,
       }),
     });
 
@@ -273,7 +276,7 @@ describe('QuotationDocument', () => {
     // Header + 4 Room Line rows + 1 footer row.
     expect(rows).toHaveLength(6);
 
-    // Check-in/Check-out/Total Days merged (rowSpan) across all 4 Room
+    // Check-in/Check-out/Total Nights merged (rowSpan) across all 4 Room
     // Line rows, not repeated on each one.
     const checkInCell = within(rows[1]!).getAllByRole('cell')[0]!;
     expect(checkInCell).toHaveAttribute('rowspan', '4');
@@ -283,9 +286,9 @@ describe('QuotationDocument', () => {
     expect(checkOutCell).toHaveAttribute('rowspan', '4');
     expect(checkOutCell.textContent).toContain('12-12-2026');
     expect(checkOutCell.textContent).toContain('11am');
-    const totalDaysCell = within(rows[1]!).getAllByRole('cell')[2]!;
-    expect(totalDaysCell).toHaveAttribute('rowspan', '4');
-    expect(totalDaysCell.textContent).toBe('2');
+    const totalNightsCell = within(rows[1]!).getAllByRole('cell')[2]!;
+    expect(totalNightsCell).toHaveAttribute('rowspan', '4');
+    expect(totalNightsCell.textContent).toBe('2');
 
     // Row 2 onward only has the 5 Room Line columns — the merged cells
     // above account for the rest.
@@ -304,7 +307,7 @@ describe('QuotationDocument', () => {
     expect(footerCells[4]!.textContent).toBe('46');
     expect(footerCells[4]!).toHaveStyle({ backgroundColor: 'rgb(169, 209, 142)' });
     expect(footerCells[6]!.textContent).toBe('Total Charges');
-    expect(footerCells[7]!.textContent).toBe('Rs. 1,09,200 /-');
+    expect(footerCells[7]!.textContent).toBe('Rs. 1,04,000 /-');
     expect(footerCells[7]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
   });
 
@@ -312,8 +315,8 @@ describe('QuotationDocument', () => {
     renderDocument({
       accommodation: makeAccommodation({
         roomLines: [
-          makeRoomLine({ roomType: 'Extra Beds', occupancy: 0, tariff: 700, noOfRooms: 0, totalInclGst: 0 }),
-          makeRoomLine({ roomType: 'Delux', occupancy: 2, tariff: 2500, noOfRooms: 14, totalInclGst: 73500 }),
+          makeRoomLine({ roomType: 'Extra Beds', occupancy: 0, tariff: 700, noOfRooms: 0, totalTaxable: 0 }),
+          makeRoomLine({ roomType: 'Delux', occupancy: 2, tariff: 2500, noOfRooms: 14, totalTaxable: 70000 }),
         ],
       }),
     });
@@ -326,12 +329,12 @@ describe('QuotationDocument', () => {
 
   it('still renders full column headers and a zero footer for an Accommodation Block with zero Room Lines at all', () => {
     renderDocument({
-      accommodation: makeAccommodation({ checkIn: null, checkOut: null, totalDays: null, roomLines: [] }),
+      accommodation: makeAccommodation({ checkIn: null, checkOut: null, totalNights: null, roomLines: [] }),
     });
 
     const table = screen.getByRole('table', { name: 'Accommodation Details' });
     expect(within(table).getByRole('columnheader', { name: 'Room Type' })).toBeInTheDocument();
-    expect(within(table).getByRole('columnheader', { name: 'Total including GST' })).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: 'Total Taxable Amount' })).toBeInTheDocument();
     const rows = within(table).getAllByRole('row');
     // Header + 1 placeholder row + footer.
     expect(rows).toHaveLength(3);
@@ -800,9 +803,10 @@ describe('QuotationDocument', () => {
       expect(within(foodCostRow).getByText('1180')).toBeInTheDocument();
     });
 
+    // DEV-07: the Final Amount plus 5% GST — 104000 → 109200.
     it('renders an Accommodation row with only Total Cost with GST populated', () => {
       renderDocument({
-        accommodation: makeAccommodation({ totalCharges: 109200 }),
+        accommodation: makeAccommodation({ totalCharges: 104000, finalAmount: 104000 }),
       });
 
       const table = screen.getByRole('table', { name: 'Total Cost Summary' });
@@ -850,7 +854,7 @@ describe('QuotationDocument', () => {
             items: [makeMealItem({ mealName: 'Hi Tea', pax: 30, costPerPlate: 275 })],
           }),
         ],
-        accommodation: makeAccommodation({ totalCharges: 10000 }),
+        accommodation: makeAccommodation({ totalCharges: 10000, finalAmount: 10000 }),
         extraLineItems: [makeManualLineItem({ name: 'Decoration', note: null, amount: 5000 })],
         foodGstRatePercent: 5,
       });
@@ -862,10 +866,10 @@ describe('QuotationDocument', () => {
       // Cost Item — this story's own literal AC instruction.
       expect(cells[3]!.textContent).toBe('Grand Total');
       // venueTotal 60000 + foodCostWithGst (8250×1.05=8662.5) + accommodation
-      // 10000 + manual 5000 = 83662.5, rounded to the nearest rupee for
+      // (10000 + 5% GST = 10500) + manual 5000 = 84162.5, rounded to the nearest rupee for
       // display. Now in cell 6 (Total Cost with GST) — the new GST on food
       // column (cell 5) stays blank on this row.
-      expect(cells[6]!.textContent).toBe('Rs. 83,663 /-');
+      expect(cells[6]!.textContent).toBe('Rs. 84,163 /-');
       expect(cells[3]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
       expect(cells[6]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
     });
@@ -924,7 +928,7 @@ describe('QuotationDocument', () => {
             ],
           }),
         ],
-        accommodation: makeAccommodation({ totalCharges: 109200 }),
+        accommodation: makeAccommodation({ totalCharges: 104000, finalAmount: 104000 }),
         extraLineItems: [
           makeManualLineItem({
             name: 'Decoration',

@@ -1,7 +1,14 @@
 import { ItemType } from '../contract';
 import type { WizardSessionRow } from '../pages/event-creation/event-details-step';
 import type { WizardDateEntry, WizardFoodItem } from '../pages/event-creation/sessions-items-step';
-import { computeTotalCharges, roundToCurrency, type WizardRoomLineInput } from './accommodation-calculations';
+import {
+  computeAccommodationSummaryAmounts,
+  computeDiscount,
+  computeFinalAmount,
+  computeTotalCharges,
+  roundToCurrency,
+  type WizardRoomLineInput,
+} from './accommodation-calculations';
 import { formatEventDate, formatQuotationPax } from './quotation-formatting';
 import { getDistinctDates } from './session-dates';
 
@@ -21,11 +28,11 @@ import { getDistinctDates } from './session-dates';
 //     Cost summed across every date; Total Cost with GST = that sum ×
 //     (1 + GST%). Both reference quotations' own printed numbers confirm a
 //     5% default here (597150 × 1.05 = 627007.5; 391500 × 1.05 = 411075),
-//     distinct from the 18% org-wide rate accommodation-calculations.ts
-//     uses — FR-QUO-9's own "editable... if it varies" (SRS §4.9/A9) is
+//     independent of Accommodation's fixed 5% — FR-QUO-9's own "editable... if it varies" (SRS §4.9/A9) is
 //     honored by this screen's own editable GST% field, not a fixed constant.
-//   - An Accommodation row: Step 3's own computeTotalCharges, already
-//     GST-inclusive, used as-is.
+//   - An Accommodation row: Step 3's Final Amount (Total Charges less the
+//     discount) plus 5% GST — DEV-07 (D2), example_quatation_3.pdf's
+//     "105840 · 5292 · ₹ 1,11,132".
 //   - Zero or more manually-added rows (FR-QUO-9a) — name, optional note,
 //     and a plain entered amount.
 //   - A Grand Total: every venue row + the one Food Cost row + Accommodation
@@ -65,6 +72,9 @@ export interface TotalCostSummaryResult {
   dateBlocks: SummaryDateBlock[];
   foodCostTotal: number;
   foodCostWithGst: number;
+  // DEV-07: Final Amount, its 5% GST, and their sum (the row's total).
+  accommodationTaxable: number;
+  accommodationGst: number;
   accommodationTotal: number;
   manualLineItems: ManualLineItem[];
   grandTotal: number;
@@ -81,13 +91,11 @@ interface ComputeWizardTotalCostSummaryInput {
   sessions: WizardSessionRow[];
   byDate: Record<string, WizardDateEntry[]>;
   roomLines: WizardRoomLineInput[];
-  // Step 3's own total_days (falls back to 1 before check-in/check-out are
-  // both set — same convention AccommodationStep's own totalDaysForMath
-  // and aaradhya-api's identical fallback both already use), needed since
-  // Accommodation's own GST-inclusive total now factors in nights stayed,
-  // not just tariff × rooms (STORY-068, verified against both reference
-  // quotations).
-  accommodationTotalDays: number;
+  // Step 3's nights (falls back to 1 before check-in/check-out are both
+  // set — the same fallback Step 3 and aaradhya-api use).
+  accommodationTotalNights: number;
+  // Step 3's whole-percent Discount (DEV-07, D3).
+  accommodationDiscountPercent: number;
   gstPercent: number;
   manualLineItems: ManualLineItem[];
 }
@@ -96,7 +104,8 @@ export const computeWizardTotalCostSummary = ({
   sessions,
   byDate,
   roomLines,
-  accommodationTotalDays,
+  accommodationTotalNights,
+  accommodationDiscountPercent,
   gstPercent,
   manualLineItems,
 }: ComputeWizardTotalCostSummaryInput): TotalCostSummaryResult => {
@@ -135,12 +144,30 @@ export const computeWizardTotalCostSummary = ({
     dateBlocks.reduce((total, block) => total + block.foodRows.reduce((sum, row) => sum + row.totalCost, 0), 0)
   );
   const foodCostWithGst = roundToCurrency(foodCostTotal * (1 + gstPercent / 100));
-  const accommodationTotal = computeTotalCharges(roomLines, accommodationTotalDays);
+  const accommodationCharges = computeTotalCharges(roomLines, accommodationTotalNights);
+  const accommodationFinalAmount = computeFinalAmount(
+    accommodationCharges,
+    computeDiscount(accommodationCharges, accommodationDiscountPercent)
+  );
+  const {
+    taxable: accommodationTaxable,
+    gst: accommodationGst,
+    total: accommodationTotal,
+  } = computeAccommodationSummaryAmounts(accommodationFinalAmount);
   const manualTotal = roundToCurrency(manualLineItems.reduce((total, item) => total + item.amount, 0));
   const venueTotal = roundToCurrency(
     dateBlocks.reduce((total, block) => total + block.venueRows.reduce((sum, row) => sum + row.amount, 0), 0)
   );
   const grandTotal = roundToCurrency(venueTotal + foodCostWithGst + accommodationTotal + manualTotal);
 
-  return { dateBlocks, foodCostTotal, foodCostWithGst, accommodationTotal, manualLineItems, grandTotal };
+  return {
+    dateBlocks,
+    foodCostTotal,
+    foodCostWithGst,
+    accommodationTaxable,
+    accommodationGst,
+    accommodationTotal,
+    manualLineItems,
+    grandTotal,
+  };
 };

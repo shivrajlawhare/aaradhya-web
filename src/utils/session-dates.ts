@@ -3,7 +3,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 // Every calendar date a Session spans, inclusive — a 3-day Session
 // contributes 3 dates, not just its start/end. Plain Date iteration on
 // already 'YYYY-MM-DD'-shaped strings, same "no dayjs format-string parsing
-// needed" reasoning accommodation-calculations.ts's own computeTotalDays
+// needed" reasoning accommodation-calculations.ts's own computeTotalNights
 // documents. Shared by event-details-step.tsx (STORY-065, deciding which
 // dates a removed Session would orphan) and sessions-items-step.tsx
 // (STORY-067, this step's own date tabs) — extracted here once a second

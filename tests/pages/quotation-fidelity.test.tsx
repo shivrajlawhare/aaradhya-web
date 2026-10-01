@@ -325,15 +325,19 @@ describe('Quotation fidelity — example_quatation_1.pdf (Sneha & Nishant)', () 
   const accommodation: QuotationDocumentAccommodation = {
     checkIn: '2026-12-10',
     checkOut: '2026-12-12',
-    totalDays: 2,
+    totalNights: 2,
     roomLines: [
-      { roomType: 'Delux', occupancy: 2, tariff: 2500, noOfRooms: 14, totalInclGst: 73500 },
-      { roomType: 'Executive', occupancy: 3, tariff: 3500, noOfRooms: 2, totalInclGst: 14700 },
-      { roomType: 'Dormatory', occupancy: 6, tariff: 5000, noOfRooms: 2, totalInclGst: 21000 },
-      { roomType: 'Extra Beds', occupancy: 0, tariff: 700, noOfRooms: 0, totalInclGst: 0 },
+      { roomType: 'Delux', occupancy: 2, tariff: 2500, noOfRooms: 14, totalTaxable: 70000 },
+      { roomType: 'Executive', occupancy: 3, tariff: 3500, noOfRooms: 2, totalTaxable: 14000 },
+      { roomType: 'Dormatory', occupancy: 6, tariff: 5000, noOfRooms: 2, totalTaxable: 20000 },
+      { roomType: 'Extra Beds', occupancy: 0, tariff: 700, noOfRooms: 0, totalTaxable: 0 },
     ],
     totalOccupancy: 46,
-    totalCharges: 109200,
+    // DEV-07 (D2): room lines are taxable now — the PDF's GST-inclusive
+    // 1,09,200 is 1,04,000 + the 5% the Total Cost Summary adds, so that
+    // row and the Grand Total still match the PDF.
+    totalCharges: 104000,
+    finalAmount: 104000,
   };
 
   const extraLineItems: QuotationDocumentManualLineItem[] = [
@@ -377,7 +381,7 @@ describe('Quotation fidelity — example_quatation_1.pdf (Sneha & Nishant)', () 
     ]);
   });
 
-  it('renders Accommodation Details exactly: merged Check-in/Check-out/Total Days, all 4 Room Lines, green/amber footer', () => {
+  it('renders Accommodation Details exactly: merged Check-in/Check-out/Total Nights, all 4 Room Lines, green/amber footer', () => {
     renderFixture({ clientContacts, sessions, accommodation, extraLineItems });
 
     const table = screen.getByRole('table', { name: 'Accommodation Details' });
@@ -399,11 +403,11 @@ describe('Quotation fidelity — example_quatation_1.pdf (Sneha & Nishant)', () 
           .slice(-5)
       )
     ).toEqual([
-      ['Delux', '2', '2500', '14', '73500'],
-      ['Executive', '3', '3500', '2', '14700'],
-      ['Dormatory', '6', '5000', '2', '21000'],
+      ['Delux', '2', '2500', '14', '70000'],
+      ['Executive', '3', '3500', '2', '14000'],
+      ['Dormatory', '6', '5000', '2', '20000'],
       ['Extra Beds', '0', '700', '0', '0'],
-      ['Total Occ.', '46', '', 'Total Charges', 'Rs. 1,09,200 /-'],
+      ['Total Occ.', '46', '', 'Total Charges', 'Rs. 1,04,000 /-'],
     ]);
     const totalOccCell = within(rows[4]!).getAllByRole('cell')[4]!;
     expect(totalOccCell).toHaveStyle({ backgroundColor: 'rgb(169, 209, 142)' });
@@ -800,15 +804,17 @@ describe('Quotation fidelity — example_quatation_2.pdf (Saish Rege)', () => {
   const accommodation: QuotationDocumentAccommodation = {
     checkIn: '2027-02-25',
     checkOut: '2027-02-27',
-    totalDays: 2,
+    totalNights: 2,
     roomLines: [
-      { roomType: 'Delux', occupancy: 2, tariff: 2800, noOfRooms: 14, totalInclGst: 82320 },
-      { roomType: 'Executive', occupancy: 3, tariff: 3800, noOfRooms: 2, totalInclGst: 15960 },
-      { roomType: 'Dormatory', occupancy: 6, tariff: 6000, noOfRooms: 2, totalInclGst: 25200 },
-      { roomType: 'Extra Beds', occupancy: 1, tariff: 700, noOfRooms: 0, totalInclGst: 0 },
+      { roomType: 'Delux', occupancy: 2, tariff: 2800, noOfRooms: 14, totalTaxable: 78400 },
+      { roomType: 'Executive', occupancy: 3, tariff: 3800, noOfRooms: 2, totalTaxable: 15200 },
+      { roomType: 'Dormatory', occupancy: 6, tariff: 6000, noOfRooms: 2, totalTaxable: 24000 },
+      { roomType: 'Extra Beds', occupancy: 1, tariff: 700, noOfRooms: 0, totalTaxable: 0 },
     ],
     totalOccupancy: 46,
-    totalCharges: 123480,
+    // DEV-07 (D2): 1,17,600 taxable + 5% = the PDF's 1,23,480.
+    totalCharges: 117600,
+    finalAmount: 117600,
   };
 
   const extraLineItems: QuotationDocumentManualLineItem[] = [
@@ -866,11 +872,11 @@ describe('Quotation fidelity — example_quatation_2.pdf (Saish Rege)', () => {
           .slice(-5)
       )
     ).toEqual([
-      ['Delux', '2', '2800', '14', '82320'],
-      ['Executive', '3', '3800', '2', '15960'],
-      ['Dormatory', '6', '6000', '2', '25200'],
+      ['Delux', '2', '2800', '14', '78400'],
+      ['Executive', '3', '3800', '2', '15200'],
+      ['Dormatory', '6', '6000', '2', '24000'],
       ['Extra Beds', '1', '700', '0', '0'],
-      ['Total Occ.', '46', '', 'Total Charges', 'Rs. 1,23,480 /-'],
+      ['Total Occ.', '46', '', 'Total Charges', 'Rs. 1,17,600 /-'],
     ]);
     const checkInCell = within(rows[0]!).getAllByRole('cell')[0]!;
     expect(checkInCell.textContent).toBe('25-02-202712pm');

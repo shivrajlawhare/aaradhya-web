@@ -1,4 +1,5 @@
 import type { WizardStepData } from '../../stores/event-wizard-context';
+import { isValidDiscountPercent } from '../../utils/accommodation-calculations';
 import type { WizardStepId } from './wizard-steps';
 
 // Each step's own "is Next allowed" predicate, read directly from whatever
@@ -21,12 +22,17 @@ export const WIZARD_STEP_READY_CHECKS: Partial<
   // STORY-066's own AC: "requires Check-in and Check-out to be set" — Room
   // Lines may all be zero, so they're not part of this check. Also blocks
   // an invalid range (check-out before check-in), same "Next must not lead
-  // to a nonsensical negative total_days" reasoning the step's own edge
-  // case documents.
+  // to a nonsensical negative total_nights" reasoning the step's own edge
+  // case documents — and an invalid Discount (%) (DEV-07: a whole number
+  // 0–100; absent reads as 0, e.g. wizard data stored before DEV-07).
   accommodation: (stepData) => {
     const checkInDate = stepData?.checkInDate;
     const checkOutDate = stepData?.checkOutDate;
     if (typeof checkInDate !== 'string' || !checkInDate || typeof checkOutDate !== 'string' || !checkOutDate) {
+      return false;
+    }
+    const discountPercent = stepData?.discountPercent ?? 0;
+    if (typeof discountPercent !== 'number' || !isValidDiscountPercent(discountPercent)) {
       return false;
     }
     return checkOutDate >= checkInDate;

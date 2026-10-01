@@ -23,7 +23,7 @@ import {
 } from './room-line-rows.styles';
 import type { AccommodationFormValues } from './rooms-tab';
 
-type RoomLineResult = z.infer<typeof roomLineSchema> & { totalInclGst: number };
+type RoomLineResult = z.infer<typeof roomLineSchema> & { totalTaxable: number };
 
 interface RoomLineRowsProps {
   fields: FieldArrayWithId<AccommodationFormValues, 'roomLines', 'id'>[];
@@ -31,6 +31,10 @@ interface RoomLineRowsProps {
   // Total column — matched by index. A row added locally but not yet saved
   // has no entry here (this component never computes a total itself).
   savedRoomLines: RoomLineResult[];
+  // Each row's read-only occupancy (DEV-07: never typed — it comes from the
+  // Room Type master, and the server snapshots it on save); null when the
+  // typed room type matches no master entry.
+  occupancies: (number | null)[];
   register: UseFormRegister<AccommodationFormValues>;
   onAddRow: () => void;
   onRemoveRow: (index: number) => void;
@@ -39,7 +43,7 @@ interface RoomLineRowsProps {
 // field.id (RHF's own generated key, distinct from array index) keeps row
 // identity/order correct under rapid add/remove — same reasoning as
 // ClientContactRows (STORY-015).
-const RoomLineRows = ({ fields, savedRoomLines, register, onAddRow, onRemoveRow }: RoomLineRowsProps) => {
+const RoomLineRows = ({ fields, savedRoomLines, occupancies, register, onAddRow, onRemoveRow }: RoomLineRowsProps) => {
   return (
     <Paper elevation={0} sx={tableCardStyles}>
       <Table>
@@ -58,14 +62,14 @@ const RoomLineRows = ({ fields, savedRoomLines, register, onAddRow, onRemoveRow 
               <Typography variant="labelS">Rooms</Typography>
             </TableCell>
             <TableCell>
-              <Typography variant="labelS">Total (incl. GST)</Typography>
+              <Typography variant="labelS">Total Taxable Amount</Typography>
             </TableCell>
             <TableCell />
           </TableRow>
         </TableHead>
         <TableBody>
           {fields.map((field, index) => {
-            const savedTotal = savedRoomLines[index]?.totalInclGst;
+            const savedTotal = savedRoomLines[index]?.totalTaxable;
             const totalDisplay = savedTotal === undefined ? '—' : savedTotal;
             return (
               <TableRow key={field.id}>
@@ -78,13 +82,7 @@ const RoomLineRows = ({ fields, savedRoomLines, register, onAddRow, onRemoveRow 
                   />
                 </TableCell>
                 <TableCell sx={numericCellStyles}>
-                  <TextField
-                    {...register(`roomLines.${index}.occupancy`, { valueAsNumber: true })}
-                    type="number"
-                    size="small"
-                    sx={numericFieldStyles}
-                    slotProps={{ htmlInput: { min: 0, 'aria-label': `Occupancy for room line ${index + 1}` } }}
-                  />
+                  <Typography variant="bodyM">{occupancies[index] ?? '—'}</Typography>
                 </TableCell>
                 <TableCell sx={numericCellStyles}>
                   <TextField

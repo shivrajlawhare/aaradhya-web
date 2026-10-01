@@ -1,66 +1,62 @@
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import AddIcon from '@mui/icons-material/Add';
-import CloseIcon from '@mui/icons-material/Close';
-import {
-  Alert,
-  Button,
-  CircularProgress,
-  IconButton,
-  MenuItem,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Paper, Stack, Typography, useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
+import type { z } from 'zod';
 import { tsr } from '../../api/client';
+import AccommodationTotals from '../../components/ui/accommodation-totals';
+import DiscountPercentField from '../../components/ui/discount-percent-field';
+import type { roomTypeResultSchema } from '../../contract';
 import { useEventWizard } from '../../stores/event-wizard-context';
 import {
-  computeRoomLineTotalInclGst,
+  computeDiscount,
+  computeFinalAmount,
   computeTotalCharges,
-  computeTotalDays,
+  computeTotalNights,
   computeTotalOccupancy,
+  parseDiscountPercent,
 } from '../../utils/accommodation-calculations';
 import { formatEventDate, formatTimeOfDay } from '../../utils/quotation-formatting';
 import { fromPickerDate, fromPickerTime, toPickerDate, toPickerTime } from '../event-detail/date-input';
-import { formatAmount } from '../event-detail/format-amount';
+import { formatRupees } from '../event-detail/format-amount';
+import AccommodationRoomLines, { type RoomLineNumberField, type WizardRoomLine } from './accommodation-room-lines';
 import {
   addButtonStyles,
-  dateTimeRowStyles,
-  dateTimeSectionStyles,
-  footerCellStyles,
-  footerStyles,
+  dateColumnStyles,
+  dateRowStyles,
+  discountFieldStyles,
   formCardStyles,
-  numericCellStyles,
+  loadingStyles,
+  nightsCountStyles,
+  nightsLabelStyles,
+  nightsPanelStyles,
+  roomsCardStyles,
+  roomsSectionStyles,
   summaryLineStyles,
-  tableCardStyles,
+  timePickerCardStyles,
   wrapperStyles,
 } from './accommodation-step.styles';
+
+export type { WizardRoomLine } from './accommodation-room-lines';
 
 // The default seeded room line SRS §4.3 says both reference quotations
 // always print, even at zero — this exact name, matching seed-config.ts's
 // own seeded Room Type Master entry (STORY-061).
 const EXTRA_BEDS_ROOM_TYPE = 'Extra Beds';
 
-export interface WizardRoomLine {
-  id: string;
-  // Field name matches roomLineSchema (contract/index.ts) one-for-one, same
-  // "ready for STORY-068's eventual submit" reasoning event-details-step.tsx's
-  // own WizardSessionRow already documents.
-  roomType: string;
-  occupancy: number;
-  tariff: number;
-  noOfRooms: number;
-  // The Extra Beds default row — this story's own AC: "cannot be removed."
-  // Every other row, seeded or added via "+ Add Room Line," has one.
-  locked: boolean;
-}
+// D8: a new event starts with Delux 14 · Executive 2 · Family Room 2 ·
+// Extra Beds 0, keyed by the seeded master names. Any other active Room
+// Type starts at 0 rooms.
+const DEFAULT_ROOM_COUNTS: Readonly<Record<string, number>> = {
+  Delux: 14,
+  Executive: 2,
+  'Family Room': 2,
+  [EXTRA_BEDS_ROOM_TYPE]: 0,
+};
+
+const HIDDEN_PICKER_ACTIONS = { actionBar: { actions: [] } };
 
 interface AccommodationStepData {
   checkInDate: string;
@@ -68,27 +64,28 @@ interface AccommodationStepData {
   checkOutDate: string;
   checkOutTime: string;
   roomLines: WizardRoomLine[];
+  discountPercent?: number;
 }
+
+type RoomTypeMasterEntry = z.infer<typeof roomTypeResultSchema>;
 
 const isAccommodationStepData = (value: unknown): value is AccommodationStepData =>
   typeof value === 'object' && value !== null && Array.isArray((value as AccommodationStepData).roomLines);
 
 const createRowId = (): string => `room-line-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-// One row per active Room Type Master entry (Deluxe/Executive/Dormitory/
-// Extra Beds as seeded, STORY-061) — this story's own AC names all four as
-// "the seeded defaults," not just Extra Beds; only the Extra Beds row is
-// locked from removal. If the Room Type Master has no active entry actually
-// named Extra Beds (e.g. deactivated), a synthetic zeroed row is still
-// appended so the "always present, never removable" guarantee holds
-// regardless of master-list state.
-const buildDefaultRoomLines = (activeRoomTypes: { name: string; defaultTariff: number }[]): WizardRoomLine[] => {
+// One row per active Room Type Master entry, with D8's default room counts
+// and the master's occupancy and tariff; only the Extra Beds row is locked
+// from removal. If the master has no active Extra Beds entry (e.g.
+// deactivated), a synthetic zeroed row is still appended so the "always
+// present, never removable" guarantee holds regardless of master-list state.
+const buildDefaultRoomLines = (activeRoomTypes: RoomTypeMasterEntry[]): WizardRoomLine[] => {
   const rows = activeRoomTypes.map((roomType) => ({
     id: createRowId(),
     roomType: roomType.name,
-    occupancy: 0,
+    occupancy: roomType.occupancy,
     tariff: roomType.defaultTariff,
-    noOfRooms: 0,
+    noOfRooms: DEFAULT_ROOM_COUNTS[roomType.name] ?? 0,
     locked: roomType.name === EXTRA_BEDS_ROOM_TYPE,
   }));
   if (!rows.some((row) => row.locked)) {
@@ -104,10 +101,16 @@ const buildDefaultRoomLines = (activeRoomTypes: { name: string; defaultTariff: n
   return rows;
 };
 
-// Wizard Step 3 (STORY-066). One Accommodation Block for the whole Event
-// (SRS §4.3 — not per Session), local state mirrored into the wizard store
-// on every change, same pattern event-details-step.tsx already established.
+const formatStayMoment = (date: string, time: string): string =>
+  date ? `${formatEventDate(date)}${time ? ` · ${formatTimeOfDay(time)}` : ''}` : '—';
+
+// Wizard Step 3 (STORY-066, restyled for DEV-07 — Figma 05 New Event / 3
+// Accommodation). One Accommodation Block for the whole Event (SRS §4.3 —
+// not per Session), local state mirrored into the wizard store on every
+// change, same pattern event-details-step.tsx already established.
 const AccommodationStep = () => {
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { data, setStepData } = useEventWizard();
   const stored = data['accommodation'];
   const restored = isAccommodationStepData(stored) ? stored : undefined;
@@ -124,6 +127,8 @@ const AccommodationStep = () => {
   const [checkOutDate, setCheckOutDate] = useState(restored?.checkOutDate ?? '');
   const [checkOutTime, setCheckOutTime] = useState(restored?.checkOutTime ?? '');
   const [rows, setRows] = useState<WizardRoomLine[]>(restored?.roomLines ?? []);
+  // The raw field text, so an invalid entry stays visible beside its error.
+  const [discountInput, setDiscountInput] = useState(String(restored?.discountPercent ?? 0));
 
   const roomTypesQuery = tsr.listRoomTypes.useQuery({ queryKey: ['room-types'] });
   const activeRoomTypes = (roomTypesQuery.data?.body ?? []).filter((roomType) => roomType.active);
@@ -132,11 +137,10 @@ const AccommodationStep = () => {
   // exist" gate event-details-step.tsx already uses.
   const isMasterListsLoading = roomTypesQuery.isPending;
 
-  // Seeds the four default Room Lines exactly once, only when nothing was
+  // Seeds the default Room Lines exactly once, only when nothing was
   // already restored from a previous visit to this step — a ref guard
   // (not a rows.length check) so a legitimate state of "user removed every
-  // removable row, leaving only the locked one" is never re-seeded back to
-  // four.
+  // removable row, leaving only the locked one" is never re-seeded.
   const seededRef = useRef(false);
   useEffect(() => {
     if (seededRef.current || isMasterListsLoading || hadStoredDataAtMount) {
@@ -147,21 +151,32 @@ const AccommodationStep = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMasterListsLoading]);
 
-  useEffect(() => {
-    setStepData('accommodation', { checkInDate, checkInTime, checkOutDate, checkOutTime, roomLines: rows });
-  }, [checkInDate, checkInTime, checkOutDate, checkOutTime, rows, setStepData]);
+  const parsedDiscount = parseDiscountPercent(discountInput);
+  const isDiscountInvalid = parsedDiscount === null;
 
-  // Blocked with a validation message rather than letting total_days go
-  // negative (this story's own edge case) — plain string comparison, same
-  // "'YYYY-MM-DD' sorts lexicographically the same as chronologically"
-  // reasoning event-details-step.tsx's own endDate check documents.
+  // An invalid discount is stored as NaN, which the step's readiness check
+  // (wizard-step-readiness.ts) rejects, keeping Next disabled.
+  useEffect(() => {
+    setStepData('accommodation', {
+      checkInDate,
+      checkInTime,
+      checkOutDate,
+      checkOutTime,
+      roomLines: rows,
+      discountPercent: parsedDiscount ?? Number.NaN,
+    });
+  }, [checkInDate, checkInTime, checkOutDate, checkOutTime, rows, parsedDiscount, setStepData]);
+
+  // Blocked with a validation message rather than letting total_nights go
+  // negative — plain string comparison, same "'YYYY-MM-DD' sorts
+  // lexicographically the same as chronologically" reasoning
+  // event-details-step.tsx's own endDate check documents.
   const isRangeInvalid = Boolean(checkInDate) && Boolean(checkOutDate) && checkOutDate < checkInDate;
-  const totalDays = !isRangeInvalid ? computeTotalDays(checkInDate, checkOutDate) : null;
+  const totalNights = !isRangeInvalid ? computeTotalNights(checkInDate, checkOutDate) : null;
   // A room line entered before check-in/check-out are both set still needs
-  // some total to display — falls back to 1 (STORY-068's own decision,
-  // matching aaradhya-api's own identical fallback) rather than always
-  // reading 0 for every line until dates are chosen.
-  const totalDaysForMath = totalDays ?? 1;
+  // some total to display — falls back to 1 (matching aaradhya-api's own
+  // identical fallback) rather than reading 0 until dates are chosen.
+  const totalNightsForMath = totalNights ?? 1;
 
   const handleAddRoomLine = () => {
     setRows((current) => [
@@ -174,27 +189,100 @@ const AccommodationStep = () => {
     setRows((current) => current.filter((row) => row.id !== id));
   };
 
+  // Picking a Room Type copies its master occupancy (read-only) and default
+  // tariff (still editable).
   const handleRoomTypeChange = (id: string, roomTypeName: string) => {
     const selected = activeRoomTypes.find((roomType) => roomType.name === roomTypeName);
     setRows((current) =>
       current.map((row) =>
-        row.id === id ? { ...row, roomType: roomTypeName, tariff: selected ? selected.defaultTariff : row.tariff } : row
+        row.id === id
+          ? {
+              ...row,
+              roomType: roomTypeName,
+              occupancy: selected?.occupancy ?? 0,
+              tariff: selected ? selected.defaultTariff : row.tariff,
+            }
+          : row
       )
     );
   };
 
-  const handleNumberFieldChange = (id: string, field: 'occupancy' | 'tariff' | 'noOfRooms', rawValue: string) => {
+  const handleNumberFieldChange = (id: string, field: RoomLineNumberField, rawValue: string) => {
     const value = rawValue === '' ? 0 : Number(rawValue);
     setRows((current) => current.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
   };
 
-  const totalOccupancy = computeTotalOccupancy(rows);
-  const totalCharges = computeTotalCharges(rows, totalDaysForMath);
+  const totalCharges = computeTotalCharges(rows, totalNightsForMath);
+  const discountPercent = parsedDiscount ?? 0;
+  const discountAmount = computeDiscount(totalCharges, discountPercent);
+  const totals = {
+    totalOccupancy: computeTotalOccupancy(rows),
+    totalCharges,
+    discountPercent,
+    discountAmount,
+    finalAmount: computeFinalAmount(totalCharges, discountAmount),
+  };
 
   if (isMasterListsLoading) {
     return (
-      <Stack sx={{ ...wrapperStyles, alignItems: 'center' }}>
+      <Stack sx={loadingStyles}>
         <CircularProgress aria-label="Loading room type options" />
+      </Stack>
+    );
+  }
+
+  const summaryLine = `${formatStayMoment(checkInDate, checkInTime)} to ${formatStayMoment(checkOutDate, checkOutTime)} · Total nights: ${totalNights ?? '—'}`;
+
+  const roomLines = (
+    <AccommodationRoomLines
+      rows={rows}
+      roomTypeOptions={activeRoomTypes}
+      totalNights={totalNightsForMath}
+      isDesktop={isDesktop}
+      onRoomTypeChange={handleRoomTypeChange}
+      onNumberChange={handleNumberFieldChange}
+      onRemove={handleRemoveRoomLine}
+    />
+  );
+
+  const totalsBlock = (
+    <AccommodationTotals
+      totals={totals}
+      formatMoney={formatRupees}
+      leading={
+        <Button variant="tonal" onClick={handleAddRoomLine} startIcon={<AddIcon />} sx={addButtonStyles}>
+          Add Room Line
+        </Button>
+      }
+      discountField={
+        <DiscountPercentField
+          value={discountInput}
+          onChange={setDiscountInput}
+          isInvalid={isDiscountInvalid}
+          sx={discountFieldStyles}
+        />
+      }
+    />
+  );
+
+  // Desktop: one card holds the table and the totals (Figma); mobile: a
+  // "Rooms" heading over the line cards and the totals.
+  let roomsSection: ReactNode;
+  if (isDesktop) {
+    roomsSection = (
+      <Paper elevation={0} sx={roomsCardStyles}>
+        {roomLines}
+        {totalsBlock}
+      </Paper>
+    );
+  } else {
+    roomsSection = (
+      <Stack sx={roomsSectionStyles}>
+        <Typography variant="titleS" component="h2">
+          Rooms
+        </Typography>
+        {roomLines}
+        {totalsBlock}
       </Stack>
     );
   }
@@ -209,9 +297,9 @@ const AccommodationStep = () => {
             face, SRS §6.9 — not TimePicker's popover-only one), matching
             the reference quotations' date-then-time two-line display for
             Check-in/Check-out. */}
-        <Stack direction="row" sx={dateTimeRowStyles}>
-          <Stack sx={dateTimeSectionStyles}>
-            <Typography variant="titleM" component="h3">
+        <Box sx={dateRowStyles}>
+          <Stack sx={dateColumnStyles}>
+            <Typography variant="titleS" component="h3">
               Check-in
             </Typography>
             <DatePicker
@@ -219,14 +307,17 @@ const AccommodationStep = () => {
               value={toPickerDate(checkInDate)}
               onChange={(date) => setCheckInDate(fromPickerDate(date))}
             />
-            <StaticTimePicker
-              ampm
-              value={toPickerTime(checkInTime)}
-              onChange={(time) => setCheckInTime(fromPickerTime(time))}
-            />
+            <Box sx={timePickerCardStyles}>
+              <StaticTimePicker
+                ampm
+                slotProps={HIDDEN_PICKER_ACTIONS}
+                value={toPickerTime(checkInTime)}
+                onChange={(time) => setCheckInTime(fromPickerTime(time))}
+              />
+            </Box>
           </Stack>
-          <Stack sx={dateTimeSectionStyles}>
-            <Typography variant="titleM" component="h3">
+          <Stack sx={dateColumnStyles}>
+            <Typography variant="titleS" component="h3">
               Check-out
             </Typography>
             <DatePicker
@@ -235,130 +326,33 @@ const AccommodationStep = () => {
               onChange={(date) => setCheckOutDate(fromPickerDate(date))}
               slotProps={{ textField: { error: isRangeInvalid } }}
             />
-            <StaticTimePicker
-              ampm
-              value={toPickerTime(checkOutTime)}
-              onChange={(time) => setCheckOutTime(fromPickerTime(time))}
-            />
+            <Box sx={timePickerCardStyles}>
+              <StaticTimePicker
+                ampm
+                slotProps={HIDDEN_PICKER_ACTIONS}
+                value={toPickerTime(checkOutTime)}
+                onChange={(time) => setCheckOutTime(fromPickerTime(time))}
+              />
+            </Box>
           </Stack>
-        </Stack>
+          {/* Never manually entered — always derived from the dates. The
+              big count is desktop-only (Figma); mobile shows the line. */}
+          <Box sx={nightsPanelStyles}>
+            <Typography variant="labelS" component="p" sx={nightsLabelStyles}>
+              Total nights
+            </Typography>
+            <Typography variant="display" component="p" aria-hidden sx={nightsCountStyles}>
+              {totalNights ?? '—'}
+            </Typography>
+            <Typography variant="bodyM" sx={summaryLineStyles}>
+              {summaryLine}
+            </Typography>
+          </Box>
+        </Box>
         {isRangeInvalid && <Alert severity="error">Check-out must be on or after check-in.</Alert>}
-        <Typography variant="bodyM" sx={summaryLineStyles}>
-          {checkInDate
-            ? `${formatEventDate(checkInDate)}${checkInTime ? ` · ${formatTimeOfDay(checkInTime)}` : ''}`
-            : '—'}
-          {' to '}
-          {checkOutDate
-            ? `${formatEventDate(checkOutDate)}${checkOutTime ? ` · ${formatTimeOfDay(checkOutTime)}` : ''}`
-            : '—'}
-          {' · Total days: '}
-          {/* Never manually entered — always derived, this story's own AC. */}
-          {totalDays ?? '—'}
-        </Typography>
       </Paper>
 
-      <Paper elevation={0} sx={tableCardStyles}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>
-                <Typography variant="labelS">Room type</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="labelS">Occupancy</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="labelS">Tariff</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="labelS">Rooms</Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="labelS">Total (incl. GST)</Typography>
-              </TableCell>
-              <TableCell />
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows.map((row, index) => (
-              <TableRow key={row.id}>
-                <TableCell>
-                  <TextField
-                    select
-                    size="small"
-                    value={row.roomType}
-                    onChange={(event) => handleRoomTypeChange(row.id, event.target.value)}
-                    sx={{ minWidth: 160 }}
-                    slotProps={{ htmlInput: { 'aria-label': `Room type for room line ${index + 1}` } }}
-                  >
-                    <MenuItem value="">Select a room type</MenuItem>
-                    {activeRoomTypes.map((roomType) => (
-                      <MenuItem key={roomType.id} value={roomType.name}>
-                        {roomType.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </TableCell>
-                <TableCell sx={numericCellStyles}>
-                  <TextField
-                    type="number"
-                    size="small"
-                    value={row.occupancy}
-                    onChange={(event) => handleNumberFieldChange(row.id, 'occupancy', event.target.value)}
-                    slotProps={{ htmlInput: { min: 0, 'aria-label': `Occupancy for room line ${index + 1}` } }}
-                  />
-                </TableCell>
-                <TableCell sx={numericCellStyles}>
-                  <TextField
-                    type="number"
-                    size="small"
-                    value={row.tariff}
-                    onChange={(event) => handleNumberFieldChange(row.id, 'tariff', event.target.value)}
-                    slotProps={{ htmlInput: { min: 0, 'aria-label': `Tariff for room line ${index + 1}` } }}
-                  />
-                </TableCell>
-                <TableCell sx={numericCellStyles}>
-                  <TextField
-                    type="number"
-                    size="small"
-                    value={row.noOfRooms}
-                    onChange={(event) => handleNumberFieldChange(row.id, 'noOfRooms', event.target.value)}
-                    slotProps={{ htmlInput: { min: 0, 'aria-label': `Number of rooms for room line ${index + 1}` } }}
-                  />
-                </TableCell>
-                <TableCell sx={numericCellStyles}>
-                  <Typography variant="bodyM">
-                    {formatAmount(computeRoomLineTotalInclGst(row, totalDaysForMath))}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  {!row.locked && (
-                    <IconButton
-                      aria-label={`Remove ${row.roomType || 'room'} line`}
-                      size="small"
-                      onClick={() => handleRemoveRoomLine(row.id)}
-                    >
-                      <CloseIcon fontSize="small" />
-                    </IconButton>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        <Button onClick={handleAddRoomLine} startIcon={<AddIcon />} sx={addButtonStyles}>
-          Add Room Line
-        </Button>
-      </Paper>
-
-      <Stack direction="row" sx={footerStyles}>
-        <Typography variant="bodyM" sx={footerCellStyles('occupancy')}>
-          Total Occupancy: {totalOccupancy}
-        </Typography>
-        <Typography variant="bodyM" sx={footerCellStyles('charges')}>
-          Total Charges: {formatAmount(totalCharges)}
-        </Typography>
-      </Stack>
+      {roomsSection}
     </Stack>
   );
 };

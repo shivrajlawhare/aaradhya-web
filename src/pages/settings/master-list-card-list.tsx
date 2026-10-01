@@ -49,6 +49,7 @@ const MasterListCardList = ({ section, rows, isMutating, onToggleActive, onEdit 
           </Box>
           {section.costLabel && (
             <Typography variant="bodyM" sx={costStyles}>
+              {section.supportsOccupancy && `Occupancy: ${row.occupancy} · `}
               {section.costLabel}: {row.cost}
             </Typography>
           )}

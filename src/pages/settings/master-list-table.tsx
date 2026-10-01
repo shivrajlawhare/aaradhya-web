@@ -36,6 +36,11 @@ const MasterListTable = ({ section, rows, isMutating, onToggleActive, onEdit }: 
           <TableCell>
             <Typography variant="labelS">Name</Typography>
           </TableCell>
+          {section.supportsOccupancy && (
+            <TableCell>
+              <Typography variant="labelS">Occupancy</Typography>
+            </TableCell>
+          )}
           {section.costLabel && (
             <TableCell>
               <Typography variant="labelS">{section.costLabel}</Typography>
@@ -53,6 +58,7 @@ const MasterListTable = ({ section, rows, isMutating, onToggleActive, onEdit }: 
         {rows.map((row) => (
           <TableRow key={row.id}>
             <TableCell>{row.name}</TableCell>
+            {section.supportsOccupancy && <TableCell>{row.occupancy}</TableCell>}
             {section.costLabel && <TableCell>{row.cost}</TableCell>}
             {section.supportsStatus && (
               <TableCell>

@@ -1,78 +1,104 @@
 import type { SxProps, Theme } from '@mui/material';
-import { colorTokens, radiusTokens, spaceTokens } from '../../theme/tokens';
+import { paletteVar, scaleTokens } from '../../theme/tokens';
+
+const { radius, space, stroke } = scaleTokens;
+
+const DATE_COLUMN_WIDTH = 320;
+const DISCOUNT_FIELD_WIDTH = 140;
+const NIGHTS_PANEL_MIN_WIDTH = 240;
 
 export const wrapperStyles: SxProps<Theme> = {
   display: 'flex',
   flexDirection: 'column',
-  gap: { xs: `${spaceTokens.space16}px`, md: `${spaceTokens.space24}px` },
+  gap: { xs: `${space[24]}px`, md: `${space[32]}px` },
 };
 
+export const loadingStyles: SxProps<Theme> = {
+  alignItems: 'center',
+  py: `${space[40]}px`,
+};
+
+// Figma 05 New Event / 3 Accommodation: the Check-in / Check-out card.
 export const formCardStyles: SxProps<Theme> = {
-  bgcolor: colorTokens.surface,
-  border: `1px solid ${colorTokens.line}`,
-  borderRadius: `${radiusTokens.radiusMd}px`, // radius-md (cards)
-  p: { xs: `${spaceTokens.space16}px`, md: `${spaceTokens.space24}px` },
+  bgcolor: 'background.paper',
+  border: `${stroke.default}px solid ${paletteVar('divider')}`,
+  borderRadius: `${radius.lg}px`,
+  p: { xs: `${space[16]}px`, md: `${space[24]}px` },
   display: 'flex',
   flexDirection: 'column',
-  gap: { xs: `${spaceTokens.space12}px`, md: `${spaceTokens.space16}px` },
+  gap: { xs: `${space[16]}px`, md: `${space[24]}px` },
 };
 
-export const dateTimeRowStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space24}px`,
+// Check-in · Check-out · the Total Nights panel (desktop); stacked on mobile.
+export const dateRowStyles: SxProps<Theme> = {
+  display: 'flex',
+  flexDirection: { xs: 'column', md: 'row' },
   flexWrap: 'wrap',
+  alignItems: { xs: 'stretch', md: 'flex-start' },
+  gap: { xs: `${space[16]}px`, md: `${space[24]}px` },
 };
 
-export const dateTimeSectionStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space8}px`,
+export const dateColumnStyles: SxProps<Theme> = {
+  width: { xs: '100%', md: DATE_COLUMN_WIDTH },
+  gap: `${space[12]}px`,
+};
+
+export const timePickerCardStyles: SxProps<Theme> = {
+  display: 'flex',
+  justifyContent: 'center',
+  border: `${stroke.default}px solid ${paletteVar('divider')}`,
+  borderRadius: `${radius.lg}px`,
+  overflow: 'hidden',
+  bgcolor: 'background.paper',
+};
+
+// The custard Total Nights panel. Desktop: label, big count, summary line;
+// mobile: just the summary line in a compact box.
+export const nightsPanelStyles: SxProps<Theme> = {
+  flex: { md: 1 },
+  minWidth: { md: NIGHTS_PANEL_MIN_WIDTH },
+  bgcolor: paletteVar('brand-subtle'),
+  borderRadius: `${radius.md}px`,
+  p: { xs: `${space[12]}px ${space[16]}px`, md: `${space[20]}px` },
+  display: 'flex',
+  flexDirection: 'column',
+  gap: `${space[8]}px`,
+};
+
+export const nightsLabelStyles: SxProps<Theme> = {
+  display: { xs: 'none', md: 'block' },
+  color: 'text.secondary',
+};
+
+export const nightsCountStyles: SxProps<Theme> = {
+  display: { xs: 'none', md: 'block' },
+  fontVariantNumeric: 'tabular-nums',
 };
 
 export const summaryLineStyles: SxProps<Theme> = {
-  color: colorTokens.textSoft,
+  color: 'text.secondary',
 };
 
-// overflowX: 'auto' (its previous value was 'hidden', which clipped
-// whatever columns didn't fit instead of letting them be reached by
-// horizontal scroll) — same fix upcoming-events-table.styles.ts's own
-// tableCardStyles already applies, for the identical reason.
-export const tableCardStyles: SxProps<Theme> = {
-  border: `1px solid ${colorTokens.line}`,
-  borderRadius: `${radiusTokens.radiusMd}px`,
-  overflowX: 'auto',
-  overflowY: 'hidden',
+// Desktop: one card holds the Room Lines table and the totals footer.
+export const roomsCardStyles: SxProps<Theme> = {
+  bgcolor: 'background.paper',
+  border: `${stroke.default}px solid ${paletteVar('divider')}`,
+  borderRadius: `${radius.lg}px`,
+  p: `${space[24]}px`,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: `${space[24]}px`,
 };
 
-export const numericCellStyles: SxProps<Theme> = {
-  fontVariantNumeric: 'tabular-nums',
+// Mobile: "Rooms" heading, a card per line, then the totals.
+export const roomsSectionStyles: SxProps<Theme> = {
+  gap: `${space[12]}px`,
 };
 
 export const addButtonStyles: SxProps<Theme> = {
-  m: `${spaceTokens.space12}px`,
-  alignSelf: 'flex-start',
+  borderRadius: `${radius.pill}px`,
 };
 
-export const footerStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space16}px`,
-  flexWrap: 'wrap',
+export const discountFieldStyles: SxProps<Theme> = {
+  width: { xs: '100%', md: DISCOUNT_FIELD_WIDTH },
 };
-
-type FooterCellKind = 'occupancy' | 'charges';
-
-// green/status-confirmed-family for Total Occupancy, yellow/accent-tint-family
-// for Total Charges — this story's own Tokens line names these two exact
-// token families (SRS §4.7e's shading, carried unchanged into the
-// Quotation's own Accommodation table, STORY-070). The palette
-// (docs/design/theme-tokens.md) has no literal green token — status-confirmed
-// is the closest "positive/settled" semantic tone available, same
-// "closest existing token, don't invent a new hex" reasoning
-// wizard-stepper.tsx's own "completed" pill already applies using
-// accent-tint/accent-deep for the other slot.
-export const footerCellStyles = (kind: FooterCellKind): SxProps<Theme> => ({
-  bgcolor: kind === 'occupancy' ? colorTokens.statusConfirmedTint : colorTokens.accentTint,
-  color: kind === 'occupancy' ? colorTokens.statusConfirmed : colorTokens.accentDeep,
-  border: `1px solid ${kind === 'occupancy' ? colorTokens.statusConfirmedTint : colorTokens.accentTint}`,
-  borderRadius: `${radiusTokens.radiusMd}px`,
-  px: `${spaceTokens.space16}px`,
-  py: `${spaceTokens.space12}px`,
-  fontVariantNumeric: 'tabular-nums',
-  flex: 1,
-});

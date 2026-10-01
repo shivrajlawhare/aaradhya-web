@@ -1,20 +1,22 @@
 import { type ReactNode, useState } from 'react';
 import { Alert, Button, Paper, Stack, Typography } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { Controller, useFieldArray, useForm } from 'react-hook-form';
+import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
+import AccommodationTotals from '../../components/ui/accommodation-totals';
+import DiscountPercentField from '../../components/ui/discount-percent-field';
 import { useToast } from '../../components/ui/toast-provider';
-import { type filteredAccommodationResultSchema, roomLineSchema } from '../../contract';
+import { type filteredAccommodationResultSchema, roomLineSchema, type roomTypeResultSchema } from '../../contract';
+import { parseDiscountPercent } from '../../utils/accommodation-calculations';
 import { formatEventDate } from '../../utils/quotation-formatting';
 import { fromPickerDate, toDateInputValue, toPickerDate } from './date-input';
 import { formatAmount } from './format-amount';
 import RoomLineRows from './room-line-rows';
 import {
   dateFieldsStyles,
-  footerCellStyles,
-  footerStyles,
   formCardStyles,
+  occupancyOnlyStyles,
   readOnlyRoomLineStyles,
   sectionStyles,
   summaryLineStyles,
@@ -22,13 +24,10 @@ import {
 
 // The role-filtered shape (STORY-052) — this tab is now reached by
 // Housekeeping/Reception too, not just Event Manager, and those two roles
-// see accommodation with its money fields (tariff/totalInclGst/
-// totalCharges) already stripped (STORY-046). Every read of one of those
-// three fields below falls back to '—' rather than the previous direct
-// interpolation, which would have rendered the literal text "undefined"
-// once a role other than Event Manager could actually reach the read-only
-// branch (nothing caught this earlier since only Event Manager, who always
-// has all three, ever opened this tab before this story).
+// see accommodation with its money fields (tariff/totalTaxable/
+// totalCharges/discount/finalAmount) already stripped (STORY-046). Every
+// read of one of those fields below falls back to '—' (or hides the money
+// totals) rather than rendering the literal text "undefined".
 type AccommodationResult = z.infer<typeof filteredAccommodationResultSchema>;
 export type RoomLineFormValue = z.infer<typeof roomLineSchema>;
 
@@ -36,7 +35,11 @@ export interface AccommodationFormValues {
   checkIn: string;
   checkOut: string;
   roomLines: RoomLineFormValue[];
+  // The Discount (%) field's raw text (DEV-07), parsed on submit.
+  discountPercent: string;
 }
+
+type RoomTypeMasterEntry = z.infer<typeof roomTypeResultSchema>;
 
 // tariff defaults to 0 — this form is only ever populated from the
 // `canEdit` (Event Manager) branch below, whose own accommodation always
@@ -50,6 +53,32 @@ const toFormRoomLines = (roomLines: AccommodationResult['roomLines']): RoomLineF
     tariff: tariff ?? 0,
     noOfRooms,
   }));
+
+const toFormValues = (accommodation: AccommodationResult): AccommodationFormValues => ({
+  checkIn: toDateInputValue(accommodation.checkIn),
+  checkOut: toDateInputValue(accommodation.checkOut),
+  roomLines: toFormRoomLines(accommodation.roomLines),
+  discountPercent: String(accommodation.discountPercent ?? 0),
+});
+
+const normaliseRoomTypeName = (name: string): string => name.trim().toLowerCase();
+
+// A room line's read-only occupancy, resolved the way the server snapshots
+// it on save (DEV-07): the Room Type master entry with that name
+// (case-insensitive, an active one preferred); else the line's own saved
+// occupancy if its room type is unchanged; else null (shown as "—").
+const resolveRoomLineOccupancy = (
+  roomType: string,
+  roomTypes: RoomTypeMasterEntry[],
+  savedLine: RoomLineFormValue | undefined
+): number | null => {
+  const matches = roomTypes.filter((entry) => normaliseRoomTypeName(entry.name) === normaliseRoomTypeName(roomType));
+  const master = matches.find((entry) => entry.active) ?? matches[0];
+  if (master) {
+    return master.occupancy;
+  }
+  return savedLine && savedLine.roomType === roomType ? savedLine.occupancy : null;
+};
 
 interface RoomsTabProps {
   eventId: string;
@@ -70,11 +99,11 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
   const { showSuccess, showError } = useToast();
   const [saveError, setSaveError] = useState<string | null>(null);
   // The last-saved server response drives every read-only computed display
-  // (per-line total_incl_gst, the footer totals) — "totals shown are exactly
+  // (per-line total_taxable, the totals block) — "totals shown are exactly
   // what the response returned, never independently calculated in the UI"
-  // (this story's own AC). Updated directly from the mutation's own
-  // response, not only once the parent's refetch (onEventChanged) resolves,
-  // so totals refresh immediately on save.
+  // (STORY-019's AC). Updated directly from the mutation's own response,
+  // not only once the parent's refetch (onEventChanged) resolves, so totals
+  // refresh immediately on save.
   const [savedAccommodation, setSavedAccommodation] = useState<AccommodationResult>(accommodation);
 
   const {
@@ -83,24 +112,24 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
     register,
     reset,
     formState: { isDirty },
-  } = useForm<AccommodationFormValues>({
-    defaultValues: {
-      checkIn: toDateInputValue(accommodation.checkIn),
-      checkOut: toDateInputValue(accommodation.checkOut),
-      roomLines: toFormRoomLines(accommodation.roomLines),
-    },
-  });
+  } = useForm<AccommodationFormValues>({ defaultValues: toFormValues(accommodation) });
   const { fields, append, remove } = useFieldArray({ control, name: 'roomLines' });
+  const watchedRoomLines = useWatch({ control, name: 'roomLines' });
+
+  // Only the editor needs the master — read-only roles see the saved
+  // snapshot as is.
+  const roomTypesQuery = tsr.listRoomTypes.useQuery({ queryKey: ['room-types'], enabled: canEdit });
+  const roomTypes = roomTypesQuery.data?.body ?? [];
+  const savedFormRoomLines = toFormRoomLines(savedAccommodation.roomLines);
+  const occupancies = watchedRoomLines.map((line, index) =>
+    resolveRoomLineOccupancy(line.roomType, roomTypes, savedFormRoomLines[index])
+  );
 
   const updateAccommodationMutation = tsr.updateEventAccommodation.useMutation({
     onSuccess: (response) => {
       setSaveError(null);
       setSavedAccommodation(response.body);
-      reset({
-        checkIn: toDateInputValue(response.body.checkIn),
-        checkOut: toDateInputValue(response.body.checkOut),
-        roomLines: toFormRoomLines(response.body.roomLines),
-      });
+      reset(toFormValues(response.body));
       showSuccess('Accommodation saved.');
       onEventChanged();
     },
@@ -131,15 +160,21 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
       body: {
         checkIn: values.checkIn || undefined,
         checkOut: values.checkOut || undefined,
-        roomLines: values.roomLines,
+        // The server overwrites occupancy from the master anyway; sending
+        // the resolved value keeps the request honest.
+        roomLines: values.roomLines.map((line, index) => ({
+          ...line,
+          occupancy: occupancies[index] ?? line.occupancy,
+        })),
+        // Validated by the field's own rule below, so never null here.
+        discountPercent: parseDiscountPercent(values.discountPercent) ?? 0,
       },
     });
   });
 
-  // "<check-in> to <check-out> · Total days: N" — matches
-  // accommodation-step.tsx's own summary line exactly, right down to the
-  // '—' fallback for an unset date/undetermined total, so the Rooms tab and
-  // the wizard's Accommodation step read the same way.
+  // "<check-in> to <check-out> · Total nights: N" — matches
+  // accommodation-step.tsx's own summary line, right down to the '—'
+  // fallback for an unset date/undetermined total.
   const summaryLine = (
     <Typography variant="bodyM" sx={summaryLineStyles}>
       {toDateInputValue(savedAccommodation.checkIn)
@@ -149,10 +184,50 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
       {toDateInputValue(savedAccommodation.checkOut)
         ? formatEventDate(toDateInputValue(savedAccommodation.checkOut))
         : '—'}
-      {' · Total days: '}
-      {savedAccommodation.totalDays ?? '—'}
+      {' · Total nights: '}
+      {savedAccommodation.totalNights ?? '—'}
     </Typography>
   );
+
+  const discountField = canEdit ? (
+    <Controller
+      name="discountPercent"
+      control={control}
+      rules={{ validate: (value) => parseDiscountPercent(value) !== null }}
+      render={({ field }) => (
+        <DiscountPercentField
+          value={field.value}
+          onChange={field.onChange}
+          onBlur={field.onBlur}
+          inputRef={field.ref}
+          isInvalid={parseDiscountPercent(field.value) === null}
+        />
+      )}
+    />
+  ) : undefined;
+
+  // Money is stripped for Housekeeping/Reception — they see the occupancy
+  // and a "—" for the charges (Figma UI-40).
+  const { totalCharges, discountAmount, finalAmount } = savedAccommodation;
+  const totals =
+    totalCharges !== undefined && discountAmount !== undefined && finalAmount !== undefined ? (
+      <AccommodationTotals
+        totals={{
+          totalOccupancy: savedAccommodation.totalOccupancy,
+          totalCharges,
+          discountPercent: savedAccommodation.discountPercent ?? 0,
+          discountAmount,
+          finalAmount,
+        }}
+        formatMoney={formatAmount}
+        discountField={discountField}
+      />
+    ) : (
+      <Stack sx={occupancyOnlyStyles}>
+        <Typography variant="bodyM">Total Occupancy: {savedAccommodation.totalOccupancy}</Typography>
+        <Typography variant="bodyM">Total Charges: —</Typography>
+      </Stack>
+    );
 
   let content: ReactNode;
   if (canEdit) {
@@ -193,19 +268,21 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
         <RoomLineRows
           fields={fields}
           // Only reached in the canEdit (Event Manager) branch, whose own
-          // accommodation always has every line's tariff/totalInclGst
+          // accommodation always has every line's tariff/totalTaxable
           // present unfiltered — the `?? 0` fallbacks exist purely to
           // satisfy RoomLineRows' own stricter, edit-form-shaped type,
           // same reasoning toFormRoomLines' own tariff fallback documents.
           savedRoomLines={savedAccommodation.roomLines.map((line) => ({
             ...line,
             tariff: line.tariff ?? 0,
-            totalInclGst: line.totalInclGst ?? 0,
+            totalTaxable: line.totalTaxable ?? 0,
           }))}
+          occupancies={occupancies}
           register={register}
           onAddRow={handleAddRow}
           onRemoveRow={remove}
         />
+        {totals}
         {saveError && (
           <Alert severity="error">
             <Typography variant="bodyM">{saveError}</Typography>
@@ -218,38 +295,28 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
     );
   } else {
     content = (
-      <Paper elevation={0} sx={formCardStyles}>
-        <Typography variant="titleM" component="h2">
-          Accommodation
-        </Typography>
-        {summaryLine}
-        <Stack sx={readOnlyRoomLineStyles}>
-          {savedAccommodation.roomLines.map((line, index) => (
-            <Typography key={index} variant="bodyM">
-              {/* totalInclGst is money — stripped for Housekeeping/Reception
-                  (STORY-046), so "—" here, not the literal text "undefined". */}
-              {line.roomType}: {line.occupancy} occupancy × {line.noOfRooms} rooms — {line.totalInclGst ?? '—'}
-            </Typography>
-          ))}
-        </Stack>
-      </Paper>
+      <>
+        <Paper elevation={0} sx={formCardStyles}>
+          <Typography variant="titleM" component="h2">
+            Accommodation
+          </Typography>
+          {summaryLine}
+          <Stack sx={readOnlyRoomLineStyles}>
+            {savedAccommodation.roomLines.map((line, index) => (
+              <Typography key={index} variant="bodyM">
+                {/* totalTaxable is money — stripped for Housekeeping/
+                    Reception (STORY-046), so "—" here, not "undefined". */}
+                {line.roomType}: {line.occupancy} occupancy × {line.noOfRooms} rooms — {line.totalTaxable ?? '—'}
+              </Typography>
+            ))}
+          </Stack>
+        </Paper>
+        {totals}
+      </>
     );
   }
 
-  return (
-    <Stack sx={sectionStyles}>
-      {content}
-      <Stack direction="row" sx={footerStyles}>
-        <Typography variant="bodyM" sx={footerCellStyles('occupancy')}>
-          Total Occupancy: {savedAccommodation.totalOccupancy}
-        </Typography>
-        <Typography variant="bodyM" sx={footerCellStyles('charges')}>
-          Total Charges:{' '}
-          {savedAccommodation.totalCharges !== undefined ? formatAmount(savedAccommodation.totalCharges) : '—'}
-        </Typography>
-      </Stack>
-    </Stack>
-  );
+  return <Stack sx={sectionStyles}>{content}</Stack>;
 };
 
 export default RoomsTab;

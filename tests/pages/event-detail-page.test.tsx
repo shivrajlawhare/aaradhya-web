@@ -27,16 +27,19 @@ interface MockRoomLineInput {
 }
 
 interface MockRoomLine extends MockRoomLineInput {
-  totalInclGst: number;
+  totalTaxable: number;
 }
 
 interface MockAccommodation {
   checkIn: string | null;
   checkOut: string | null;
-  totalDays: number | null;
+  totalNights: number | null;
   roomLines: MockRoomLine[];
   totalOccupancy: number;
   totalCharges: number;
+  discountPercent: number;
+  discountAmount: number;
+  finalAmount: number;
 }
 
 interface MockPayment {
@@ -225,25 +228,54 @@ interface MockEvent {
 const makeAccommodation = (overrides: Partial<MockAccommodation> = {}): MockAccommodation => ({
   checkIn: null,
   checkOut: null,
-  totalDays: null,
+  totalNights: null,
   roomLines: [],
   totalOccupancy: 0,
   totalCharges: 0,
+  discountPercent: 0,
+  discountAmount: 0,
+  finalAmount: 0,
   ...overrides,
 });
 
-// A plain-JS reimplementation of STORY-018's math, just enough for the mock
+// The Room Type master GET /room-types serves — the mock PATCH snapshots
+// each line's occupancy from it, as the real server does (DEV-07).
+const ROOM_TYPE_MASTER = [
+  {
+    id: 'rt-1',
+    name: 'Double',
+    occupancy: 2,
+    defaultTariff: 5000,
+    active: true,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  },
+];
+
+// A plain-JS reimplementation of STORY-018/DEV-07's math, just enough for the mock
 // PATCH /events/:id/accommodation to behave like the real server — the
 // point of these tests is verifying the UI renders whatever the response
 // says, not re-testing the backend's own already-tested computation.
 const GST_RATE = 18;
 const roundToCurrency = (amount: number) => Math.round(amount * 100) / 100;
-const computeAccommodationResponse = (
-  body: { checkIn?: string; checkOut?: string; roomLines?: MockRoomLineInput[] },
-  current: MockAccommodation
-): MockAccommodation => {
+
+// A type alias, not an interface, so it stays assignable to the request log's
+// Record<string, unknown>.
+type MockAccommodationPatch = {
+  checkIn?: string;
+  checkOut?: string;
+  roomLines?: MockRoomLineInput[];
+  discountPercent?: number;
+};
+
+const computeAccommodationResponse = (body: MockAccommodationPatch, current: MockAccommodation): MockAccommodation => {
   const checkIn = body.checkIn ?? current.checkIn;
   const checkOut = body.checkOut ?? current.checkOut;
+  const totalNights =
+    checkIn && checkOut
+      ? Math.max(Math.floor((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000), 1)
+      : null;
+  const discountPercent = body.discountPercent ?? current.discountPercent;
   const roomLines = (
     body.roomLines ??
     current.roomLines.map(({ roomType, occupancy, tariff, noOfRooms }) => ({
@@ -252,18 +284,24 @@ const computeAccommodationResponse = (
       tariff,
       noOfRooms,
     }))
-  ).map((line) => ({ ...line, totalInclGst: roundToCurrency(line.tariff * line.noOfRooms * (1 + GST_RATE / 100)) }));
+  ).map((line) => ({
+    ...line,
+    occupancy: ROOM_TYPE_MASTER.find((entry) => entry.name === line.roomType)?.occupancy ?? line.occupancy,
+    totalTaxable: roundToCurrency(line.tariff * line.noOfRooms * (totalNights ?? 1)),
+  }));
+  const totalCharges = roundToCurrency(roomLines.reduce((sum, line) => sum + line.totalTaxable, 0));
+  const discountAmount = Math.round((totalCharges * discountPercent) / 100);
 
   return {
     checkIn,
     checkOut,
-    totalDays:
-      checkIn && checkOut
-        ? Math.floor((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000) + 1
-        : null,
+    totalNights,
     roomLines,
     totalOccupancy: roomLines.reduce((sum, line) => sum + line.occupancy * line.noOfRooms, 0),
-    totalCharges: roundToCurrency(roomLines.reduce((sum, line) => sum + line.totalInclGst, 0)),
+    totalCharges,
+    discountPercent,
+    discountAmount,
+    finalAmount: roundToCurrency(totalCharges - discountAmount),
   };
 };
 
@@ -302,12 +340,17 @@ const computeQuotationSummary = (event: MockEvent) => {
     )
   );
   const foodTotalInclGst = roundToCurrency(foodSubtotal * (1 + GST_RATE / 100));
-  const accommodationTotal = event.accommodation.totalCharges;
+  // DEV-07: the Final Amount plus 5% GST.
+  const accommodationTaxable = event.accommodation.finalAmount;
+  const accommodationGst = roundToCurrency(accommodationTaxable * 0.05);
+  const accommodationTotal = roundToCurrency(accommodationTaxable + accommodationGst);
   const extrasTotal = roundToCurrency(event.extras.decoration + event.extras.photographer + event.extras.bhatji);
   return {
     venueTotal,
     foodSubtotal,
     foodTotalInclGst,
+    accommodationTaxable,
+    accommodationGst,
     accommodationTotal,
     extrasTotal,
     grandTotal: roundToCurrency(venueTotal + foodTotalInclGst + accommodationTotal + extrasTotal),
@@ -389,13 +432,14 @@ const mockEventDetailApi = ({
       const url = String(input);
       const method = init?.method ?? 'GET';
 
+      if (method === 'GET' && url.endsWith('/room-types')) {
+        return jsonResponse(200, ROOM_TYPE_MASTER);
+      }
       if (method === 'GET' && url.includes('/change-log')) {
         return jsonResponse(200, changeLogEntries);
       }
       if (method === 'PATCH' && currentEvent && url.endsWith(`/events/${currentEvent.id}/accommodation`)) {
-        const body: { checkIn?: string; checkOut?: string; roomLines?: MockRoomLineInput[] } = JSON.parse(
-          String(init?.body)
-        );
+        const body: MockAccommodationPatch = JSON.parse(String(init?.body));
         accommodationPatchRequests.push(body);
         currentEvent = {
           ...currentEvent,
@@ -834,7 +878,7 @@ describe('EventDetailPage', () => {
     seedSession();
     mockEventDetailApi({
       event: makeEvent({
-        accommodation: makeAccommodation({ totalCharges: 11800 }),
+        accommodation: makeAccommodation({ totalCharges: 10000, finalAmount: 10000 }),
         extras: makeExtras({ decoration: 1000, photographer: 1500, bhatji: 500 }),
         sessions: [
           {
@@ -874,14 +918,14 @@ describe('EventDetailPage', () => {
     fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
 
     // venueTotal 5000, foodSubtotal 2000, foodTotalInclGst 2000 × 1.18 =
-    // 2360, accommodationTotal 11800, extrasTotal 3000, grandTotal =
-    // 5000 + 2360 + 11800 + 3000 = 22160.
+    // 2360, accommodationTotal 10000 + 5% GST = 10500, extrasTotal 3000,
+    // grandTotal = 5000 + 2360 + 10500 + 3000 = 20860.
     expect(await screen.findByText('Venue total: 5,000')).toBeInTheDocument();
     expect(screen.getByText('Food subtotal: 2,000')).toBeInTheDocument();
     expect(screen.getByText('Food total (incl. GST): 2,360')).toBeInTheDocument();
-    expect(screen.getByText('Accommodation total: 11,800')).toBeInTheDocument();
+    expect(screen.getByText('Accommodation total: 10,500')).toBeInTheDocument();
     expect(screen.getByText('Extras total: 3,000')).toBeInTheDocument();
-    const grandTotal = screen.getByText('22,160');
+    const grandTotal = screen.getByText('20,860');
     expect(grandTotal).toBeInTheDocument();
     // display variant (Fraunces) — the Grand Total is the single most
     // visually prominent number on the panel (this story's own AC).
@@ -1171,31 +1215,48 @@ describe('EventDetailPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Add room line' }));
 
     fireEvent.change(screen.getByLabelText('Room type for room line 1'), { target: { value: 'Double' } });
-    fireEvent.change(screen.getByLabelText('Occupancy for room line 1'), { target: { value: '2' } });
     fireEvent.change(screen.getByLabelText('Tariff for room line 1'), { target: { value: '5000' } });
     fireEvent.change(screen.getByLabelText('Number of rooms for room line 1'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save accommodation' }));
 
     await waitFor(() => expect(accommodationPatchRequests).toHaveLength(1));
+    // Occupancy comes from the Room Type master (Double = 2), never typed.
     expect(accommodationPatchRequests[0]?.roomLines).toEqual([
       { roomType: 'Double', occupancy: 2, tariff: 5000, noOfRooms: 1 },
     ]);
-    // 5000 × 1 × 1.18 = 5900 — same render tree throughout, no full reload.
-    expect(await screen.findByText('5900')).toBeInTheDocument();
-    expect(await screen.findByText('Total Charges: 5,900')).toBeInTheDocument();
+    expect(accommodationPatchRequests[0]?.discountPercent).toBe(0);
+    // 5000 × 1 room × 1 night, no GST — same render tree, no full reload.
+    expect(await screen.findByText('5000')).toBeInTheDocument();
+    expect(screen.getByText('Total Charges', { selector: 'p' }).nextElementSibling?.textContent).toBe('5,000');
   });
 
-  it('renders total_days/total_occupancy/total_charges/total_incl_gst read-only, never independently calculated from an unsaved edit', async () => {
+  it('shows occupancy read-only from the Room Type master — no occupancy input', async () => {
+    seedSession();
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Accommodation' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add room line' }));
+    fireEvent.change(screen.getByLabelText('Room type for room line 1'), { target: { value: 'double' } });
+
+    expect(screen.queryByLabelText(/Occupancy for room line/)).not.toBeInTheDocument();
+    const row = screen.getByLabelText('Room type for room line 1').closest('tr')!;
+    await waitFor(() => expect(within(row).getAllByRole('cell')[1]!.textContent).toBe('2'));
+    expect(screen.getByRole('columnheader', { name: 'Total Taxable Amount' })).toBeInTheDocument();
+  });
+
+  it('renders total_nights/total_occupancy/total_charges/total_taxable read-only, never independently calculated from an unsaved edit', async () => {
     seedSession();
     mockEventDetailApi({
       event: makeEvent({
         accommodation: makeAccommodation({
           checkIn: '2026-06-15T00:00:00.000Z',
           checkOut: '2026-06-16T00:00:00.000Z',
-          totalDays: 2,
-          roomLines: [{ roomType: 'Double', occupancy: 2, tariff: 5000, noOfRooms: 1, totalInclGst: 5900 }],
+          totalNights: 1,
+          roomLines: [{ roomType: 'Double', occupancy: 2, tariff: 5000, noOfRooms: 1, totalTaxable: 5000 }],
           totalOccupancy: 2,
-          totalCharges: 5900,
+          totalCharges: 5000,
+          finalAmount: 5000,
         }),
       }),
     });
@@ -1205,18 +1266,61 @@ describe('EventDetailPage', () => {
     const tariffField = await screen.findByLabelText('Tariff for room line 1');
     expect(tariffField).toHaveValue(5000);
 
-    // Edited locally, not saved — the read-only Total column and footer
-    // totals must still reflect the last *server* response (5900), not a
+    // Edited locally, not saved — the read-only Total column and totals
+    // must still reflect the last *server* response (5000), not a
     // client-side recalculation off the new, unsaved tariff.
     fireEvent.change(tariffField, { target: { value: '99999' } });
 
-    expect(screen.getByText('5900')).toBeInTheDocument();
-    expect(screen.getByText('Total Charges: 5,900')).toBeInTheDocument();
-    expect(screen.getByText('Total Occupancy: 2')).toBeInTheDocument();
-    // Total days now lives in the Check-in/Check-out summary line, matching
-    // accommodation-step.tsx's own "<check-in> to <check-out> · Total days: N".
-    expect(screen.getByText('15/06/2026 to 16/06/2026 · Total days: 2')).toBeInTheDocument();
+    expect(screen.getByText('5000')).toBeInTheDocument();
+    expect(screen.getByText('Total Charges', { selector: 'p' }).nextElementSibling?.textContent).toBe('5,000');
+    expect(screen.getByText('Total Occupancy').nextElementSibling?.textContent).toBe('2');
+    expect(screen.getByText('15/06/2026 to 16/06/2026 · Total nights: 1')).toBeInTheDocument();
     expect(screen.queryByText('99999')).not.toBeInTheDocument();
+  });
+
+  it('saves a Discount (%) and shows the server’s Discount and Final Amount rows', async () => {
+    seedSession();
+    const { accommodationPatchRequests } = mockEventDetailApi({
+      event: makeEvent({
+        accommodation: makeAccommodation({
+          roomLines: [{ roomType: 'Double', occupancy: 2, tariff: 5000, noOfRooms: 1, totalTaxable: 5000 }],
+          totalOccupancy: 2,
+          totalCharges: 5000,
+          finalAmount: 5000,
+        }),
+      }),
+    });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Accommodation' }));
+    // At 0% the discount rows are hidden.
+    expect(await screen.findByLabelText('Discount (%)')).toHaveValue(0);
+    expect(screen.queryByText('Final Amount')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Discount (%)'), { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save accommodation' }));
+
+    await waitFor(() => expect(accommodationPatchRequests).toHaveLength(1));
+    expect(accommodationPatchRequests[0]?.discountPercent).toBe(10);
+    expect((await screen.findByText('Discount 10%')).nextElementSibling?.textContent).toBe('500');
+    expect(screen.getByText('Final Amount').nextElementSibling?.textContent).toBe('4,500');
+  });
+
+  it('blocks saving a Discount (%) outside a whole 0–100', async () => {
+    seedSession();
+    const { accommodationPatchRequests } = mockEventDetailApi({
+      event: makeEvent({ accommodation: makeAccommodation({ totalCharges: 5000, finalAmount: 5000 }) }),
+    });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Accommodation' }));
+    fireEvent.change(await screen.findByLabelText('Discount (%)'), { target: { value: '150' } });
+
+    expect(screen.getByText('Enter a whole number from 0 to 100.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Save accommodation' }));
+    // The failed validation focuses the field instead of sending a PATCH.
+    await waitFor(() => expect(screen.getByLabelText('Discount (%)')).toHaveFocus());
+    expect(accommodationPatchRequests).toHaveLength(0);
   });
 
   it('shows Accommodation read-only, with no edit controls, for a non-EventManager session', async () => {
@@ -1224,9 +1328,10 @@ describe('EventDetailPage', () => {
     mockEventDetailApi({
       event: makeEvent({
         accommodation: makeAccommodation({
-          roomLines: [{ roomType: 'Double', occupancy: 2, tariff: 5000, noOfRooms: 1, totalInclGst: 5900 }],
+          roomLines: [{ roomType: 'Double', occupancy: 2, tariff: 5000, noOfRooms: 1, totalTaxable: 5000 }],
           totalOccupancy: 2,
-          totalCharges: 5900,
+          totalCharges: 5000,
+          finalAmount: 5000,
         }),
       }),
     });
@@ -1234,8 +1339,9 @@ describe('EventDetailPage', () => {
 
     fireEvent.click(await screen.findByRole('tab', { name: 'Accommodation' }));
 
-    expect(await screen.findByText(/Double.*2 occupancy.*1 rooms.*5900/)).toBeInTheDocument();
+    expect(await screen.findByText(/Double.*2 occupancy.*1 rooms.*5000/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Tariff for room line/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Discount (%)')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add room line' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Save accommodation' })).not.toBeInTheDocument();
   });

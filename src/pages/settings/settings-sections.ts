@@ -17,18 +17,43 @@ export interface SectionConfig {
   costLabel: string | null;
   supportsStatus: boolean;
   supportsEdit: boolean;
+  // Room Types carry a per-room occupancy (DEV-07), entered on add/edit
+  // and shown as its own column.
+  supportsOccupancy: boolean;
 }
 
 export const SECTIONS: SectionConfig[] = [
-  { id: 'venues', label: 'Venues', costLabel: 'Default Venue Cost', supportsStatus: true, supportsEdit: true },
-  { id: 'eventTypes', label: 'Event Types', costLabel: null, supportsStatus: true, supportsEdit: true },
-  { id: 'roomTypes', label: 'Room Types', costLabel: 'Default Tariff', supportsStatus: true, supportsEdit: true },
+  {
+    id: 'venues',
+    label: 'Venues',
+    costLabel: 'Default Venue Cost',
+    supportsStatus: true,
+    supportsEdit: true,
+    supportsOccupancy: false,
+  },
+  {
+    id: 'eventTypes',
+    label: 'Event Types',
+    costLabel: null,
+    supportsStatus: true,
+    supportsEdit: true,
+    supportsOccupancy: false,
+  },
+  {
+    id: 'roomTypes',
+    label: 'Room Types',
+    costLabel: 'Default Tariff',
+    supportsStatus: true,
+    supportsEdit: true,
+    supportsOccupancy: true,
+  },
   {
     id: 'menuItems',
     label: 'Menu Items',
     costLabel: 'Default Cost / Plate',
     supportsStatus: false,
     supportsEdit: true,
+    supportsOccupancy: false,
   },
 ];
 
@@ -40,5 +65,19 @@ export interface MasterListRow {
   id: string;
   name: string;
   cost: number | null;
+  // null for every section without supportsOccupancy.
+  occupancy: number | null;
   active: boolean;
 }
+
+export const OCCUPANCY_ERROR = 'Enter a whole number of guests (0 or more).';
+
+// The Occupancy field's raw text → guests per room, or null when blank or
+// not a whole number ≥ 0 (the API's own rule, DEV-07).
+export const parseOccupancy = (raw: string): number | null => {
+  if (raw.trim() === '') {
+    return null;
+  }
+  const value = Number(raw);
+  return Number.isInteger(value) && value >= 0 ? value : null;
+};

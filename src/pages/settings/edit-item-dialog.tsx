@@ -10,16 +10,19 @@ import {
   Typography,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
-import type { MasterListRow, SectionConfig } from './settings-sections';
+import OccupancyField from './occupancy-field';
+import { type MasterListRow, parseOccupancy, type SectionConfig } from './settings-sections';
 
 interface EditItemFormValues {
   name: string;
   cost: string;
+  occupancy: string;
 }
 
 export interface EditItemSubmitValues {
   name: string;
   cost?: number;
+  occupancy?: number;
 }
 
 interface EditItemDialogProps {
@@ -44,11 +47,17 @@ const EditItemDialog = ({ section, row, isPending, errorMessage, onClose, onSave
     watch,
     formState: { isDirty },
   } = useForm<EditItemFormValues>({
-    defaultValues: { name: row.name, cost: row.cost === null ? '' : String(row.cost) },
+    defaultValues: {
+      name: row.name,
+      cost: row.cost === null ? '' : String(row.cost),
+      occupancy: row.occupancy === null ? '' : String(row.occupancy),
+    },
   });
 
   const name = watch('name');
-  const canSubmit = isDirty && name.trim().length > 0;
+  const occupancy = parseOccupancy(watch('occupancy'));
+  const isOccupancyInvalid = section.supportsOccupancy && occupancy === null;
+  const canSubmit = isDirty && name.trim().length > 0 && !isOccupancyInvalid;
 
   const handleEdit = (values: EditItemFormValues) => {
     if (isPending || !canSubmit) {
@@ -57,6 +66,7 @@ const EditItemDialog = ({ section, row, isPending, errorMessage, onClose, onSave
     onSave({
       name: values.name,
       cost: section.costLabel && values.cost.trim() !== '' ? Number(values.cost) : undefined,
+      occupancy: section.supportsOccupancy ? (occupancy ?? undefined) : undefined,
     });
   };
 
@@ -66,6 +76,9 @@ const EditItemDialog = ({ section, row, isPending, errorMessage, onClose, onSave
       <DialogContent>
         <Stack sx={{ gap: 4, pt: 2, minWidth: 280 }}>
           <TextField label="Name" fullWidth autoFocus {...register('name')} />
+          {section.supportsOccupancy && (
+            <OccupancyField registration={register('occupancy')} isInvalid={isOccupancyInvalid} />
+          )}
           {section.costLabel && (
             <TextField
               label={section.costLabel}

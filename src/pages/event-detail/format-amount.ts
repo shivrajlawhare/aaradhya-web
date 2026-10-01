@@ -5,3 +5,7 @@
 // 'en-US' 3-digit groups — no currency symbol, since neither the SRS nor
 // the theme tokens name one.
 export const formatAmount = (amount: number): string => new Intl.NumberFormat('en-IN').format(amount);
+
+// "₹ 1,05,840" — the wizard's Accommodation money cells and totals (Figma
+// 05 New Event / 3 Accommodation, DEV-07).
+export const formatRupees = (amount: number): string => `₹ ${formatAmount(amount)}`;
