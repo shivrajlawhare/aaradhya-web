@@ -833,6 +833,74 @@ export const dashboardResultSchema = z.object({
   upcomingEvents: z.array(dashboardUpcomingEventResultSchema),
 });
 
+// DEV-11 (CR-1 D1) — mirrors aaradhya-api's
+// contract/schemas/one-day-event-template.ts. Times are 'HH:mm'.
+const timeOfDaySchema = z
+  .string()
+  .trim()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use a 24-hour HH:mm time.');
+
+const templateSessionSchema = z.object({
+  sessionType: z.string().trim().min(1),
+  venue: z.string().trim().min(1),
+  venueCost: z.number().min(0).optional(),
+  startTime: timeOfDaySchema,
+  endTime: timeOfDaySchema,
+  pax: z.number().int().min(0),
+  setup: sessionSetupSchema.optional(),
+});
+
+const templateRoomLineSchema = z.object({
+  roomType: z.string().trim().min(1),
+  noOfRooms: z.number().int().min(0),
+});
+
+const templateCeremonySchema = z.object({
+  eventName: z.string().trim().min(1),
+  startTime: timeOfDaySchema,
+  endTime: timeOfDaySchema,
+});
+
+const templateMealBaseSchema = z.object({
+  mealName: z.string().trim().min(1),
+  startTime: timeOfDaySchema,
+  endTime: timeOfDaySchema,
+  pax: z.number().int().min(0),
+  costPerPlate: z.number().min(0),
+  limitedSeating: z.boolean(),
+});
+
+const templateLineItemSchema = z.object({
+  name: z.string().trim().min(1),
+  note: z.string().trim().optional(),
+  amount: z.number().min(0),
+});
+
+export const updateOneDayEventTemplateBodySchema = z.object({
+  eventFamilyType: z.string().trim().min(1),
+  session: templateSessionSchema,
+  roomLines: z.array(templateRoomLineSchema),
+  ceremonies: z.array(templateCeremonySchema),
+  meals: z.array(
+    templateMealBaseSchema.extend({
+      menuItems: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid menu item id.')),
+    })
+  ),
+  lineItems: z.array(templateLineItemSchema),
+  gstPercent: z.number().min(0).max(100),
+});
+
+export const oneDayEventTemplateResultSchema = z.object({
+  eventFamilyType: z.string(),
+  session: templateSessionSchema.extend({ venueCost: z.number().nullable(), setup: sessionSetupSchema.nullable() }),
+  roomLines: z.array(templateRoomLineSchema),
+  ceremonies: z.array(templateCeremonySchema),
+  meals: z.array(templateMealBaseSchema.extend({ menuItems: z.array(z.object({ id: z.string(), name: z.string() })) })),
+  lineItems: z.array(templateLineItemSchema.extend({ note: z.string().nullable() })),
+  gstPercent: z.number(),
+  updatedAt: z.string(),
+});
+
 export const contract = c.router({
   login: {
     method: 'POST',
@@ -1211,5 +1279,23 @@ export const contract = c.router({
       409: apiErrorSchema,
     },
     summary: 'Edit name/default tariff and/or toggle active on a Room Type (Event Manager only)',
+  },
+  getOneDayEventTemplate: {
+    method: 'GET',
+    path: '/settings/one-day-event-template',
+    responses: {
+      200: oneDayEventTemplateResultSchema,
+    },
+    summary: 'Read the One Day Event template, seeding it on first read (Event Manager only)',
+  },
+  updateOneDayEventTemplate: {
+    method: 'PUT',
+    path: '/settings/one-day-event-template',
+    body: updateOneDayEventTemplateBodySchema,
+    responses: {
+      200: oneDayEventTemplateResultSchema,
+      400: apiErrorSchema,
+    },
+    summary: 'Replace the One Day Event template (Event Manager only)',
   },
 });

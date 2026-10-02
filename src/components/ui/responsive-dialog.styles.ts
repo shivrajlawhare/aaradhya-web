@@ -5,8 +5,9 @@ const { radius, space } = scaleTokens;
 
 const DIALOG_WIDTH = 440;
 
-// Figma Dialog/Confirm Destructive: a centred dialog on desktop, a bottom
-// sheet (full width, top corners rounded) on mobile.
+// Figma Dialog/Confirm Destructive and Dialog/Form (One Day Event): a centred
+// dialog on desktop, a bottom sheet (full width, top corners rounded) on
+// mobile.
 export const dialogStyles = (isBottomSheet: boolean): SxProps<Theme> => ({
   '& .MuiDialog-container': { alignItems: isBottomSheet ? 'flex-end' : 'center' },
   '& .MuiDialog-paper': isBottomSheet

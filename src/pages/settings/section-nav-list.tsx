@@ -1,6 +1,6 @@
 import { Box } from '@mui/material';
 import { navListStyles, sectionRowStyles } from './section-nav-list.styles';
-import { type SectionId, SECTIONS } from './settings-sections';
+import { type SectionId, SETTINGS_NAV } from './settings-sections';
 
 interface SectionNavListProps {
   selected: SectionId;
@@ -8,11 +8,11 @@ interface SectionNavListProps {
 }
 
 // Desktop's left-hand section list (this story's own AC) — a vertical list
-// of the four sections beside the right-hand panel showing whichever one is
+// of the five sections beside the right-hand panel showing whichever one is
 // selected. See section-chip-row.tsx for the mobile equivalent.
 const SectionNavList = ({ selected, onSelect }: SectionNavListProps) => (
   <Box component="nav" aria-label="Settings sections" sx={navListStyles}>
-    {SECTIONS.map((section) => (
+    {SETTINGS_NAV.map((section) => (
       <Box
         key={section.id}
         component="button"

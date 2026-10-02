@@ -8,6 +8,7 @@ import AddItemForm, { type AddItemFormSubmitValues } from './add-item-form';
 import EditItemDialog, { type EditItemSubmitValues } from './edit-item-dialog';
 import MasterListCardList from './master-list-card-list';
 import MasterListTable from './master-list-table';
+import OneDayEventSettings from './one-day-event-settings';
 import SectionChipRow from './section-chip-row';
 import SectionNavList from './section-nav-list';
 import {
@@ -17,7 +18,7 @@ import {
   pageStyles,
   panelHeaderStyles,
 } from './settings-page.styles';
-import { type MasterListRow, type SectionId, SECTIONS } from './settings-sections';
+import { type MasterListRow, type MasterListSectionId, type SectionId, SECTIONS } from './settings-sections';
 
 // Shared by every create/update mutation below — each route's own 409/404
 // apiErrorSchema carries { error: { message } }; anything else (a network
@@ -48,17 +49,15 @@ const SettingsPage = () => {
   const [editingRow, setEditingRow] = useState<MasterListRow | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
 
+  // undefined only for One Day Event, which isn't a master list.
   const section = SECTIONS.find((candidate) => candidate.id === selectedSectionId);
-  if (!section) {
-    throw new Error(`Unknown Settings section: ${String(selectedSectionId)}`);
-  }
 
   const venuesQuery = tsr.listVenues.useQuery({ queryKey: ['venues'] });
   const eventTypesQuery = tsr.listEventTypes.useQuery({ queryKey: ['event-types'] });
   const roomTypesQuery = tsr.listRoomTypes.useQuery({ queryKey: ['room-types'] });
   const menuItemsQuery = tsr.listMenuItems.useQuery({ queryKey: ['menu-items'], queryData: { query: {} } });
 
-  const refetchSection = (id: SectionId) => {
+  const refetchSection = (id: MasterListSectionId) => {
     if (id === 'venues') {
       venuesQuery.refetch();
     } else if (id === 'eventTypes') {
@@ -70,7 +69,7 @@ const SettingsPage = () => {
     }
   };
 
-  const handleCreateSuccess = (id: SectionId) => {
+  const handleCreateSuccess = (id: MasterListSectionId) => {
     setAddError(null);
     setIsAddFormOpen(false);
     setAddFormResetKey((key) => key + 1);
@@ -259,6 +258,30 @@ const SettingsPage = () => {
         <CircularProgress aria-label="Loading settings" />
       </Box>
     );
+  }
+
+  // DEV-11: the One Day Event template is a form, not a master list.
+  if (selectedSectionId === 'oneDayEvent') {
+    if (isDesktop) {
+      return (
+        <Box sx={pageStyles}>
+          <Box sx={desktopContentStyles}>
+            <SectionNavList selected={selectedSectionId} onSelect={handleSelectSection} />
+            <OneDayEventSettings />
+          </Box>
+        </Box>
+      );
+    }
+    return (
+      <Box sx={pageStyles}>
+        <SectionChipRow selected={selectedSectionId} onSelect={handleSelectSection} />
+        <OneDayEventSettings />
+      </Box>
+    );
+  }
+
+  if (!section) {
+    throw new Error(`Unknown Settings section: ${String(selectedSectionId)}`);
   }
 
   const rows: MasterListRow[] = (() => {

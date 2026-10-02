@@ -9,7 +9,7 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { actionsStyles, dialogStyles } from './confirm-destructive-dialog.styles';
+import { actionsStyles, dialogStyles } from './responsive-dialog.styles';
 
 interface ConfirmDestructiveDialogProps {
   open: boolean;

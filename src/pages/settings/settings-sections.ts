@@ -9,10 +9,14 @@
 // ARE now editable via PATCH /menu-items/:id, so `supportsEdit: true`.
 // Conflating the two originally meant Menu Item rows had no Edit action
 // either, purely as a side effect of not having a Status column.
-export type SectionId = 'venues' | 'eventTypes' | 'roomTypes' | 'menuItems';
+export type MasterListSectionId = 'venues' | 'eventTypes' | 'roomTypes' | 'menuItems';
+
+// Every Settings section: the four master lists plus the One Day Event
+// template (DEV-11), which is a form rather than a list.
+export type SectionId = MasterListSectionId | 'oneDayEvent';
 
 export interface SectionConfig {
-  id: SectionId;
+  id: MasterListSectionId;
   label: string;
   costLabel: string | null;
   supportsStatus: boolean;
@@ -55,6 +59,18 @@ export const SECTIONS: SectionConfig[] = [
     supportsEdit: true,
     supportsOccupancy: false,
   },
+];
+
+export interface SettingsNavEntry {
+  id: SectionId;
+  label: string;
+}
+
+// The sub-nav (desktop) / chip row (mobile), in order — One Day Event is the
+// 5th section (UI-41).
+export const SETTINGS_NAV: SettingsNavEntry[] = [
+  ...SECTIONS.map(({ id, label }) => ({ id, label })),
+  { id: 'oneDayEvent', label: 'One Day Event' },
 ];
 
 // A common row shape every section's table/card list renders from, so

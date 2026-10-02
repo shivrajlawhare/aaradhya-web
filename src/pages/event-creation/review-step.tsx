@@ -16,6 +16,11 @@ import { computeWizardTotalCostSummary, type ManualLineItem } from '../../utils/
 import type { WizardRoomLine } from './accommodation-step';
 import type { WizardContactRow } from './client-details-step';
 import { emptySetup, type WizardSessionRow } from './event-details-step';
+import {
+  CUSTOM_EVENT_FAMILY_TYPE_OPTION,
+  EVENT_FAMILY_TYPE_PRESETS,
+  toEventFamilyTypeOption,
+} from './event-family-type-options';
 import ReviewCostSummary from './review-cost-summary';
 import {
   addButtonStyles,
@@ -27,17 +32,6 @@ import {
   wrapperStyles,
 } from './review-step.styles';
 import type { WizardDateEntry } from './sessions-items-step';
-
-// No master list backs this, and no earlier wizard step collects it — the
-// old (STORY-063-deleted) single-page form had its own Event Family Type
-// picker, and nothing in Steps 1-4 replaced it. Same "dropdown + custom"
-// convention every other free-text field in this app uses; defaults to a
-// smart guess (the last Session's own sessionType — both reference
-// quotations' overall theme matches their final, culminating Session) so
-// most Event Managers never need to touch it, while still seeing and being
-// able to correct it before submitting.
-const EVENT_FAMILY_TYPE_PRESETS = ['Wedding', 'Engagement', 'Corporate', 'Birthday'];
-const CUSTOM_EVENT_FAMILY_TYPE_OPTION = 'Custom…';
 
 const DEFAULT_GST_PERCENT = 5;
 
@@ -91,16 +85,6 @@ interface ReviewStepData {
 
 const isReviewStepData = (value: unknown): value is ReviewStepData =>
   typeof value === 'object' && value !== null && Array.isArray((value as ReviewStepData).manualLineItems);
-
-const toEventFamilyTypeOption = (guess: string): { option: string; custom: string } => {
-  if (!guess) {
-    return { option: '', custom: '' };
-  }
-  if (EVENT_FAMILY_TYPE_PRESETS.includes(guess)) {
-    return { option: guess, custom: '' };
-  }
-  return { option: CUSTOM_EVENT_FAMILY_TYPE_OPTION, custom: guess };
-};
 
 const createRowId = (): string => `line-item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -311,14 +295,24 @@ const ReviewStep = ({ registerSubmit }: ReviewStepProps) => {
     accommodation.checkOutDate &&
     accommodation.checkOutDate < accommodation.checkInDate
   );
-  const accommodationTotalNights =
-    (accommodation && !isAccommodationRangeInvalid
-      ? computeTotalNights(accommodation.checkInDate, accommodation.checkOutDate)
-      : null) ?? 1;
+  // Without both check-in and check-out no Accommodation is submitted at all
+  // (mapAccommodationForSubmit below), so it counts as 0 nights — ₹ 0 — here
+  // too, e.g. a One Day Event's prefilled rooms with no dates yet (D8).
+  const hasAccommodationDates = Boolean(accommodation?.checkInDate && accommodation.checkOutDate);
+  let accommodationTotalNights = 0;
+  if (accommodation && hasAccommodationDates) {
+    accommodationTotalNights =
+      (!isAccommodationRangeInvalid
+        ? computeTotalNights(accommodation.checkInDate, accommodation.checkOutDate)
+        : null) ?? 1;
+  }
 
   const stored = data['review'];
   const restored = isReviewStepData(stored) ? stored : undefined;
 
+  // Defaults to a smart guess — the last Session's own sessionType (both
+  // reference quotations' overall theme matches their final Session) — so
+  // most Event Managers never need to touch it.
   const defaultEventType = toEventFamilyTypeOption(sessions[sessions.length - 1]?.sessionType ?? '');
   const [eventFamilyTypeOption, setEventFamilyTypeOption] = useState(
     () => restored?.eventFamilyTypeOption ?? defaultEventType.option

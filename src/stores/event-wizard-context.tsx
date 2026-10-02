@@ -7,7 +7,7 @@ import type { WizardStepId } from '../pages/event-creation/wizard-steps';
 // what's inside any one of them.
 export type WizardStepData = Record<string, unknown>;
 
-type WizardData = Partial<Record<WizardStepId, WizardStepData>>;
+export type WizardData = Partial<Record<WizardStepId, WizardStepData>>;
 
 interface WizardContextValue {
   data: WizardData;
@@ -17,6 +17,9 @@ interface WizardContextValue {
   // Back/Next navigation, which is what keeps "Back never discards
   // already-entered data" true by construction.
   clearWizard: () => void;
+  // Swaps in a whole new wizard at once — the One Day Event prefill
+  // (DEV-11), which fills every step in one go.
+  replaceWizard: (next: WizardData) => void;
 }
 
 // sessionStorage, not localStorage (unlike auth-context.tsx's own session
@@ -77,9 +80,14 @@ export const EventWizardProvider = ({ children }: EventWizardProviderProps) => {
     setData({});
   }, []);
 
+  const replaceWizard = useCallback((next: WizardData) => {
+    sessionStorage.setItem(WIZARD_STORAGE_KEY, JSON.stringify(next));
+    setData(next);
+  }, []);
+
   const value = useMemo<WizardContextValue>(
-    () => ({ data, setStepData, clearWizard }),
-    [data, setStepData, clearWizard]
+    () => ({ data, setStepData, clearWizard, replaceWizard }),
+    [data, setStepData, clearWizard, replaceWizard]
   );
 
   return <WizardContext.Provider value={value}>{children}</WizardContext.Provider>;

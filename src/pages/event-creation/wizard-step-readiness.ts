@@ -28,11 +28,16 @@ export const WIZARD_STEP_READY_CHECKS: Partial<
   accommodation: (stepData) => {
     const checkInDate = stepData?.checkInDate;
     const checkOutDate = stepData?.checkOutDate;
-    if (typeof checkInDate !== 'string' || !checkInDate || typeof checkOutDate !== 'string' || !checkOutDate) {
-      return false;
-    }
     const discountPercent = stepData?.discountPercent ?? 0;
     if (typeof discountPercent !== 'number' || !isValidDiscountPercent(discountPercent)) {
+      return false;
+    }
+    // DEV-11 (D8): a One Day Event may leave both dates empty — no rooms
+    // booked yet — but not just one of them.
+    if (stepData?.datesOptional === true && !checkInDate && !checkOutDate) {
+      return true;
+    }
+    if (typeof checkInDate !== 'string' || !checkInDate || typeof checkOutDate !== 'string' || !checkOutDate) {
       return false;
     }
     return checkOutDate >= checkInDate;

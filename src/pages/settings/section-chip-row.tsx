@@ -1,6 +1,6 @@
 import { Box, Chip } from '@mui/material';
 import { chipStyles, rowStyles } from './section-chip-row.styles';
-import { type SectionId, SECTIONS } from './settings-sections';
+import { type SectionId, SETTINGS_NAV } from './settings-sections';
 
 interface SectionChipRowProps {
   selected: SectionId;
@@ -12,7 +12,7 @@ interface SectionChipRowProps {
 // SectionNavList.
 const SectionChipRow = ({ selected, onSelect }: SectionChipRowProps) => (
   <Box role="tablist" aria-label="Settings sections" sx={rowStyles}>
-    {SECTIONS.map((section) => (
+    {SETTINGS_NAV.map((section) => (
       <Chip
         key={section.id}
         role="tab"
