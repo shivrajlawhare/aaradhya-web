@@ -58,7 +58,7 @@ export const toastStyles = (severity: ToastSeverity, isLeaving: boolean): SxProp
   boxShadow: shadowTokens.softLg,
   typography: 'bodyM',
   animation: isLeaving
-    ? `${toastExit} ${EXIT_DURATION_MS}ms ${motionTokens.easing.base} forwards`
+    ? `${toastExit} ${EXIT_DURATION_MS}ms ${motionTokens.easing.exit} forwards`
     : `${toastEnter} ${motionTokens.duration.spring}ms ${motionTokens.easing.spring}`,
   '&::before': {
     content: '""',

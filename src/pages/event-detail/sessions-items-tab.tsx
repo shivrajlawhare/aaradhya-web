@@ -6,7 +6,7 @@ import { tsr } from '../../api/client';
 import ItemCard from '../../components/ui/item-card';
 import { ItemCardFoodDetails, ItemCardTime } from '../../components/ui/item-card-details';
 import { useToast } from '../../components/ui/toast-provider';
-import { type filteredEventResultSchema, ItemType } from '../../contract';
+import { type createItemBodySchema, type filteredEventResultSchema, ItemType } from '../../contract';
 import { formatEventDate, formatQuotationPax, formatSessionDuration } from '../../utils/quotation-formatting';
 import { getDistinctDates } from '../../utils/session-dates';
 import CeremonyFormCard from '../event-creation/ceremony-form-card';
@@ -75,6 +75,15 @@ interface EditingItem {
   sessionId: string;
   itemId: string;
 }
+
+// venueCost is stripped for every role but Event Manager (STORY-046) — the
+// reminder omits it rather than printing "NaN" (UI-24: F&B sees no cost).
+const formatVenueCostSuffix = (venueCost: number | undefined): string => {
+  if (venueCost === undefined) {
+    return '';
+  }
+  return ` · ${formatAmount(venueCost)}/-`;
+};
 
 interface SessionsItemsTabProps {
   event: PublicEvent;
@@ -190,8 +199,8 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
     // own Ceremony form already establishes ("venue is read-only, pulled
     // from the date's own Session"), applied here against the real owning
     // Session instead of a wizard-local reminder line.
-    const body = {
-      type: ItemType.Event as const,
+    const body: z.infer<typeof createItemBodySchema> = {
+      type: ItemType.Event,
       eventName,
       venue: targetSession?.venue ?? '',
       startTime: values.startTime.trim() || undefined,
@@ -364,9 +373,7 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
     reminderContent = sessionsStartingOnDate.map((session) => (
       <Alert key={session.id} severity="info">
         {session.sessionType} — Venue for this date: {session.venue}
-        {/* venueCost is stripped for every role but Event Manager
-            (STORY-046) — omitted rather than printing "NaN" when absent. */}
-        {session.venueCost !== undefined ? ` · ${formatAmount(session.venueCost)}/-` : ''} (from Event Details)
+        {formatVenueCostSuffix(session.venueCost)} (from Event Details)
       </Alert>
     ));
   }

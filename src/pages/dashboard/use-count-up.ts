@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useMediaQuery } from '@mui/material';
+import { useReducedMotion } from '../../theme/motion';
 
 export const COUNT_UP_DURATION_MS = 600;
 
@@ -8,7 +8,7 @@ const easeOutCubic = (progress: number) => 1 - (1 - progress) ** 3;
 // Counts a stat tile from 0 up to its value over 600 ms. Under
 // prefers-reduced-motion the value shows straight away.
 export const useCountUp = (target: number): number => {
-  const isReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)', { noSsr: true });
+  const isReducedMotion = useReducedMotion();
   const [value, setValue] = useState(0);
 
   useEffect(() => {

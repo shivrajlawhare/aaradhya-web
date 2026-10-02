@@ -7,6 +7,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import aaradhyaLockupLight from '../../assets/aaradhya-lockup-light.png';
 import { LOGIN_PATH } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
+import PageTransition from '../ui/page-transition';
 import AppShellNav from './app-shell-nav';
 import { logoStyles } from './app-shell-nav.styles';
 import {
@@ -80,7 +81,7 @@ const AppShell = ({ title, isDesktopTitleHidden = false, children }: AppShellPro
               {title}
             </Typography>
           )}
-          {children}
+          <PageTransition>{children}</PageTransition>
         </Box>
       </Box>
     );
@@ -111,7 +112,9 @@ const AppShell = ({ title, isDesktopTitleHidden = false, children }: AppShellPro
           </Box>
           <Box sx={topBarSpacerStyles} />
         </Box>
-        <Box component="main">{children}</Box>
+        <Box component="main">
+          <PageTransition>{children}</PageTransition>
+        </Box>
       </Box>
       {/* An overlay drawn over the current screen, not a route change — the
           page underneath (wizard state included) stays mounted. */}

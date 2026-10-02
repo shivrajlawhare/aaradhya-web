@@ -1,5 +1,5 @@
 import type { AlertColor } from '@mui/material';
-import type { Components, Theme } from '@mui/material/styles';
+import { type Components, keyframes, type Theme } from '@mui/material/styles';
 import { focusTokens, motionTokens, paletteVar, scaleTokens, shadowTokens } from './tokens';
 import { typography } from './typography';
 
@@ -12,6 +12,27 @@ const px = (value: number) => `${value}px`;
 const border = (width: number, colorPath: string) => `${px(width)} solid ${paletteVar(colorPath)}`;
 const transition = (properties: string[]) =>
   properties.map((property) => `${property} ${motionTokens.duration.base}ms ${motionTokens.easing.base}`).join(', ');
+// motion/fast — hover, press (Figma Motion Spec: Button, Sidebar row).
+const fastTransition = (properties: string[]) =>
+  properties.map((property) => `${property} ${motionTokens.duration.fast}ms ${motionTokens.easing.fast}`).join(', ');
+
+// Press feedback for Button / Icon Button (scale 0.97). A transform, so it
+// never shifts layout.
+const PRESS_SCALE = 'scale(0.97)';
+
+// Dialog paper (Figma Motion Spec): dissolve + scale 0.96 → 1 at
+// motion/slow; on mobile the paper is a bottom sheet that moves in from
+// the bottom instead. The Dialog's own Fade covers the exit (motion/base).
+const dialogEnter = keyframes`
+  from { transform: scale(0.96); }
+  to { transform: scale(1); }
+`;
+const sheetEnter = keyframes`
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+`;
+// Skeleton/* shimmer: a 1.6 s linear wave.
+const SKELETON_WAVE = '1.6s';
 
 const alertSeverities: AlertColor[] = ['success', 'error', 'warning', 'info'];
 
@@ -51,8 +72,8 @@ export const components: Components<Omit<Theme, 'components'>> = {
         borderRadius: px(radius.pill),
         border: `${px(stroke.bold)} solid transparent`,
         gap: px(8),
-        transition: transition(['background-color', 'border-color', 'color', 'box-shadow', 'transform']),
-        '&:active': { transform: 'scale(0.97)' },
+        transition: fastTransition(['background-color', 'border-color', 'color', 'box-shadow', 'transform']),
+        '&:active': { transform: PRESS_SCALE },
         '&.Mui-focusVisible': { boxShadow: focusTokens.ring },
         '&.Mui-disabled': buttonColors(paletteVar('action-disabledBackground'), paletteVar('action-disabled')),
       },
@@ -132,6 +153,8 @@ export const components: Components<Omit<Theme, 'components'>> = {
       root: {
         borderRadius: px(radius.pill),
         color: paletteVar('text-primary'),
+        transition: fastTransition(['background-color', 'color', 'box-shadow', 'transform']),
+        '&:active': { transform: PRESS_SCALE },
         '&.Mui-focusVisible': { boxShadow: focusTokens.ring },
       },
       sizeSmall: { width: px(controlSize.s), height: px(controlSize.s) },
@@ -169,7 +192,10 @@ export const components: Components<Omit<Theme, 'components'>> = {
         borderRadius: px(radius.md),
         backgroundColor: paletteVar('background-paper'),
         transition: transition(['box-shadow']),
-        '& .MuiOutlinedInput-notchedOutline': { border: border(stroke.default, 'divider') },
+        '& .MuiOutlinedInput-notchedOutline': {
+          border: border(stroke.default, 'divider'),
+          transition: transition(['border-color', 'border-width']),
+        },
         '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: paletteVar('brand-borderHover') },
         '&.Mui-focused': { boxShadow: focusTokens.input },
         '&.Mui-focused .MuiOutlinedInput-notchedOutline': { border: border(stroke.bold, 'brand-focus') },
@@ -223,6 +249,7 @@ export const components: Components<Omit<Theme, 'components'>> = {
       root: {
         ...typography.labelM,
         borderRadius: px(radius.pill),
+        transition: transition(['background-color', 'border-color', 'color']),
       },
       sizeSmall: { height: px(24) },
       sizeMedium: { height: px(controlSize.s) },
@@ -280,6 +307,7 @@ export const components: Components<Omit<Theme, 'components'>> = {
         borderRadius: px(radius.pill),
         border: border(stroke.default, 'brand-borderStrong'),
         color: paletteVar('text-primary'),
+        transition: transition(['background-color', 'border-color', 'color']),
         '&.Mui-selected, &.Mui-selected:hover': {
           backgroundColor: paletteVar('brand-inverse'),
           color: paletteVar('brand-onInverse'),
@@ -306,6 +334,8 @@ export const components: Components<Omit<Theme, 'components'>> = {
         minHeight: px(controlSize.m - 8),
         borderRadius: px(radius.pill),
         color: paletteVar('text-secondary'),
+        // The active pill cross-fades between tabs (motion/base).
+        transition: transition(['background-color', 'color']),
         '&.Mui-selected': {
           backgroundColor: paletteVar('tab-activeBg'),
           color: paletteVar('tab-activeFg'),
@@ -371,7 +401,9 @@ export const components: Components<Omit<Theme, 'components'>> = {
         borderRadius: px(radius.xl),
         border: border(stroke.default, 'brand-borderStrong'),
         boxShadow: shadowTokens.hardMd,
+        animation: `${dialogEnter} ${motionTokens.duration.slow}ms ${motionTokens.easing.slow}`,
         '@media (max-width:899.95px)': {
+          animationName: sheetEnter,
           margin: 0,
           width: '100%',
           maxWidth: '100%',
@@ -436,6 +468,8 @@ export const components: Components<Omit<Theme, 'components'>> = {
         backgroundColor: paletteVar('skeleton-base'),
         '&::after': {
           background: `linear-gradient(90deg, transparent, ${paletteVar('skeleton-highlight')}, transparent)`,
+          animationDuration: SKELETON_WAVE,
+          animationTimingFunction: 'linear',
         },
       },
     },

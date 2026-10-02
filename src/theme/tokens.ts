@@ -143,7 +143,11 @@ export const motionTokens = {
     base: 'cubic-bezier(0.2, 0, 0, 1)',
     slow: 'cubic-bezier(0.4, 0, 0.2, 1)',
     spring: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+    // Leaving the screen (toast exit) — Figma Motion Spec "ease-in".
+    exit: 'cubic-bezier(0.4, 0, 1, 1)',
   },
+  // How far route content and toasts travel as they fade in (px).
+  travel: 8,
 };
 
 export const fontFamilyTokens = {

@@ -65,13 +65,26 @@ export const labelStyles = (status: StepStatus): SxProps<Theme> => ({
   whiteSpace: 'nowrap',
 });
 
+// Figma Motion Spec "Wizard stepper — progress": the divider track with a
+// primary fill that grows from the left (scaleX 0 → 1, motion/slow) as the
+// step is passed. A transform, so the row never shifts.
 export const connectorStyles = (isPassed: boolean): SxProps<Theme> => ({
+  position: 'relative',
   flex: 1,
   minWidth: space[16],
   height: stroke.default,
   borderRadius: `${radius.pill}px`,
-  bgcolor: isPassed ? 'primary.main' : 'divider',
-  transition: `background-color ${motionTokens.duration.base}ms ${motionTokens.easing.base}`,
+  bgcolor: 'divider',
+  overflow: 'hidden',
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    inset: 0,
+    bgcolor: 'primary.main',
+    transformOrigin: 'left',
+    transform: isPassed ? 'scaleX(1)' : 'scaleX(0)',
+    transition: `transform ${motionTokens.duration.slow}ms ${motionTokens.easing.slow}`,
+  },
 });
 
 // Figma Wizard/Stepper Mobile: "Step N of 5 — <label>" over a 5-segment bar.
@@ -98,6 +111,7 @@ export const segmentStyles = (isFilled: boolean): SxProps<Theme> => ({
   height: SEGMENT_HEIGHT,
   borderRadius: `${radius.pill}px`,
   bgcolor: isFilled ? 'primary.main' : 'divider',
+  transition: `background-color ${motionTokens.duration.slow}ms ${motionTokens.easing.slow}`,
 });
 
 // The visible step name is painted from `data-label`: the DOM text is the

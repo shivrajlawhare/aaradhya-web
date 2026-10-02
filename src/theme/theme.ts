@@ -1,4 +1,4 @@
-import { createTheme, type Theme } from '@mui/material/styles';
+import { createTheme, type Theme, type ThemeOptions } from '@mui/material/styles';
 // Types theme.vars (the palette CSS variables) as always present, since the
 // theme is built with cssVariables.
 import type {} from '@mui/material/themeCssVarsAugmentation';
@@ -100,7 +100,7 @@ declare module '@mui/material/Button' {
 
 export const THEME_MODE_STORAGE_KEY = 'aaradhya-theme';
 
-export const theme = createTheme({
+const themeOptions: ThemeOptions = {
   cssVariables: { colorSchemeSelector: 'data-theme' },
   colorSchemes: {
     light: { palette: lightPalette },
@@ -116,8 +116,10 @@ export const theme = createTheme({
       short: motionTokens.duration.base,
       standard: motionTokens.duration.base,
       complex: motionTokens.duration.slow,
-      enteringScreen: motionTokens.duration.base,
-      leavingScreen: motionTokens.duration.fast,
+      // Dialog / drawer / bottom sheet (Figma Motion Spec): enter at
+      // motion/slow, exit at motion/base.
+      enteringScreen: motionTokens.duration.slow,
+      leavingScreen: motionTokens.duration.base,
     },
     easing: {
       easeInOut: motionTokens.easing.base,
@@ -127,6 +129,29 @@ export const theme = createTheme({
     },
   },
   components,
+};
+
+export const theme = createTheme(themeOptions);
+
+// Under prefers-reduced-motion (Figma Motion Spec rule): every MUI
+// transition is instant — zero durations, and `create` emits no CSS
+// transition — so dialogs, drawers, menus and collapses just appear. CSS
+// keyframe animations are switched off by the global rule in components.ts.
+export const reducedMotionTheme = createTheme({
+  ...themeOptions,
+  transitions: {
+    ...themeOptions.transitions,
+    duration: {
+      shortest: 0,
+      shorter: 0,
+      short: 0,
+      standard: 0,
+      complex: 0,
+      enteringScreen: 0,
+      leavingScreen: 0,
+    },
+    create: () => 'none',
+  },
 });
 
 // @mui/x-scheduler sizes its month view from theme.spacing and was laid out
