@@ -24,7 +24,12 @@ export const getBrideGroomNames = (clientContacts: PublicEvent['clientContacts']
   // flatMap over [contact ? [contact.name] : []] narrows to string[] without
   // a hand-rolled `is` type guard (docs/typescript-rules.md rule 1) — a
   // plain .filter(Boolean) would keep the array typed (string | undefined)[].
-  const names = [bride, groom].flatMap((contact) => (contact ? [contact.name] : []));
+  // Blank names are skipped (DEV-16): a Bride/Groom row saved with no name
+  // printed a lone "&".
+  const names = [bride, groom].flatMap((contact) => {
+    const name = contact?.name.trim() ?? '';
+    return name ? [name] : [];
+  });
 
   if (names.length === 0) {
     return '—';

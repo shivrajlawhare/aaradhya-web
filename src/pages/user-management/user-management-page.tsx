@@ -5,6 +5,7 @@ import { useTheme } from '@mui/material/styles';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import ConfirmDestructiveDialog from '../../components/ui/confirm-destructive-dialog';
+import PageHeader from '../../components/ui/page-header';
 import PageLoader from '../../components/ui/page-loader';
 import { useToast } from '../../components/ui/toast-provider';
 import type { userResultSchema } from '../../contract';
@@ -24,6 +25,9 @@ const deleteDialogBody = (name: string) =>
   `${name} will be removed from User Management and will no longer be able to log in. Their past activity stays in the history.`;
 
 const UserManagementPage = () => {
+  // Figma 10 Settings / 09 Users (UI-28, UI-29): the Admin page header,
+  // like the other top-level screens (DEV-16).
+  const pageHeader = <PageHeader eyebrow="Admin" title="User Management" isMobileDecorHidden />;
   const usersQuery = tsr.listUsers.useQuery({ queryKey: USERS_QUERY_KEY });
   const theme = useTheme();
   // 900px — MUI's own `md` breakpoint, matching AppShell's (STORY-053) and
@@ -72,6 +76,7 @@ const UserManagementPage = () => {
   if (usersQuery.isPending) {
     return (
       <Box sx={pageStyles}>
+        {pageHeader}
         <PageLoader caption="Loading users" />
       </Box>
     );
@@ -106,6 +111,7 @@ const UserManagementPage = () => {
 
   return (
     <Box sx={pageStyles}>
+      {pageHeader}
       {listSlot}
       {userToDelete && (
         <ConfirmDestructiveDialog

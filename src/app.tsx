@@ -60,7 +60,7 @@ const App = () => {
       <Route
         path={USER_MANAGEMENT_PATH}
         element={
-          <AppShell title="User Management">
+          <AppShell title="User Management" isDesktopTitleHidden>
             <RequireRole roles={[Role.EventManager]}>
               <UserManagementPage />
             </RequireRole>
@@ -215,7 +215,7 @@ const App = () => {
       <Route
         path={SETTINGS_PATH}
         element={
-          <AppShell title="Settings">
+          <AppShell title="Settings" isDesktopTitleHidden>
             <RequireRole roles={[Role.EventManager]}>
               <SettingsPage />
             </RequireRole>

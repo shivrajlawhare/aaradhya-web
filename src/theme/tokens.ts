@@ -21,7 +21,9 @@ export const lightPalette = {
     tertiary: '#7A6152',
     borderStrong: '#200F07',
     borderHover: '#9A8475',
-    focus: '#F77331',
+    // DEV-16: orange/600, not 500 — 3.68:1 on paper (500 was 2.77, under the
+    // 3:1 non-text minimum for a focus indicator).
+    focus: '#E0591A',
     tonal: '#FEDFCC',
     onTonal: '#5E220B',
     destructiveText: '#A52D38',
@@ -75,7 +77,8 @@ export const darkPalette: typeof lightPalette = {
     link: '#F88849',
     tertiary: '#9A8475',
     borderStrong: '#FFF9EB',
-    borderHover: '#7A6152',
+    // DEV-16: 4.67:1 on paper (was #7A6152, 2.88 — under 3:1 non-text).
+    borderHover: '#9A8475',
     focus: '#F88849',
     tonal: '#5E220B',
     onTonal: '#FFF1E9',

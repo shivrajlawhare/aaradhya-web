@@ -1,5 +1,5 @@
 import type { SxProps, Theme } from '@mui/material';
-import { colorTokens, paletteVar, scaleTokens } from '../../theme/tokens';
+import { colorTokens, focusTokens, paletteVar, scaleTokens } from '../../theme/tokens';
 
 const { radius, space, stroke } = scaleTokens;
 
@@ -32,11 +32,13 @@ export const sectionRowStyles = (selected: boolean): SxProps<Theme> => ({
   py: `${space[12]}px`,
   borderRadius: `${radius.md}px`,
   bgcolor: selected ? colorTokens.accentTint : 'transparent',
-  color: selected ? paletteVar('brand-link') : colorTokens.text,
+  // on-tonal, not link: 9.73:1 on the tonal fill (link was 4.27 in light).
+  color: selected ? paletteVar('brand-onTonal') : colorTokens.text,
   fontWeight: selected ? 600 : 400,
   '&:hover': {
     bgcolor: selected ? colorTokens.accentTint : paletteVar('action-hover'),
   },
+  '&:focus-visible': { outline: 'none', boxShadow: focusTokens.ring },
 });
 
 export const checkIconStyles: SxProps<Theme> = {

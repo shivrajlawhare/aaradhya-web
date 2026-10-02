@@ -5,7 +5,6 @@ import type { sessionDepartmentNotesResultSchema, sessionDepartmentNotesSchema }
 import {
   cardStyles,
   maintenanceChipStyles,
-  maintenanceFieldStyles,
   paxFieldStyles,
   paxRowStyles,
   warningStyles,
@@ -133,7 +132,6 @@ const DepartmentNotesFields = ({ value, pax, onChange }: DepartmentNotesFieldsPr
             label="Maintenance"
             placeholder="e.g. Sound System"
             helperText="Press Enter to add each item."
-            sx={maintenanceFieldStyles}
           />
         )}
       />

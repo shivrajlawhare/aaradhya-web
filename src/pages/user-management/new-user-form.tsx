@@ -18,6 +18,10 @@ interface NewUserFormValues {
   role: Role | '';
 }
 
+// The label sits above the select, so its empty option shows "Select a role"
+// (Figma UI-28) instead of a blank box.
+const SHOW_EMPTY_OPTION = { select: { displayEmpty: true } };
+
 interface NewUserFormProps {
   onCreated: () => void;
 }
@@ -88,7 +92,7 @@ const NewUserForm = ({ onCreated }: NewUserFormProps) => {
           name="role"
           control={control}
           render={({ field }) => (
-            <TextField {...field} select label="Role" fullWidth>
+            <TextField {...field} select label="Role" fullWidth slotProps={SHOW_EMPTY_OPTION}>
               <MenuItem value="" disabled>
                 Select a role
               </MenuItem>

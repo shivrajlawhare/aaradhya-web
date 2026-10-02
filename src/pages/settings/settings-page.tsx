@@ -3,6 +3,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { Box, Button, CircularProgress, Typography, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { tsr } from '../../api/client';
+import PageHeader from '../../components/ui/page-header';
 import { useToast } from '../../components/ui/toast-provider';
 import AddItemForm, { type AddItemFormSubmitValues } from './add-item-form';
 import EditItemDialog, { type EditItemSubmitValues } from './edit-item-dialog';
@@ -36,6 +37,9 @@ const errorMessageFrom = (error: unknown): string => {
 };
 
 const SettingsPage = () => {
+  // Figma 10 Settings / 09 Users (UI-28, UI-29): the Admin page header,
+  // like the other top-level screens (DEV-16).
+  const pageHeader = <PageHeader eyebrow="Admin" title="Settings" isMobileDecorHidden />;
   const { showSuccess, showError } = useToast();
   const theme = useTheme();
   // 900px — MUI's own `md` breakpoint, matching AppShell's (STORY-053) and
@@ -255,6 +259,7 @@ const SettingsPage = () => {
   if (isInitialLoading) {
     return (
       <Box sx={pageStyles}>
+        {pageHeader}
         <CircularProgress aria-label="Loading settings" />
       </Box>
     );
@@ -265,6 +270,7 @@ const SettingsPage = () => {
     if (isDesktop) {
       return (
         <Box sx={pageStyles}>
+          {pageHeader}
           <Box sx={desktopContentStyles}>
             <SectionNavList selected={selectedSectionId} onSelect={handleSelectSection} />
             <OneDayEventSettings />
@@ -274,6 +280,7 @@ const SettingsPage = () => {
     }
     return (
       <Box sx={pageStyles}>
+        {pageHeader}
         <SectionChipRow selected={selectedSectionId} onSelect={handleSelectSection} />
         <OneDayEventSettings />
       </Box>
@@ -369,6 +376,7 @@ const SettingsPage = () => {
   if (isDesktop) {
     return (
       <Box sx={pageStyles}>
+        {pageHeader}
         <Box sx={desktopContentStyles}>
           <SectionNavList selected={selectedSectionId} onSelect={handleSelectSection} />
           <Box sx={desktopPanelStyles}>
@@ -401,6 +409,7 @@ const SettingsPage = () => {
 
   return (
     <Box sx={pageStyles}>
+      {pageHeader}
       <SectionChipRow selected={selectedSectionId} onSelect={handleSelectSection} />
       <Box sx={mobileSectionStyles}>
         <Button variant="contained" startIcon={<AddIcon />} fullWidth onClick={() => setIsAddFormOpen((open) => !open)}>

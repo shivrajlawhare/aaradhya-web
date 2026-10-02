@@ -36,10 +36,3 @@ export const warningStyles: SxProps<Theme> = {
 export const maintenanceChipStyles: SxProps<Theme> = {
   bgcolor: colorTokens.accentTint,
 };
-
-export const maintenanceFieldStyles: SxProps<Theme> = {
-  '& .MuiInputBase-input::placeholder': {
-    color: colorTokens.textFaint,
-    opacity: 1,
-  },
-};

@@ -182,6 +182,15 @@ export const components: Components<Omit<Theme, 'components'>> = {
       },
     },
   },
+  // Placeholders in brand/tertiary (DEV-16): AA in both themes (5.64 / 4.67),
+  // where MUI's default 42% text colour and text/disabled fall short.
+  MuiInputBase: {
+    styleOverrides: {
+      input: {
+        '&::placeholder': { color: paletteVar('brand-tertiary'), opacity: 1 },
+      },
+    },
+  },
   MuiOutlinedInput: {
     defaultProps: {
       notched: false,
@@ -250,6 +259,7 @@ export const components: Components<Omit<Theme, 'components'>> = {
         ...typography.labelM,
         borderRadius: px(radius.pill),
         transition: transition(['background-color', 'border-color', 'color']),
+        '&.Mui-focusVisible': { boxShadow: focusTokens.ring },
       },
       sizeSmall: { height: px(24) },
       sizeMedium: { height: px(controlSize.s) },
@@ -264,6 +274,7 @@ export const components: Components<Omit<Theme, 'components'>> = {
       },
       switchBase: {
         padding: px(3),
+        '&.Mui-focusVisible + .MuiSwitch-track': { boxShadow: focusTokens.ring },
         transition: transition(['transform']),
         '&.Mui-checked': {
           transform: 'translateX(20px)',
@@ -308,6 +319,7 @@ export const components: Components<Omit<Theme, 'components'>> = {
         border: border(stroke.default, 'brand-borderStrong'),
         color: paletteVar('text-primary'),
         transition: transition(['background-color', 'border-color', 'color']),
+        '&.Mui-focusVisible': { boxShadow: focusTokens.ring },
         '&.Mui-selected, &.Mui-selected:hover': {
           backgroundColor: paletteVar('brand-inverse'),
           color: paletteVar('brand-onInverse'),
@@ -336,6 +348,7 @@ export const components: Components<Omit<Theme, 'components'>> = {
         color: paletteVar('text-secondary'),
         // The active pill cross-fades between tabs (motion/base).
         transition: transition(['background-color', 'color']),
+        '&.Mui-focusVisible': { boxShadow: focusTokens.ring },
         '&.Mui-selected': {
           backgroundColor: paletteVar('tab-activeBg'),
           color: paletteVar('tab-activeFg'),
