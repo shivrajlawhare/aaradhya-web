@@ -1,13 +1,23 @@
 import { type ChangeEvent, useState } from 'react';
-import { Alert, Button, MenuItem, Stack, TextField, ToggleButton, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  InputAdornment,
+  MenuItem,
+  Stack,
+  TextField,
+  ToggleButton,
+  Typography,
+} from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
 import { Controller, useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import { useToast } from '../../components/ui/toast-provider';
 import { type filteredEventResultSchema, SEATING_ARRANGEMENT_OPTIONS, SeatingArrangement } from '../../contract';
-import { fromPickerDate, fromPickerTime, toDateInputValue, toPickerDate, toPickerTime } from './date-input';
+import TimePickerCard from '../event-creation/time-picker-card';
+import { fromPickerDate, toDateInputValue, toPickerDate } from './date-input';
 import {
   CUSTOM_SESSION_TYPE_OPTION,
   CUSTOM_VENUE_OPTION,
@@ -16,9 +26,41 @@ import {
   VENUE_COST_LOOKUP,
   VENUE_PRESETS,
 } from './session-form-options';
-import { formStyles, rowStyles, setupCardStyles, timeFieldStyles, toggleActiveStyles } from './session-form.styles';
+import {
+  costFieldStyles,
+  costPaxRowStyles,
+  countFieldStyles,
+  dateColumnStyles,
+  formActionsStyles,
+  formStyles,
+  paxFieldStyles,
+  primaryFieldsStyles,
+  scheduleStyles,
+  seatingFieldStyles,
+  selectFieldStyles,
+  setupCardStyles,
+  setupFieldsStyles,
+  setupToggleStyles,
+  timeFieldStyles,
+  toggleRowStyles,
+} from './session-form.styles';
 
 type PublicEvent = z.infer<typeof filteredEventResultSchema>;
+
+const RUPEE_ADORNMENT = { input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> } };
+
+// The label sits above the select, so the empty option shows its own text.
+const SHOW_EMPTY_OPTION = { select: { displayEmpty: true } };
+
+type SetupToggleKey = 'stage' | 'buffet' | 'registrationDesk' | 'vipSeating' | 'brideGroomSeating';
+
+const SETUP_TOGGLES: { key: SetupToggleKey; label: string }[] = [
+  { key: 'stage', label: 'Stage' },
+  { key: 'buffet', label: 'Buffet' },
+  { key: 'registrationDesk', label: 'Registration desk' },
+  { key: 'vipSeating', label: 'VIP seating' },
+  { key: 'brideGroomSeating', label: 'Bride/Groom seating' },
+];
 type SessionResult = PublicEvent['sessions'][number];
 
 // This form is only ever reachable through SessionsTab's own canEdit
@@ -252,16 +294,14 @@ const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) 
       <Typography variant="titleM" component="h2">
         {session ? 'Edit Session' : 'Add Session'}
       </Typography>
-      {/* Session type/Venue/Venue cost/Pax grouped in one wrapped row —
-          matches event-details-step.tsx's own entry-form grouping, so the
-          Sessions tab's Add/Edit form lays out fields the same way the
-          wizard's own Session-entry form already does. */}
-      <Stack direction="row" sx={rowStyles}>
+      {/* Session type · Venue · Venue cost · Pax — the wizard step-2 entry
+          card's grouping. */}
+      <Box sx={primaryFieldsStyles}>
         <Controller
           name="sessionTypeOption"
           control={control}
           render={({ field }) => (
-            <TextField {...field} select label="Session type" sx={{ minWidth: 200 }}>
+            <TextField {...field} select label="Session type" sx={selectFieldStyles}>
               {SESSION_TYPE_PRESETS.map((preset) => (
                 <MenuItem key={preset} value={preset}>
                   {preset}
@@ -279,7 +319,7 @@ const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) 
               {...field}
               select
               label="Venue"
-              sx={{ minWidth: 200 }}
+              sx={selectFieldStyles}
               onChange={(changeEvent) => {
                 field.onChange(changeEvent);
                 handleVenueOptionChange(changeEvent);
@@ -294,132 +334,114 @@ const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) 
             </TextField>
           )}
         />
-        <TextField
-          {...register('venueCost', { valueAsNumber: true })}
-          label="Venue cost"
-          type="number"
-          sx={{ minWidth: 140 }}
-        />
-        <TextField
-          {...register('pax', { valueAsNumber: true })}
-          label="Pax"
-          type="number"
-          slotProps={{ htmlInput: { min: 0 } }}
-          sx={{ minWidth: 120 }}
-        />
-      </Stack>
-      <Stack direction="row" sx={rowStyles}>
-        <Controller
-          name="startDate"
-          control={control}
-          render={({ field }) => (
-            <DatePicker
-              label="Start date"
-              value={toPickerDate(field.value)}
-              onChange={(date) => field.onChange(fromPickerDate(date))}
-              slotProps={{ textField: { onBlur: field.onBlur } }}
-            />
-          )}
-        />
-        <Controller
-          name="endDate"
-          control={control}
-          render={({ field, fieldState }) => (
-            <DatePicker
-              label="End date"
-              value={toPickerDate(field.value)}
-              onChange={(date) => field.onChange(fromPickerDate(date))}
-              slotProps={{
-                textField: {
-                  onBlur: field.onBlur,
-                  error: Boolean(fieldState.error),
-                  helperText: fieldState.error?.message,
-                },
-              }}
-            />
-          )}
-        />
-      </Stack>
-      {/* StaticTimePicker (STORY-057) — the always-visible clock face SRS
-          §6.9 calls for, not TimePicker's popover-only one, with an explicit
-          AM/PM control (`ampm`). No floating label of its own, unlike
-          TextField, so each gets a plain heading instead. */}
-      <Stack direction="row" sx={rowStyles}>
+        <Box sx={costPaxRowStyles}>
+          <TextField
+            {...register('venueCost', { valueAsNumber: true })}
+            label="Venue cost"
+            type="number"
+            sx={costFieldStyles}
+            slotProps={RUPEE_ADORNMENT}
+          />
+          <TextField
+            {...register('pax', { valueAsNumber: true })}
+            label="Pax"
+            type="number"
+            slotProps={{ htmlInput: { min: 0 } }}
+            sx={paxFieldStyles}
+          />
+        </Box>
+      </Box>
+      {/* The dates beside the two always-visible clocks (SRS §6.9). */}
+      <Box sx={scheduleStyles}>
+        <Stack sx={dateColumnStyles}>
+          <Controller
+            name="startDate"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                label="Start date"
+                value={toPickerDate(field.value)}
+                onChange={(date) => field.onChange(fromPickerDate(date))}
+                slotProps={{ textField: { onBlur: field.onBlur } }}
+              />
+            )}
+          />
+          <Controller
+            name="endDate"
+            control={control}
+            render={({ field, fieldState }) => (
+              <DatePicker
+                label="End date"
+                value={toPickerDate(field.value)}
+                onChange={(date) => field.onChange(fromPickerDate(date))}
+                slotProps={{
+                  textField: {
+                    onBlur: field.onBlur,
+                    error: Boolean(fieldState.error),
+                    helperText: fieldState.error?.message,
+                  },
+                }}
+              />
+            )}
+          />
+        </Stack>
         <Stack sx={timeFieldStyles}>
-          <Typography variant="titleM" component="h3" id="session-start-time-label">
+          <Typography variant="titleS" component="h3" id="session-start-time-label">
             Start time
           </Typography>
           <Controller
             name="startTime"
             control={control}
-            render={({ field }) => (
-              <StaticTimePicker
-                ampm
-                value={toPickerTime(field.value)}
-                onChange={(time) => field.onChange(fromPickerTime(time))}
-              />
-            )}
+            render={({ field }) => <TimePickerCard value={field.value} onChange={field.onChange} />}
           />
         </Stack>
         <Stack sx={timeFieldStyles}>
-          <Typography variant="titleM" component="h3" id="session-end-time-label">
+          <Typography variant="titleS" component="h3" id="session-end-time-label">
             End time
           </Typography>
           <Controller
             name="endTime"
             control={control}
-            render={({ field }) => (
-              <StaticTimePicker
-                ampm
-                value={toPickerTime(field.value)}
-                onChange={(time) => field.onChange(fromPickerTime(time))}
-              />
-            )}
+            render={({ field }) => <TimePickerCard value={field.value} onChange={field.onChange} />}
           />
         </Stack>
-      </Stack>
+      </Box>
       <Stack sx={setupCardStyles}>
-        <Typography variant="titleM" component="h3">
+        <Typography variant="titleS" component="h3">
           Setup
         </Typography>
-        <Controller
-          name="setup.seating"
-          control={control}
-          render={({ field }) => (
-            <TextField {...field} select label="Seating" fullWidth>
-              <MenuItem value="">Not set</MenuItem>
-              {SEATING_ARRANGEMENT_OPTIONS.map((option) => (
-                <MenuItem key={option} value={option}>
-                  {SEATING_ARRANGEMENT_LABELS[option]}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
-        />
-        <Stack direction="row" sx={rowStyles}>
+        <Box sx={setupFieldsStyles}>
+          <Controller
+            name="setup.seating"
+            control={control}
+            render={({ field }) => (
+              <TextField {...field} select label="Seating" sx={seatingFieldStyles} slotProps={SHOW_EMPTY_OPTION}>
+                <MenuItem value="">Not set</MenuItem>
+                {SEATING_ARRANGEMENT_OPTIONS.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {SEATING_ARRANGEMENT_LABELS[option]}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+          />
           <TextField
             {...register('setup.tableCount', { valueAsNumber: true })}
             label="Tables"
             type="number"
             slotProps={{ htmlInput: { min: 0 } }}
+            sx={countFieldStyles}
           />
           <TextField
             {...register('setup.chairCount', { valueAsNumber: true })}
             label="Chairs"
             type="number"
             slotProps={{ htmlInput: { min: 0 } }}
+            sx={countFieldStyles}
           />
-        </Stack>
-        <Stack direction="row" sx={rowStyles}>
-          {(
-            [
-              ['stage', 'Stage'],
-              ['buffet', 'Buffet'],
-              ['registrationDesk', 'Registration desk'],
-              ['vipSeating', 'VIP seating'],
-              ['brideGroomSeating', 'Bride/Groom seating'],
-            ] as const
-          ).map(([key, label]) => (
+        </Box>
+        <Box sx={toggleRowStyles}>
+          {SETUP_TOGGLES.map(({ key, label }) => (
             <Controller
               key={key}
               name={`setup.${key}`}
@@ -429,14 +451,14 @@ const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) 
                   value={key}
                   selected={field.value}
                   onChange={() => field.onChange(!field.value)}
-                  sx={field.value ? toggleActiveStyles : undefined}
+                  sx={setupToggleStyles}
                 >
                   <Typography variant="labelS">{label}</Typography>
                 </ToggleButton>
               )}
             />
           ))}
-        </Stack>
+        </Box>
         <TextField {...register('setup.notes')} label="Notes" multiline minRows={2} fullWidth />
       </Stack>
       {submitError && (
@@ -444,14 +466,14 @@ const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) 
           <Typography variant="bodyM">{submitError}</Typography>
         </Alert>
       )}
-      <Stack direction="row" sx={rowStyles}>
+      <Box sx={formActionsStyles}>
         <Button type="submit" variant="contained" disabled={!isDirty || isPending}>
           {session ? 'Save session' : 'Add session'}
         </Button>
-        <Button onClick={onCancel} disabled={isPending}>
+        <Button variant="ghost" onClick={onCancel} disabled={isPending}>
           Cancel
         </Button>
-      </Stack>
+      </Box>
     </Stack>
   );
 };

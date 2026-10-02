@@ -4,14 +4,15 @@ import { focusTokens, motionTokens, paletteVar, scaleTokens } from '../../theme/
 const { iconSize, radius, space, stroke } = scaleTokens;
 
 // Figma Card/Item: Default / Editing (accent subtle + focus border) — the
-// same states as step 2's Card/Wizard Session.
-export const cardStyles = (isEditing: boolean): SxProps<Theme> => ({
+// same states as step 2's Card/Wizard Session. A read-only card isn't
+// interactive.
+export const cardStyles = (isEditing: boolean, isInteractive: boolean): SxProps<Theme> => ({
   display: 'flex',
   flexDirection: 'column',
   gap: `${space[8]}px`,
   p: `${space[16]}px`,
   borderRadius: `${radius.lg}px`,
-  cursor: 'pointer',
+  cursor: isInteractive ? 'pointer' : 'default',
   transition: `background-color ${motionTokens.duration.fast}ms ${motionTokens.easing.fast}`,
   '&:focus-visible': { outline: 'none', boxShadow: focusTokens.ring },
   bgcolor: isEditing ? paletteVar('brand-accentSubtle') : 'background.paper',

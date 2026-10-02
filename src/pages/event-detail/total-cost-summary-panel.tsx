@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Alert, Button, CircularProgress, Paper, Stack, TextField, Typography } from '@mui/material';
+import { type ReactNode, useState } from 'react';
+import { Alert, Box, Button, CircularProgress, InputAdornment, Paper, TextField, Typography } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
@@ -7,12 +7,16 @@ import { useToast } from '../../components/ui/toast-provider';
 import type { extrasResultSchema } from '../../contract';
 import { formatAmount } from './format-amount';
 import {
-  extrasFieldsStyles,
-  grandTotalRowStyles,
+  extrasLabelStyles,
+  extrasStyles,
+  grandTotalTileStyles,
   grandTotalValueStyles,
   lineItemsStyles,
-  lineItemValueStyles,
+  lineItemStyles,
+  lineLabelStyles,
+  lineValueStyles,
   panelStyles,
+  saveButtonStyles,
 } from './total-cost-summary-panel.styles';
 
 type ExtrasResult = z.infer<typeof extrasResultSchema>;
@@ -22,6 +26,30 @@ interface ExtrasFormValues {
   photographer: number;
   bhatji: number;
 }
+
+const EXTRA_FIELDS: { name: keyof ExtrasFormValues; label: string }[] = [
+  { name: 'decoration', label: 'Decoration' },
+  { name: 'photographer', label: 'Photographer' },
+  { name: 'bhatji', label: 'Bhatji' },
+];
+
+const RUPEE_ADORNMENT = { input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> } };
+
+interface LineItemProps {
+  label: string;
+  value: string;
+}
+
+const LineItem = ({ label, value }: LineItemProps) => (
+  <Box sx={lineItemStyles}>
+    <Typography variant="bodyM" component="dt" sx={lineLabelStyles}>
+      {label}
+    </Typography>
+    <Typography variant="numeric" component="dd" sx={lineValueStyles}>
+      {value}
+    </Typography>
+  </Box>
+);
 
 const toFormValues = (extras: ExtrasResult): ExtrasFormValues => ({
   decoration: extras.decoration,
@@ -105,97 +133,89 @@ const TotalCostSummaryPanel = ({ eventId, extras, canEdit, onEventChanged }: Tot
 
   const summary = quotationSummaryQuery.data?.body;
 
-  return (
-    <Paper sx={panelStyles}>
-      <Typography variant="titleM" component="h2">
-        Total Cost Summary
-      </Typography>
-      {quotationSummaryQuery.isError ? (
-        <Typography variant="bodyM">Something went wrong. Please try again.</Typography>
-      ) : !summary ? (
-        <CircularProgress aria-label="Loading Total Cost Summary" />
-      ) : (
-        <>
-          <Stack sx={lineItemsStyles}>
-            <Typography variant="bodyM" sx={lineItemValueStyles}>
-              Venue total: {formatAmount(summary.venueTotal)}
-            </Typography>
-            <Typography variant="bodyM" sx={lineItemValueStyles}>
-              Food subtotal: {formatAmount(summary.foodSubtotal)}
-            </Typography>
-            <Typography variant="bodyM" sx={lineItemValueStyles}>
-              Food total (incl. GST): {formatAmount(summary.foodTotalInclGst)}
-            </Typography>
-            <Typography variant="bodyM" sx={lineItemValueStyles}>
-              Accommodation total: {formatAmount(summary.accommodationTotal)}
-            </Typography>
-            <Typography variant="bodyM" sx={lineItemValueStyles}>
-              Extras total: {formatAmount(summary.extrasTotal)}
-            </Typography>
-          </Stack>
-          {canEdit ? (
-            <Stack direction="row" sx={extrasFieldsStyles}>
-              <TextField
-                {...register('decoration', { valueAsNumber: true })}
-                label="Decoration"
-                type="number"
-                slotProps={{ htmlInput: { min: 0 } }}
-              />
-              <TextField
-                {...register('photographer', { valueAsNumber: true })}
-                label="Photographer"
-                type="number"
-                slotProps={{ htmlInput: { min: 0 } }}
-              />
-              <TextField
-                {...register('bhatji', { valueAsNumber: true })}
-                label="Bhatji"
-                type="number"
-                slotProps={{ htmlInput: { min: 0 } }}
-              />
-            </Stack>
-          ) : (
-            <Stack sx={lineItemsStyles}>
-              <Typography variant="bodyM" sx={lineItemValueStyles}>
-                Decoration: {formatAmount(extras.decoration)}
-              </Typography>
-              <Typography variant="bodyM" sx={lineItemValueStyles}>
-                Photographer: {formatAmount(extras.photographer)}
-              </Typography>
-              <Typography variant="bodyM" sx={lineItemValueStyles}>
-                Bhatji: {formatAmount(extras.bhatji)}
-              </Typography>
-            </Stack>
-          )}
+  let extrasContent: ReactNode;
+  if (canEdit) {
+    extrasContent = (
+      <>
+        {EXTRA_FIELDS.map(({ name, label }) => (
+          <TextField
+            key={name}
+            {...register(name, { valueAsNumber: true })}
+            label={label}
+            type="number"
+            fullWidth
+            slotProps={{ htmlInput: { min: 0 }, ...RUPEE_ADORNMENT }}
+          />
+        ))}
+      </>
+    );
+  } else {
+    extrasContent = (
+      <Box component="dl" sx={lineItemsStyles}>
+        {EXTRA_FIELDS.map(({ name, label }) => (
+          <LineItem key={name} label={label} value={formatAmount(extras[name])} />
+        ))}
+      </Box>
+    );
+  }
+
+  let body: ReactNode;
+  if (quotationSummaryQuery.isError) {
+    body = <Typography variant="bodyM">Something went wrong. Please try again.</Typography>;
+  } else if (!summary) {
+    body = <CircularProgress aria-label="Loading Total Cost Summary" />;
+  } else {
+    body = (
+      <>
+        <Box component="dl" aria-label="Cost totals" sx={lineItemsStyles}>
+          <LineItem label="Venue total" value={formatAmount(summary.venueTotal)} />
+          <LineItem label="Food subtotal" value={formatAmount(summary.foodSubtotal)} />
+          <LineItem label="Food total (incl. GST)" value={formatAmount(summary.foodTotalInclGst)} />
+          <LineItem label="Accommodation total" value={formatAmount(summary.accommodationTotal)} />
+          <LineItem label="Extras total" value={formatAmount(summary.extrasTotal)} />
+        </Box>
+        <Box sx={extrasStyles}>
+          <Typography variant="labelS" component="h3" sx={extrasLabelStyles}>
+            Extras
+          </Typography>
+          {extrasContent}
           {saveError && (
             <Alert severity="error">
               <Typography variant="bodyM">{saveError}</Typography>
             </Alert>
           )}
           {canEdit && (
-            <Button variant="contained" onClick={handleSave} disabled={!isDirty || updateExtrasMutation.isPending}>
+            <Button
+              variant="contained"
+              onClick={handleSave}
+              disabled={!isDirty || updateExtrasMutation.isPending}
+              sx={saveButtonStyles}
+            >
               Save extras
             </Button>
           )}
-          <Stack sx={grandTotalRowStyles}>
-            <Typography variant="bodyM" component="span">
-              Grand Total
-            </Typography>
-            <Typography variant="display" component="span" sx={grandTotalValueStyles}>
-              {/* Rounded to the nearest whole rupee — a fractional
-                  foodTotalInclGst (e.g. 597150 × 1.05 = 627007.5) otherwise
-                  shows through verbatim as "10,73,207.5", the same rounding
-                  gap STORY-072's own formatQuotationRupees fix already
-                  closed for the Quotation's own printed Grand Total.
-                  formatAmount itself stays untouched — it's a shared,
-                  general-purpose formatter (Payments, extras, Room costs)
-                  where a caller that genuinely needs fractional precision
-                  shouldn't lose it. */}
-              {formatAmount(Math.round(summary.grandTotal))}
-            </Typography>
-          </Stack>
-        </>
-      )}
+        </Box>
+        <Box sx={grandTotalTileStyles}>
+          <Typography variant="labelS" component="p">
+            Grand Total
+          </Typography>
+          {/* Rounded to the whole rupee — a fractional foodTotalInclGst
+              (597150 × 1.05 = 627007.5) would otherwise show through as
+              "10,73,207.5"; formatAmount itself stays general-purpose. */}
+          <Typography variant="display" component="p" sx={grandTotalValueStyles}>
+            {formatAmount(Math.round(summary.grandTotal))}
+          </Typography>
+        </Box>
+      </>
+    );
+  }
+
+  return (
+    <Paper elevation={0} component="section" aria-label="Total Cost Summary" sx={panelStyles}>
+      <Typography variant="titleM" component="h2">
+        Total Cost Summary
+      </Typography>
+      {body}
     </Paper>
   );
 };

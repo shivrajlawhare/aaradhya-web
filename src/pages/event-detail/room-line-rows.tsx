@@ -1,5 +1,7 @@
+import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import {
+  Box,
   Button,
   IconButton,
   Paper,
@@ -10,20 +12,37 @@ import {
   TableRow,
   TextField,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import type { FieldArrayWithId, UseFormRegister } from 'react-hook-form';
 import type { z } from 'zod';
 import type { roomLineSchema } from '../../contract';
 import {
   addButtonStyles,
-  numericCellStyles,
+  amountCellStyles,
+  mobileLineStyles,
+  mobileNumbersStyles,
+  mobileTotalStyles,
   numericFieldStyles,
+  removeCellStyles,
   roomTypeFieldStyles,
   tableCardStyles,
+  tableScrollStyles,
 } from './room-line-rows.styles';
 import type { AccommodationFormValues } from './rooms-tab';
 
 type RoomLineResult = z.infer<typeof roomLineSchema> & { totalTaxable: number };
+
+interface FieldLabels {
+  roomType?: string;
+  tariff?: string;
+  rooms?: string;
+}
+
+// Mobile blocks label each field; the desktop table's header does instead.
+const MOBILE_FIELD_LABELS: FieldLabels = { roomType: 'Room type', tariff: 'Tariff', rooms: 'Rooms' };
+const TABLE_FIELD_LABELS: FieldLabels = {};
 
 interface RoomLineRowsProps {
   fields: FieldArrayWithId<AccommodationFormValues, 'roomLines', 'id'>[];
@@ -40,90 +59,118 @@ interface RoomLineRowsProps {
   onRemoveRow: (index: number) => void;
 }
 
-// field.id (RHF's own generated key, distinct from array index) keeps row
-// identity/order correct under rapid add/remove — same reasoning as
-// ClientContactRows (STORY-015).
+// The Accommodation tab's room lines (Figma 07 Event Detail / Accommodation):
+// a table on desktop, a stacked block per line on mobile. field.id (RHF's
+// own key, distinct from the index) keeps row identity correct under rapid
+// add/remove — same reasoning as ClientContactRows (STORY-015).
 const RoomLineRows = ({ fields, savedRoomLines, occupancies, register, onAddRow, onRemoveRow }: RoomLineRowsProps) => {
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const labels = isDesktop ? TABLE_FIELD_LABELS : MOBILE_FIELD_LABELS;
+
+  const roomTypeField = (index: number) => (
+    <TextField
+      {...register(`roomLines.${index}.roomType`)}
+      size="small"
+      fullWidth
+      label={labels.roomType}
+      sx={roomTypeFieldStyles}
+      slotProps={{ htmlInput: { 'aria-label': `Room type for room line ${index + 1}` } }}
+    />
+  );
+  const tariffField = (index: number) => (
+    <TextField
+      {...register(`roomLines.${index}.tariff`, { valueAsNumber: true })}
+      type="number"
+      size="small"
+      label={labels.tariff}
+      sx={numericFieldStyles}
+      slotProps={{ htmlInput: { min: 0, 'aria-label': `Tariff for room line ${index + 1}` } }}
+    />
+  );
+  const roomsField = (index: number) => (
+    <TextField
+      {...register(`roomLines.${index}.noOfRooms`, { valueAsNumber: true })}
+      type="number"
+      size="small"
+      label={labels.rooms}
+      sx={numericFieldStyles}
+      slotProps={{ htmlInput: { min: 0, 'aria-label': `Number of rooms for room line ${index + 1}` } }}
+    />
+  );
+  const removeButton = (index: number) => (
+    <IconButton aria-label={`Remove room line ${index + 1}`} size="small" onClick={() => onRemoveRow(index)}>
+      <CloseIcon fontSize="small" />
+    </IconButton>
+  );
+  const totalOf = (index: number) => savedRoomLines[index]?.totalTaxable ?? '—';
+  const addButton = (
+    <Button variant="ghost" startIcon={<AddIcon />} onClick={onAddRow} sx={addButtonStyles}>
+      Add room line
+    </Button>
+  );
+
+  if (!isDesktop) {
+    return (
+      <Paper elevation={0} sx={tableCardStyles}>
+        {fields.map((field, index) => (
+          <Box key={field.id} role="group" aria-label={`Room line ${index + 1}`} sx={mobileLineStyles}>
+            {roomTypeField(index)}
+            <Box sx={mobileNumbersStyles}>
+              <Box>
+                <Typography variant="labelM" component="p">
+                  Occupancy
+                </Typography>
+                <Typography variant="bodyM">{occupancies[index] ?? '—'}</Typography>
+              </Box>
+              {tariffField(index)}
+              {roomsField(index)}
+            </Box>
+            <Box sx={mobileTotalStyles}>
+              <Typography variant="bodyS">Total Taxable Amount</Typography>
+              <Typography variant="numeric">{totalOf(index)}</Typography>
+              {removeButton(index)}
+            </Box>
+          </Box>
+        ))}
+        {addButton}
+      </Paper>
+    );
+  }
+
   return (
     <Paper elevation={0} sx={tableCardStyles}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>
-              <Typography variant="labelS">Room type</Typography>
-            </TableCell>
-            <TableCell>
-              <Typography variant="labelS">Occupancy</Typography>
-            </TableCell>
-            <TableCell>
-              <Typography variant="labelS">Tariff</Typography>
-            </TableCell>
-            <TableCell>
-              <Typography variant="labelS">Rooms</Typography>
-            </TableCell>
-            <TableCell>
-              <Typography variant="labelS">Total Taxable Amount</Typography>
-            </TableCell>
-            <TableCell />
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {fields.map((field, index) => {
-            const savedTotal = savedRoomLines[index]?.totalTaxable;
-            const totalDisplay = savedTotal === undefined ? '—' : savedTotal;
-            return (
+      <Box sx={tableScrollStyles}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Room type</TableCell>
+              <TableCell align="right">Occupancy</TableCell>
+              <TableCell>Tariff</TableCell>
+              <TableCell>Rooms</TableCell>
+              <TableCell align="right">Total Taxable Amount</TableCell>
+              <TableCell />
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {fields.map((field, index) => (
               <TableRow key={field.id}>
-                <TableCell>
-                  <TextField
-                    {...register(`roomLines.${index}.roomType`)}
-                    size="small"
-                    sx={roomTypeFieldStyles}
-                    slotProps={{ htmlInput: { 'aria-label': `Room type for room line ${index + 1}` } }}
-                  />
+                <TableCell>{roomTypeField(index)}</TableCell>
+                <TableCell align="right" sx={amountCellStyles}>
+                  <Typography variant="numeric">{occupancies[index] ?? '—'}</Typography>
                 </TableCell>
-                <TableCell sx={numericCellStyles}>
-                  <Typography variant="bodyM">{occupancies[index] ?? '—'}</Typography>
+                <TableCell>{tariffField(index)}</TableCell>
+                <TableCell>{roomsField(index)}</TableCell>
+                <TableCell align="right" sx={amountCellStyles}>
+                  <Typography variant="numeric">{totalOf(index)}</Typography>
                 </TableCell>
-                <TableCell sx={numericCellStyles}>
-                  <TextField
-                    {...register(`roomLines.${index}.tariff`, { valueAsNumber: true })}
-                    type="number"
-                    size="small"
-                    sx={numericFieldStyles}
-                    slotProps={{ htmlInput: { min: 0, 'aria-label': `Tariff for room line ${index + 1}` } }}
-                  />
-                </TableCell>
-                <TableCell sx={numericCellStyles}>
-                  <TextField
-                    {...register(`roomLines.${index}.noOfRooms`, { valueAsNumber: true })}
-                    type="number"
-                    size="small"
-                    sx={numericFieldStyles}
-                    slotProps={{
-                      htmlInput: { min: 0, 'aria-label': `Number of rooms for room line ${index + 1}` },
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={numericCellStyles}>
-                  <Typography variant="bodyM">{totalDisplay}</Typography>
-                </TableCell>
-                <TableCell>
-                  <IconButton
-                    aria-label={`Remove room line ${index + 1}`}
-                    size="small"
-                    onClick={() => onRemoveRow(index)}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </TableCell>
+                <TableCell sx={removeCellStyles}>{removeButton(index)}</TableCell>
               </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-      <Button onClick={onAddRow} sx={addButtonStyles}>
-        Add room line
-      </Button>
+            ))}
+          </TableBody>
+        </Table>
+      </Box>
+      {addButton}
     </Paper>
   );
 };

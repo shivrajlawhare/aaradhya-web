@@ -6,7 +6,8 @@ import { tsr } from '../../api/client';
 import ClientContactRows, { type ClientContactFormValue } from '../../components/ui/client-contact-rows';
 import { useToast } from '../../components/ui/toast-provider';
 import { ClientContactRole, EventStatus, type filteredEventResultSchema } from '../../contract';
-import { cardStyles, contactsReadOnlyStyles, sectionStyles, statusFieldStyles } from './client-details-tab.styles';
+import { contactsReadOnlyStyles, statusFieldStyles } from './client-details-tab.styles';
+import { tabActionStyles, tabCardStyles, tabSectionStyles } from './tab-card.styles';
 
 type PublicEvent = z.infer<typeof filteredEventResultSchema>;
 
@@ -19,11 +20,10 @@ interface ClientDetailsTabProps {
   // would just get a 403; showing read-only content instead is more honest
   // than showing controls that can't work.
   canEdit: boolean;
-  // Client Contacts visibility (STORY-046/STORY-052) — F&B Head/Reception
-  // see it, Housekeeping doesn't. An explicit flag from the parent, not
-  // re-derived here from `event.clientContacts` alone, matching
-  // event-detail-page.tsx's own Payments/Rooms gates (a role flag paired
-  // with a field-presence check, not data-presence alone).
+  // Client Contacts visibility (STORY-046/STORY-052, CR-1 D17) — every role
+  // now. An explicit flag from the parent, not re-derived here from
+  // `event.clientContacts` alone, matching event-detail-page.tsx's own
+  // Payments/Rooms gates (a role flag paired with a field-presence check).
   canSeeClientContacts: boolean;
   onEventChanged: () => void;
 }
@@ -154,13 +154,10 @@ const ClientDetailsTab = ({ event, canEdit, canSeeClientContacts, onEventChanged
     updateContactsMutation.mutate({ params: { id: event.id }, body: { clientContacts } });
   });
 
-  // Three-way, not two: editable (Event Manager), read-only (a role
-  // STORY-046 grants clientContacts to — F&B Head, Reception), or nothing
-  // at all (Housekeeping, for whom this key is genuinely absent from the
-  // response — SRS §3.3 never lists client names among what it sees). The
-  // `else if` branch is the only one that reads `event.clientContacts`
-  // directly, so it's the only place that needs it narrowed away from
-  // `undefined`.
+  // Editable (Event Manager) or read-only lines (F&B Head, Housekeeping,
+  // Reception — D17 added Housekeeping). The `else if` branch is the only
+  // one that reads `event.clientContacts` directly, so it's the only place
+  // that needs it narrowed away from `undefined`.
   let contactsSection: ReactNode = null;
   if (canEdit) {
     contactsSection = (
@@ -179,6 +176,7 @@ const ClientDetailsTab = ({ event, canEdit, canSeeClientContacts, onEventChanged
         <Button
           variant="contained"
           onClick={handleSaveContacts}
+          sx={tabActionStyles}
           disabled={!isContactsDirty || !canSaveContacts || updateContactsMutation.isPending}
         >
           Save contacts
@@ -201,9 +199,9 @@ const ClientDetailsTab = ({ event, canEdit, canSeeClientContacts, onEventChanged
   }
 
   return (
-    <Stack sx={sectionStyles}>
+    <Stack sx={tabSectionStyles}>
       {canEdit && (
-        <Paper elevation={0} sx={cardStyles}>
+        <Paper elevation={0} sx={tabCardStyles}>
           <Typography variant="titleM" component="h2">
             Event Status
           </Typography>
@@ -233,7 +231,7 @@ const ClientDetailsTab = ({ event, canEdit, canSeeClientContacts, onEventChanged
         </Paper>
       )}
       {contactsSection && (
-        <Paper elevation={0} sx={cardStyles}>
+        <Paper elevation={0} sx={tabCardStyles}>
           {contactsSection}
         </Paper>
       )}

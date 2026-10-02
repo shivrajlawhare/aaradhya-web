@@ -1,22 +1,44 @@
 import type { SxProps, Theme } from '@mui/material';
-import { colorTokens, spaceTokens } from '../../theme/tokens';
+import { paletteVar, scaleTokens } from '../../theme/tokens';
 
-export const sectionStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space16}px`, // space-16
+const { iconSize, radius, space, stroke } = scaleTokens;
+
+const PROGRESS_HEIGHT = 8;
+
+export const progressBarStyles: SxProps<Theme> = {
+  height: PROGRESS_HEIGHT,
+  borderRadius: `${radius.pill}px`,
+  bgcolor: paletteVar('brand-subtle'),
+  '& .MuiLinearProgress-bar': { borderRadius: `${radius.pill}px`, bgcolor: 'primary.main' },
 };
 
-// surface + line tokens, per this story's Tokens line — the checklist reads
-// as one bordered list, not a bare stack of rows.
 export const listStyles: SxProps<Theme> = {
-  bgcolor: colorTokens.surface,
-  border: `1px solid ${colorTokens.line}`,
-  borderRadius: 1,
+  m: 0,
+  p: 0,
+  listStyle: 'none',
 };
 
+// Figma Checklist Row: status icon · label · switch, hairline-separated.
 export const rowStyles: SxProps<Theme> = {
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'space-between',
-  px: `${spaceTokens.space8}px`, // space-8
-  py: `${spaceTokens.space8}px`, // space-8
+  gap: `${space[12]}px`,
+  px: `${space[16]}px`,
+  py: `${space[12]}px`,
+  borderBottom: `${stroke.hair}px solid ${paletteVar('divider')}`,
+};
+
+export const labelStyles: SxProps<Theme> = {
+  flex: 1,
+  minWidth: 0,
+};
+
+export const receivedIconStyles: SxProps<Theme> = {
+  fontSize: iconSize.m,
+  color: 'success.main',
+};
+
+export const pendingIconStyles: SxProps<Theme> = {
+  fontSize: iconSize.m,
+  color: 'text.secondary',
 };

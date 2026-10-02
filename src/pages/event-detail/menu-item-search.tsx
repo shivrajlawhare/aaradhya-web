@@ -22,9 +22,9 @@ const isSameChip = (a: MenuItemChip, b: MenuItemChip): boolean =>
   a.id !== '' && b.id !== '' ? a.id === b.id : a.name.trim().toLowerCase() === b.name.trim().toLowerCase();
 
 interface MenuItemSearchProps {
-  // The full known Menu Item master list — fetched once by the caller
-  // (ItemsSection) rather than re-queried per keystroke here. Aaradhya's
-  // master list is small at its stated scale (~15 users, one property),
+  // The full known Menu Item master list — fetched once by the caller (the
+  // wizard's Food/Dining card, the Sessions & Items tab) rather than
+  // re-queried per keystroke here. Aaradhya's master list is small at its stated scale (~15 users, one property),
   // so a single fetch that's filtered client-side both drives the search
   // box and resolves an already-attached item's stored ids back to
   // display names (GET /menu-items has no "by id" lookup to do that

@@ -1,33 +1,71 @@
 import type { SxProps, Theme } from '@mui/material';
-import { colorTokens, spaceTokens } from '../../theme/tokens';
+import { paletteVar, scaleTokens } from '../../theme/tokens';
 
-export const sectionStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space16}px`, // space-16
-};
+const { radius, space } = scaleTokens;
 
+const PROGRESS_HEIGHT = 8;
+
+// The five fields in one row (desktop), stacked on mobile.
 export const fieldsStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space12}px`, // space-12
-  flexWrap: 'wrap',
+  display: 'grid',
+  gridTemplateColumns: { xs: '1fr', md: 'repeat(5, minmax(0, 1fr))' },
+  gap: { xs: `${space[12]}px`, md: `${space[16]}px` },
 };
 
-// surface-2 token, per this story's Tokens line, for the balance card.
+// Figma Balance card (accent-subtle): the balance beside the advance
+// progress; stacked on mobile.
 export const balanceCardStyles: SxProps<Theme> = {
-  bgcolor: colorTokens.surface2,
-  p: `${spaceTokens.space12}px`, // space-12
-  // A very large amount must not overflow the card on a narrow viewport
-  // (this story's own edge case) — wrap rather than force horizontal
-  // scroll or clip.
+  bgcolor: paletteVar('brand-accentSubtle'),
+  borderRadius: `${radius.md}px`,
+  px: `${space[20]}px`,
+  py: `${space[16]}px`,
+  display: 'flex',
+  flexDirection: { xs: 'column', md: 'row' },
+  alignItems: { xs: 'stretch', md: 'center' },
+  gap: { xs: `${space[16]}px`, md: `${space[24]}px` },
+};
+
+export const balanceFigureStyles: SxProps<Theme> = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: `${space[4]}px`,
+  minWidth: 0,
+};
+
+export const balanceLabelStyles: SxProps<Theme> = {
+  color: 'text.secondary',
+};
+
+// A very large amount wraps rather than overflowing the card.
+export const balanceValueStyles: SxProps<Theme> = {
+  color: paletteVar('brand-link'),
+  fontVariantNumeric: 'tabular-nums',
   overflowWrap: 'break-word',
   maxWidth: '100%',
 };
 
-export const balanceValueStyles: SxProps<Theme> = {
+export const progressStyles: SxProps<Theme> = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: `${space[8]}px`,
+  minWidth: 0,
+};
+
+export const progressCaptionStyles: SxProps<Theme> = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  justifyContent: 'space-between',
+  gap: `${space[8]}px`,
+};
+
+export const progressFigureStyles: SxProps<Theme> = {
   fontVariantNumeric: 'tabular-nums',
 };
 
-// accent-deep, per this story's Tokens line — emphasis for a non-zero
-// balance (outstanding due, or overpaid).
-export const balanceEmphasisStyles: SxProps<Theme> = {
-  fontVariantNumeric: 'tabular-nums',
-  color: colorTokens.accentDeep,
+export const progressBarStyles: SxProps<Theme> = {
+  height: PROGRESS_HEIGHT,
+  borderRadius: `${radius.pill}px`,
+  bgcolor: 'background.paper',
+  '& .MuiLinearProgress-bar': { borderRadius: `${radius.pill}px`, bgcolor: 'primary.main' },
 };

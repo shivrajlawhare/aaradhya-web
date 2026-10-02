@@ -1,5 +1,7 @@
+import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import {
+  Box,
   Button,
   FormControl,
   IconButton,
@@ -12,7 +14,14 @@ import {
 } from '@mui/material';
 import type { z } from 'zod';
 import { CLIENT_CONTACT_ROLE_OPTIONS, ClientContactRole, type clientContactSchema } from '../../contract';
-import { addButtonStyles, roleFieldStyles, rowStackStyles, rowStyles } from './client-contact-rows.styles';
+import {
+  addButtonStyles,
+  removeButtonStyles,
+  roleFieldStyles,
+  roleRowStyles,
+  rowStackStyles,
+  rowStyles,
+} from './client-contact-rows.styles';
 
 export type ClientContactFormValue = z.infer<typeof clientContactSchema>;
 
@@ -44,7 +53,7 @@ const ClientContactRows = ({ rows, onRowChange, onAddRow, onRemoveRow }: ClientC
         Client contacts
       </Typography>
       {rows.map((row, index) => (
-        <Stack key={row.id} direction="row" sx={rowStyles}>
+        <Box key={row.id} sx={rowStyles}>
           <TextField
             label="Name"
             fullWidth
@@ -57,30 +66,37 @@ const ClientContactRows = ({ rows, onRowChange, onAddRow, onRemoveRow }: ClientC
             value={row.contactNumber}
             onChange={(event) => onRowChange(index, { contactNumber: event.target.value })}
           />
-          <FormControl sx={roleFieldStyles}>
-            <InputLabel id={`contact-role-label-${row.id}`}>Role</InputLabel>
-            {/* Select<ClientContactRole>, not TextField's select prop — the
+          <Box sx={roleRowStyles}>
+            <FormControl sx={roleFieldStyles}>
+              <InputLabel id={`contact-role-label-${row.id}`}>Role</InputLabel>
+              {/* Select<ClientContactRole>, not TextField's select prop — the
                 explicit generic types event.target.value as ClientContactRole
                 natively, avoiding an `as` cast (typescript-rules rule 1). */}
-            <Select<ClientContactRole>
-              labelId={`contact-role-label-${row.id}`}
-              label="Role"
-              value={row.role}
-              onChange={(event) => onRowChange(index, { role: event.target.value })}
+              <Select<ClientContactRole>
+                labelId={`contact-role-label-${row.id}`}
+                label="Role"
+                value={row.role}
+                onChange={(event) => onRowChange(index, { role: event.target.value })}
+              >
+                {CLIENT_CONTACT_ROLE_OPTIONS.map((roleOption) => (
+                  <MenuItem key={roleOption} value={roleOption}>
+                    {roleOption}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <IconButton
+              aria-label={`Remove contact row ${index + 1}`}
+              size="small"
+              onClick={() => onRemoveRow(index)}
+              sx={removeButtonStyles}
             >
-              {CLIENT_CONTACT_ROLE_OPTIONS.map((roleOption) => (
-                <MenuItem key={roleOption} value={roleOption}>
-                  {roleOption}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <IconButton aria-label={`Remove contact row ${index + 1}`} size="small" onClick={() => onRemoveRow(index)}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </Stack>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        </Box>
       ))}
-      <Button onClick={onAddRow} sx={addButtonStyles}>
+      <Button variant="ghost" startIcon={<AddIcon />} onClick={onAddRow} sx={addButtonStyles}>
         Add contact
       </Button>
     </Stack>

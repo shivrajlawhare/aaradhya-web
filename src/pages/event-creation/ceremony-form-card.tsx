@@ -1,6 +1,6 @@
 import type { FormEventHandler } from 'react';
 import AddIcon from '@mui/icons-material/Add';
-import { Box, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import ItemTimeClocks from './item-time-clocks';
 import {
@@ -19,13 +19,26 @@ import { CEREMONY_CARD_ID } from './wizard-item-actions';
 interface CeremonyFormCardProps {
   form: UseFormReturn<CeremonyFormValues>;
   isEditing: boolean;
+  // The Event Detail tab saves to the API: submit waits for a change and
+  // for any in-flight save; the wizard leaves both off.
+  isSubmitDisabled?: boolean;
+  isSubmitting?: boolean;
+  submitError?: string | null;
   onSubmit: FormEventHandler<HTMLFormElement>;
   onCancelEdit: () => void;
 }
 
 // The Ceremony Events card (Figma 05 New Event / 4): Event Name (preset or
 // custom) and the actions on the left, Start/End clocks on the right.
-const CeremonyFormCard = ({ form, isEditing, onSubmit, onCancelEdit }: CeremonyFormCardProps) => {
+const CeremonyFormCard = ({
+  form,
+  isEditing,
+  isSubmitDisabled = false,
+  isSubmitting = false,
+  submitError = null,
+  onSubmit,
+  onCancelEdit,
+}: CeremonyFormCardProps) => {
   const nameOption = form.watch('eventNameOption');
   const submitLabel = isEditing ? 'Save Ceremony Event' : 'Add Ceremony Event';
 
@@ -61,12 +74,22 @@ const CeremonyFormCard = ({ form, isEditing, onSubmit, onCancelEdit }: CeremonyF
           {nameOption === CUSTOM_CEREMONY_EVENT_OPTION && (
             <TextField {...form.register('eventNameCustom')} fullWidth label="Custom event name" />
           )}
+          {submitError && (
+            <Alert severity="error">
+              <Typography variant="bodyM">{submitError}</Typography>
+            </Alert>
+          )}
           <Box sx={formActionsStyles}>
-            <Button type="submit" variant="contained" startIcon={<AddIcon />}>
+            <Button
+              type="submit"
+              variant="contained"
+              startIcon={<AddIcon />}
+              disabled={isSubmitDisabled || isSubmitting}
+            >
               {submitLabel}
             </Button>
             {isEditing && (
-              <Button variant="ghost" onClick={onCancelEdit}>
+              <Button variant="ghost" onClick={onCancelEdit} disabled={isSubmitting}>
                 Cancel edit
               </Button>
             )}

@@ -1,21 +1,44 @@
 import type { KeyboardEvent, ReactNode } from 'react';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import { Box, IconButton, Typography } from '@mui/material';
-import { cardStyles, headerStyles } from './wizard-item-card.styles';
+import { cardStyles, headerStyles } from './item-card.styles';
 
-interface WizardItemCardProps {
-  title: string;
+interface EditableProps {
   removeLabel: string;
   isEditing: boolean;
+  isRemoveDisabled?: boolean;
   onEdit: () => void;
   onRemove: () => void;
+}
+
+interface ItemCardProps {
+  title: string;
+  // Absent for a read-only viewer (e.g. the F&B Head): no edit, no delete.
+  editable?: EditableProps;
   children?: ReactNode;
 }
 
-// Figma Card/Item: one added Ceremony or Food/Dining row. Clicking (or
+// Figma Card/Item: one Ceremony or Food/Dining Item (wizard step 4 and the
+// Event Detail Sessions & Items tab). When editable, clicking it (or
 // Enter/Space) loads it into its card for editing — the same row pattern as
 // step 2's added events; the delete button doesn't trigger the edit.
-const WizardItemCard = ({ title, removeLabel, isEditing, onEdit, onRemove, children }: WizardItemCardProps) => {
+const ItemCard = ({ title, editable, children }: ItemCardProps) => {
+  const heading = (
+    <Typography variant="titleS" component="p">
+      {title}
+    </Typography>
+  );
+
+  if (!editable) {
+    return (
+      <Box sx={cardStyles(false, false)}>
+        {heading}
+        {children}
+      </Box>
+    );
+  }
+
+  const { removeLabel, isEditing, isRemoveDisabled = false, onEdit, onRemove } = editable;
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
       event.preventDefault();
@@ -30,15 +53,14 @@ const WizardItemCard = ({ title, removeLabel, isEditing, onEdit, onRemove, child
       aria-pressed={isEditing}
       onClick={onEdit}
       onKeyDown={handleKeyDown}
-      sx={cardStyles(isEditing)}
+      sx={cardStyles(isEditing, true)}
     >
       <Box sx={headerStyles}>
-        <Typography variant="titleS" component="p">
-          {title}
-        </Typography>
+        {heading}
         <IconButton
           aria-label={removeLabel}
           size="small"
+          disabled={isRemoveDisabled}
           onClick={(event) => {
             event.stopPropagation();
             onRemove();
@@ -52,4 +74,4 @@ const WizardItemCard = ({ title, removeLabel, isEditing, onEdit, onRemove, child
   );
 };
 
-export default WizardItemCard;
+export default ItemCard;

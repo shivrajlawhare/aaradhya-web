@@ -1,40 +1,32 @@
 import type { SxProps, Theme } from '@mui/material';
-import { colorTokens, radiusTokens, spaceTokens } from '../../theme/tokens';
+import { scaleTokens } from '../../theme/tokens';
 
-export const sectionStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space24}px`, // space-24 — matches accommodation-step.styles.ts's own wrapperStyles
-};
+const { space } = scaleTokens;
 
-// The Check-in/Check-out card — same recipe as accommodation-step.styles.ts's
-// own formCardStyles, wrapping both editable DatePickers and the read-only
-// summary line/list, so an EventManager's edit view and a Housekeeping/
-// Reception's read-only view sit in the same card either way.
-export const formCardStyles: SxProps<Theme> = {
-  bgcolor: colorTokens.surface,
-  border: `1px solid ${colorTokens.line}`,
-  borderRadius: `${radiusTokens.radiusMd}px`,
-  p: `${spaceTokens.space24}px`,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: `${spaceTokens.space16}px`,
-};
+const DATE_FIELD_WIDTH = 240;
 
+// Check-in · Check-out side by side; stacked on mobile.
 export const dateFieldsStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space12}px`, // space-12
+  display: 'flex',
+  flexDirection: { xs: 'column', md: 'row' },
+  gap: { xs: `${space[12]}px`, md: `${space[16]}px` },
 };
 
-// Matches accommodation-step.styles.ts's own summaryLineStyles — the
-// derived '<check-in> to <check-out> · Total nights: N' line.
+export const dateFieldStyles: SxProps<Theme> = {
+  width: { xs: '100%', md: DATE_FIELD_WIDTH },
+};
+
+// The derived "<check-in> to <check-out> · Total nights: N" line.
 export const summaryLineStyles: SxProps<Theme> = {
-  color: colorTokens.textSoft,
+  color: 'text.secondary',
 };
 
 // Housekeeping/Reception see no money: the occupancy total and a "—".
 export const occupancyOnlyStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space4}px`,
+  gap: `${space[4]}px`,
   fontVariantNumeric: 'tabular-nums',
 };
 
 export const readOnlyRoomLineStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space8}px`, // space-8
+  gap: `${space[8]}px`,
 };

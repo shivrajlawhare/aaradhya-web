@@ -1,10 +1,10 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
-import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
-import { Alert, Box, Chip, Stack, Tab, Tabs, Typography, useMediaQuery } from '@mui/material';
+import { Alert, Stack, Tab, Tabs, Typography, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useForm } from 'react-hook-form';
 import { tsr } from '../../api/client';
+import ItemCard from '../../components/ui/item-card';
+import { ItemCardFoodDetails, ItemCardTime } from '../../components/ui/item-card-details';
 import { ItemType } from '../../contract';
 import { useEventWizard } from '../../stores/event-wizard-context';
 import { formatEventDate, formatQuotationPax, formatSessionDuration } from '../../utils/quotation-formatting';
@@ -29,14 +29,6 @@ import {
 } from './sessions-items-forms';
 import { dateTabsStyles, reminderListStyles, wrapperStyles } from './sessions-items-step.styles';
 import WizardItemActions, { type WizardItemCardKind } from './wizard-item-actions';
-import WizardItemCard from './wizard-item-card';
-import {
-  chipListStyles,
-  chipStyles,
-  detailIconStyles,
-  detailLineStyles,
-  detailStyles,
-} from './wizard-item-card.styles';
 import WizardItemGroup from './wizard-item-group';
 
 export type { WizardCeremonyItem, WizardDateEntry, WizardFoodItem } from './sessions-items-forms';
@@ -233,9 +225,9 @@ const SessionsItemsStep = () => {
   };
 
   // Each chip with an empty id is a not-yet-real Menu Item the user typed
-  // with no existing match — persisted for real here (unlike menu-item-
-  // search.tsx's other caller, ItemCard, which defers resolution to
-  // createItem/updateItem's own server-side find-or-create) since the
+  // with no existing match — persisted for real here (unlike the Sessions
+  // & Items tab, which defers resolution to createItem/updateItem's own
+  // server-side find-or-create) since the
   // wizard has no Item-creation endpoint of its own to lean on yet, and
   // Menu Item is a shared, org-wide master list (SRS §4.6) worth adding for
   // real immediately, not only once STORY-068 eventually submits this
@@ -380,63 +372,41 @@ const SessionsItemsStep = () => {
       {openCardContent}
 
       <WizardItemGroup label="Ceremony events" emptyText="No ceremony events yet" count={ceremonyEntries.length}>
-        {ceremonyEntries.map((item) => {
-          const duration = formatSessionDuration(item.startTime, item.endTime);
-          return (
-            <WizardItemCard
-              key={item.id}
-              title={item.eventName || BLANK_CEREMONY_TITLE}
-              removeLabel={`Remove ${item.eventName || 'ceremony event'} row`}
-              isEditing={editingCeremonyId === item.id}
-              onEdit={() => handleEditCeremonyRow(item)}
-              onRemove={() => handleRemoveCeremonyRow(item.id)}
-            >
-              {duration && (
-                <Box sx={detailLineStyles}>
-                  <Box component="span" sx={detailStyles}>
-                    <ScheduleOutlinedIcon aria-hidden sx={detailIconStyles} />
-                    <Typography variant="bodyS" component="span">
-                      {duration}
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-            </WizardItemCard>
-          );
-        })}
+        {ceremonyEntries.map((item) => (
+          <ItemCard
+            key={item.id}
+            title={item.eventName || BLANK_CEREMONY_TITLE}
+            editable={{
+              removeLabel: `Remove ${item.eventName || 'ceremony event'} row`,
+              isEditing: editingCeremonyId === item.id,
+              onEdit: () => handleEditCeremonyRow(item),
+              onRemove: () => handleRemoveCeremonyRow(item.id),
+            }}
+          >
+            <ItemCardTime duration={formatSessionDuration(item.startTime, item.endTime)} />
+          </ItemCard>
+        ))}
       </WizardItemGroup>
 
       <WizardItemGroup label="Food/dining events" emptyText="No food/dining events yet" count={foodEntries.length}>
         {foodEntries.map((item) => (
-          <WizardItemCard
+          <ItemCard
             key={item.id}
             title={item.mealName || BLANK_FOOD_TITLE}
-            removeLabel={`Remove ${item.mealName || 'food event'} row`}
-            isEditing={editingFoodId === item.id}
-            onEdit={() => handleEditFoodRow(item)}
-            onRemove={() => handleRemoveFoodRow(item.id)}
+            editable={{
+              removeLabel: `Remove ${item.mealName || 'food event'} row`,
+              isEditing: editingFoodId === item.id,
+              onEdit: () => handleEditFoodRow(item),
+              onRemove: () => handleRemoveFoodRow(item.id),
+            }}
           >
-            <Box sx={detailLineStyles}>
-              <Box component="span" sx={detailStyles}>
-                <GroupsOutlinedIcon aria-hidden sx={detailIconStyles} />
-                <Typography variant="bodyS" component="span">
-                  {formatQuotationPax(item.pax, item.limitedSeating)}
-                </Typography>
-              </Box>
-              <Typography variant="bodyS" component="span">
-                ₹ {formatAmount(item.costPerPlate)}
-              </Typography>
-            </Box>
-            {item.menuItems.length > 0 && (
-              <Box component="ul" aria-label={`${item.mealName || 'Food'} menu items`} sx={chipListStyles}>
-                {item.menuItems.map((menuItem) => (
-                  <li key={menuItem.id || menuItem.name}>
-                    <Chip size="small" label={menuItem.name} sx={chipStyles} />
-                  </li>
-                ))}
-              </Box>
-            )}
-          </WizardItemCard>
+            <ItemCardFoodDetails
+              pax={formatQuotationPax(item.pax, item.limitedSeating)}
+              cost={`₹ ${formatAmount(item.costPerPlate)}`}
+              menuItemNames={item.menuItems.map((menuItem) => menuItem.name)}
+              menuLabel={`${item.mealName || 'Food'} menu items`}
+            />
+          </ItemCard>
         ))}
       </WizardItemGroup>
     </Stack>

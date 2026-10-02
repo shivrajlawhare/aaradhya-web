@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Button, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, LinearProgress, Paper, TextField, Typography } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Controller, useForm } from 'react-hook-form';
 import type { z } from 'zod';
@@ -7,13 +7,21 @@ import { tsr } from '../../api/client';
 import { useToast } from '../../components/ui/toast-provider';
 import type { paymentResultSchema } from '../../contract';
 import { fromPickerDate, toDateInputValue, toPickerDate } from './date-input';
+import { formatAmount } from './format-amount';
 import {
   balanceCardStyles,
-  balanceEmphasisStyles,
+  balanceFigureStyles,
+  balanceLabelStyles,
   balanceValueStyles,
   fieldsStyles,
-  sectionStyles,
+  progressBarStyles,
+  progressCaptionStyles,
+  progressFigureStyles,
+  progressStyles,
 } from './payments-tab.styles';
+import { tabActionStyles, tabCardStyles } from './tab-card.styles';
+
+const ADVANCE_PROGRESS_LABEL_ID = 'advance-progress-label';
 
 type PaymentResult = z.infer<typeof paymentResultSchema>;
 
@@ -106,11 +114,16 @@ const PaymentsTab = ({ eventId, payment, onEventChanged }: PaymentsTabProps) => 
     });
   });
 
-  const balanceStyles = savedPayment.balance === 0 ? balanceValueStyles : balanceEmphasisStyles;
+  // D9: "Advance paid vs required", from the last saved figures.
+  const advancePercent =
+    savedPayment.advanceRequired > 0
+      ? Math.min(100, Math.round((savedPayment.advancePaid / savedPayment.advanceRequired) * 100))
+      : 0;
+  const advanceCaption = `${formatAmount(savedPayment.advancePaid)} / ${formatAmount(savedPayment.advanceRequired)} · ${advancePercent}%`;
 
   return (
-    <Stack sx={sectionStyles}>
-      <Stack direction="row" sx={fieldsStyles}>
+    <Paper elevation={0} sx={tabCardStyles}>
+      <Box sx={fieldsStyles}>
         <TextField
           {...register('totalEstimatedAmount', { valueAsNumber: true })}
           label="Total estimated amount"
@@ -138,32 +151,54 @@ const PaymentsTab = ({ eventId, payment, onEventChanged }: PaymentsTabProps) => 
               value={toPickerDate(field.value)}
               onChange={(date) => field.onChange(fromPickerDate(date))}
               // A cleared picker shows its own placeholder text, never an
-              // invalid/NaN date (this story's own edge case) — fromPickerDate
-              // already resolves a cleared/invalid selection to '', so the
-              // underlying form value is never anything else.
+              // invalid/NaN date — fromPickerDate resolves a cleared or
+              // invalid selection to ''.
               slotProps={{ textField: { onBlur: field.onBlur } }}
             />
           )}
         />
         <TextField {...register('paymentMode')} label="Payment mode" />
-      </Stack>
+      </Box>
+      <Box sx={balanceCardStyles}>
+        <Box sx={balanceFigureStyles}>
+          <Typography variant="labelS" component="h2" sx={balanceLabelStyles}>
+            Balance
+          </Typography>
+          <Typography variant="h2" component="p" sx={balanceValueStyles}>
+            {savedPayment.balance}
+          </Typography>
+        </Box>
+        <Box sx={progressStyles}>
+          <Box sx={progressCaptionStyles}>
+            <Typography variant="labelM" component="p" id={ADVANCE_PROGRESS_LABEL_ID}>
+              Advance paid vs required
+            </Typography>
+            <Typography variant="labelM" component="p" sx={progressFigureStyles}>
+              {advanceCaption}
+            </Typography>
+          </Box>
+          <LinearProgress
+            variant="determinate"
+            value={advancePercent}
+            aria-labelledby={ADVANCE_PROGRESS_LABEL_ID}
+            sx={progressBarStyles}
+          />
+        </Box>
+      </Box>
       {saveError && (
         <Alert severity="error">
           <Typography variant="bodyM">{saveError}</Typography>
         </Alert>
       )}
-      <Paper sx={balanceCardStyles}>
-        <Typography variant="titleM" component="h2">
-          Balance
-        </Typography>
-        <Typography variant="titleM" sx={balanceStyles}>
-          {savedPayment.balance}
-        </Typography>
-      </Paper>
-      <Button variant="contained" onClick={handleSave} disabled={!isDirty || updatePaymentMutation.isPending}>
+      <Button
+        variant="contained"
+        onClick={handleSave}
+        disabled={!isDirty || updatePaymentMutation.isPending}
+        sx={tabActionStyles}
+      >
         Save payment
       </Button>
-    </Stack>
+    </Paper>
   );
 };
 

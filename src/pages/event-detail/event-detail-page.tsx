@@ -1,20 +1,21 @@
 import { type ReactNode, useState } from 'react';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { Box, Button, Tab, Tabs, Typography } from '@mui/material';
+import { Box, Tab, Tabs, useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { useParams } from 'react-router-dom';
 import { tsr } from '../../api/client';
 import ActivityTab from '../../components/ui/activity-tab';
 import ErrorState from '../../components/ui/error-state';
 import type { IllustrationName } from '../../components/ui/illustrations';
 import PageLoader from '../../components/ui/page-loader';
-import StatusChip from '../../components/ui/status-chip';
 import { Role } from '../../contract';
 import { EVENT_LIST_PATH } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
 import ClientDetailsTab from './client-details-tab';
 import DeleteEventDialog from './delete-event-dialog';
 import DocumentsTab from './documents-tab';
-import { deleteButtonStyles, headerStyles, pageStyles, tabPanelStyles } from './event-detail-page.styles';
+import EventDetailHeader from './event-detail-header';
+import { pageStyles, tabPanelStyles, tabsStyles } from './event-detail-page.styles';
+import { computeEventSummary } from './event-summary';
 import PaymentsTab from './payments-tab';
 import ReviewTab from './review-tab';
 import RoomsTab from './rooms-tab';
@@ -41,6 +42,8 @@ type DetailTab =
 const EventDetailPage = () => {
   const { id } = useParams();
   const { user } = useAuth();
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const [activeTab, setActiveTab] = useState<DetailTab>('client-details');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -83,7 +86,7 @@ const EventDetailPage = () => {
   //   summary line, no Setup) + Sessions & Items (Food/Dining rows only —
   //   see canSeeItems below). No Accommodation — §3.2 never mentions
   //   accommodation/rooms.
-  // Housekeeping (§3.3): Client Details (filtered) + Accommodation + Event
+  // Housekeeping (§3.3): Client Details (read-only contacts, D17) + Accommodation + Event
   //   Details (Setup summary line, no Menu). NOT Sessions & Items — STORY-
   //   079's own investigation found the backend's filterEventForRole sends
   //   Housekeeping no `items` at all (event-visibility.ts: "Housekeeping and
@@ -117,14 +120,15 @@ const EventDetailPage = () => {
   // "Edit".
   const canSeeSetup = user?.role === Role.Housekeeping;
   const canSeeMenu = user?.role === Role.FnBHead;
-  // Overview's own Client Contacts section (STORY-046: F&B Head/Reception
-  // see it, Housekeeping doesn't) — an explicit role flag, not just
-  // `event.clientContacts &&` alone, matching every other tab-level content
-  // gate on this page (Payments/Rooms already pair a role flag with a
-  // field-presence check). Passed down so OverviewTab doesn't have to
-  // re-derive it from `user` itself.
+  // The Client Details tab's contacts: every role (STORY-046 gave them to
+  // F&B Head/Reception; CR-1 D17 adds Housekeeping, read-only, so that
+  // role's default landing tab is no longer empty). An explicit role flag,
+  // not just `event.clientContacts &&`, matching every other tab-level gate.
   const canSeeClientContacts =
-    user?.role === Role.EventManager || user?.role === Role.FnBHead || user?.role === Role.Reception;
+    user?.role === Role.EventManager ||
+    user?.role === Role.FnBHead ||
+    user?.role === Role.Housekeeping ||
+    user?.role === Role.Reception;
   const canEdit = user?.role === Role.EventManager;
 
   let content: ReactNode;
@@ -213,35 +217,24 @@ const EventDetailPage = () => {
 
     content = (
       <>
-        <Box sx={headerStyles}>
-          <Typography variant="titleL" component="h1">
-            {event.eventId}
-          </Typography>
-          <StatusChip status={event.status} />
-          <Typography variant="bodyM">{event.eventFamilyType}</Typography>
-          {/* Not scoped to any one tab (this story's own AC) — deleting an
-              Event isn't a tab's content, it's the whole record, so it lives
-              on the page's own header/shell instead. */}
-          {canEdit && (
-            <Button
-              startIcon={<DeleteIcon />}
-              color="error"
-              onClick={() => setIsDeleteDialogOpen(true)}
-              sx={deleteButtonStyles}
-            >
-              Delete Event
-            </Button>
-          )}
-        </Box>
-        {/* scrollable — up to 8 Tabs render for an Event Manager, which
-            overflowed un-reachably past the viewport edge on a phone with
-            the default non-scrollable Tabs. */}
+        {/* Not scoped to any one tab — deleting an Event deletes the whole
+            record, so it lives in the page header. */}
+        <EventDetailHeader
+          event={event}
+          summary={computeEventSummary(event, canEdit)}
+          isDesktop={isDesktop}
+          canEdit={canEdit}
+          onDelete={() => setIsDeleteDialogOpen(true)}
+        />
+        {/* Pill tabs, scrollable — up to 8 for an Event Manager; MUI keeps
+            the active tab scrolled into view on a phone. */}
         <Tabs
           value={activeTab}
           onChange={(_changeEvent, value: DetailTab) => setActiveTab(value)}
           variant="scrollable"
-          scrollButtons="auto"
-          allowScrollButtonsMobile
+          scrollButtons={false}
+          aria-label="Event sections"
+          sx={tabsStyles}
         >
           <Tab label="Client Details" value="client-details" />
           {canSeeSessions && <Tab label="Event Details" value="event-details" />}

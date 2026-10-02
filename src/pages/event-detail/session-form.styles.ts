@@ -1,47 +1,120 @@
 import type { SxProps, Theme } from '@mui/material';
-import { colorTokens, radiusTokens, spaceTokens } from '../../theme/tokens';
+import { paletteVar, scaleTokens } from '../../theme/tokens';
 
-// The form's own outer card — same recipe as event-details-step.styles.ts's
-// own formCardStyles (and every other wizard step's), so the Sessions tab's
-// Add/Edit form reads as one of the same cards the wizard's own Session-entry
-// form already is, not a bare unstyled Stack.
+const { radius, space, stroke } = scaleTokens;
+
+const SELECT_FIELD_WIDTH = 240;
+const COST_FIELD_WIDTH = 180;
+const PAX_FIELD_WIDTH = 120;
+const DATE_COLUMN_WIDTH = 240;
+const SEATING_FIELD_WIDTH = 280;
+const COUNT_FIELD_WIDTH = 140;
+
+// Figma 07 Event Detail / Event Details — Add/Edit session: the wizard
+// step-2 entry card, relabelled.
 export const formStyles: SxProps<Theme> = {
-  bgcolor: colorTokens.surface,
-  border: `1px solid ${colorTokens.line}`,
-  borderRadius: `${radiusTokens.radiusMd}px`,
-  p: `${spaceTokens.space24}px`,
+  bgcolor: 'background.paper',
+  border: `${stroke.default}px solid ${paletteVar('divider')}`,
+  borderRadius: `${radius.lg}px`,
+  p: { xs: `${space[16]}px`, md: `${space[24]}px` },
   display: 'flex',
   flexDirection: 'column',
-  gap: `${spaceTokens.space16}px`,
+  gap: { xs: `${space[16]}px`, md: `${space[24]}px` },
 };
 
-// Shared by every field row on this form (dates, times, table/chair counts)
-// and the button row at the bottom — a plain wrapping flex row with
-// space-12 gaps, nothing row-specific enough to warrant separate names.
-export const rowStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space12}px`, // space-12
+// Session type · Venue · Venue cost · Pax.
+export const primaryFieldsStyles: SxProps<Theme> = {
+  display: 'flex',
+  flexDirection: { xs: 'column', md: 'row' },
   flexWrap: 'wrap',
+  alignItems: { xs: 'stretch', md: 'flex-end' },
+  gap: { xs: `${space[12]}px`, md: `${space[16]}px` },
 };
 
-// Identical recipe to event-details-step.styles.ts's own setupCardStyles —
-// this is the exact same Setup card conceptually, just reachable from two
-// different screens, so it renders pixel-identical in both.
+export const selectFieldStyles: SxProps<Theme> = {
+  width: { xs: '100%', md: SELECT_FIELD_WIDTH },
+};
+
+export const costPaxRowStyles: SxProps<Theme> = {
+  display: 'flex',
+  gap: { xs: `${space[12]}px`, md: `${space[16]}px` },
+};
+
+export const costFieldStyles: SxProps<Theme> = {
+  flex: { xs: 1, md: 'none' },
+  width: { md: COST_FIELD_WIDTH },
+};
+
+export const paxFieldStyles: SxProps<Theme> = {
+  width: { xs: '40%', md: PAX_FIELD_WIDTH },
+};
+
+// The two dates (stacked) beside the two clocks; all stacked on mobile.
+export const scheduleStyles: SxProps<Theme> = {
+  display: 'flex',
+  flexDirection: { xs: 'column', md: 'row' },
+  flexWrap: 'wrap',
+  alignItems: 'flex-start',
+  gap: { xs: `${space[16]}px`, md: `${space[24]}px` },
+};
+
+export const dateColumnStyles: SxProps<Theme> = {
+  width: { xs: '100%', md: DATE_COLUMN_WIDTH },
+  gap: `${space[16]}px`,
+};
+
+export const timeFieldStyles: SxProps<Theme> = {
+  gap: `${space[8]}px`,
+  width: { xs: '100%', md: 'auto' },
+};
+
+// The Setup panel nested in the card (brand.subtle), as in the wizard.
 export const setupCardStyles: SxProps<Theme> = {
-  bgcolor: colorTokens.surface2,
-  borderRadius: `${radiusTokens.radiusMd}px`,
-  p: `${spaceTokens.space16}px`,
+  bgcolor: paletteVar('brand-subtle'),
+  borderRadius: `${radius.lg}px`,
+  p: { xs: `${space[16]}px`, md: `${space[24]}px` },
   display: 'flex',
   flexDirection: 'column',
-  gap: `${spaceTokens.space12}px`,
+  gap: `${space[16]}px`,
 };
 
-// accent-tint for the active toggle state, per this story's Tokens line.
-export const toggleActiveStyles: SxProps<Theme> = {
-  bgcolor: colorTokens.accentTint,
+export const setupFieldsStyles: SxProps<Theme> = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: { xs: `${space[12]}px`, md: `${space[16]}px` },
 };
 
-// Wraps one StaticTimePicker (STORY-057) — unlike TextField, it has no
-// floating label of its own, so this pairs it with a plain heading above.
-export const timeFieldStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space4}px`, // space-4
+export const seatingFieldStyles: SxProps<Theme> = {
+  width: { xs: '100%', md: SEATING_FIELD_WIDTH },
+};
+
+export const countFieldStyles: SxProps<Theme> = {
+  flex: { xs: 1, md: 'none' },
+  width: { md: COUNT_FIELD_WIDTH },
+};
+
+export const toggleRowStyles: SxProps<Theme> = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: `${space[8]}px`,
+};
+
+// Figma Toggle (setup): outlined pills; on = tonal fill.
+export const setupToggleStyles: SxProps<Theme> = {
+  borderRadius: `${radius.pill}px`,
+  px: `${space[16]}px`,
+  py: `${space[4]}px`,
+  textTransform: 'none',
+  bgcolor: 'background.paper',
+  '&.Mui-selected': {
+    bgcolor: paletteVar('brand-tonal'),
+    color: paletteVar('brand-onTonal'),
+  },
+};
+
+export const formActionsStyles: SxProps<Theme> = {
+  display: 'flex',
+  flexDirection: { xs: 'column', md: 'row' },
+  alignItems: { xs: 'stretch', md: 'center' },
+  gap: `${space[12]}px`,
 };

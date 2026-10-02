@@ -1,71 +1,42 @@
 import { type ReactNode, useMemo, useState } from 'react';
-import AddIcon from '@mui/icons-material/Add';
-import CloseIcon from '@mui/icons-material/Close';
-import {
-  Alert,
-  Button,
-  IconButton,
-  MenuItem,
-  Paper,
-  Stack,
-  Switch,
-  Tab,
-  Tabs,
-  TextField,
-  Typography,
-} from '@mui/material';
-import { StaticTimePicker } from '@mui/x-date-pickers/StaticTimePicker';
-import { Controller, useForm } from 'react-hook-form';
+import { Alert, Box, Stack, Tab, Tabs, Typography } from '@mui/material';
+import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
+import ItemCard from '../../components/ui/item-card';
+import { ItemCardFoodDetails, ItemCardTime } from '../../components/ui/item-card-details';
 import { useToast } from '../../components/ui/toast-provider';
 import { type filteredEventResultSchema, ItemType } from '../../contract';
 import { formatEventDate, formatQuotationPax, formatSessionDuration } from '../../utils/quotation-formatting';
 import { getDistinctDates } from '../../utils/session-dates';
-import { fromPickerTime, toDateInputValue, toPickerTime } from './date-input';
-import { formatAmount } from './format-amount';
-import MenuItemSearch, { type MenuItemChip } from './menu-item-search';
+import CeremonyFormCard from '../event-creation/ceremony-form-card';
+import FoodFormCard from '../event-creation/food-form-card';
 import {
-  addButtonStyles,
-  lsLabelStyles,
-  lsSwitchStyles,
-  lsToggleRowStyles,
-  miniFieldLabelStyles,
-  optionFieldStyles,
-  paxRowStyles,
-  previewLineStyles,
-  reminderStyles,
-  rowCardEditingStyles,
-  rowCardReadOnlyStyles,
-  rowCardStyles,
-  rowListStyles,
-  rowStyles,
-  sectionCardStyles,
-  timeFieldStyles,
-  wrapperStyles,
-} from './sessions-items-tab.styles';
+  CEREMONY_EVENT_NAME_PRESETS,
+  type CeremonyFormValues,
+  CUSTOM_CEREMONY_EVENT_OPTION,
+  CUSTOM_MEAL_NAME_OPTION,
+  emptyCeremonyEntry,
+  emptyFoodEntry,
+  type FoodFormValues,
+  MEAL_NAME_PRESETS,
+} from '../event-creation/sessions-items-forms';
+import { toDateInputValue } from './date-input';
+import { formatAmount } from './format-amount';
+import type { MenuItemChip } from './menu-item-search';
+import { dateTabsStyles, itemGridStyles, reminderListStyles } from './sessions-items-tab.styles';
+import { tabSectionStyles } from './tab-card.styles';
 
 type PublicEvent = z.infer<typeof filteredEventResultSchema>;
 type SessionResult = PublicEvent['sessions'][number];
 type ItemResult = NonNullable<SessionResult['items']>[number];
 
-// Same presets as sessions-items-step.tsx's own identical fields — no
-// master list backs either list (SRS names none), same "illustrative
-// placeholder" reasoning that step's own comment already documents.
-const CEREMONY_EVENT_NAME_PRESETS = ['Muhurta', 'Engagement Sangeet', 'Cake Cutting'];
-const CUSTOM_CEREMONY_EVENT_OPTION = 'Custom…';
-const MEAL_NAME_PRESETS = ['Breakfast', 'Lunch', 'Hi-Tea', 'Dinner'];
-const CUSTOM_MEAL_NAME_OPTION = 'Custom…';
+// An Event Item with every field blank still persists as a valid row (both
+// reference quotations print one, STORY-071).
+const BLANK_CEREMONY_TITLE = '(blank ceremony row)';
+const BLANK_FOOD_TITLE = '(blank food row)';
 
-interface CeremonyFormValues {
-  eventNameOption: string;
-  eventNameCustom: string;
-  startTime: string;
-  endTime: string;
-}
-
-const emptyCeremonyEntry: CeremonyFormValues = { eventNameOption: '', eventNameCustom: '', startTime: '', endTime: '' };
-
+// The wizard's converters take wizard items; these take saved Items.
 const toCeremonyFormValues = (item: ItemResult): CeremonyFormValues => {
   const eventName = item.eventName ?? '';
   const isPreset = CEREMONY_EVENT_NAME_PRESETS.includes(eventName);
@@ -75,36 +46,6 @@ const toCeremonyFormValues = (item: ItemResult): CeremonyFormValues => {
     startTime: item.startTime ?? '',
     endTime: item.endTime ?? '',
   };
-};
-
-// An Event Item with every field blank still persists as a valid row (both
-// reference quotations print one, STORY-071) — same "(blank ... row)"
-// fallback sessions-items-step.tsx's own identical label already uses.
-const ceremonyRowLabel = (item: ItemResult): string => {
-  const parts = [item.eventName, formatSessionDuration(item.startTime ?? '', item.endTime ?? '')].filter(Boolean);
-  return parts.length > 0 ? parts.join(' · ') : '(blank ceremony row)';
-};
-
-interface FoodFormValues {
-  mealNameOption: string;
-  mealNameCustom: string;
-  startTime: string;
-  endTime: string;
-  pax: number;
-  limitedSeating: boolean;
-  costPerPlate: number;
-  menuItems: MenuItemChip[];
-}
-
-const emptyFoodEntry: FoodFormValues = {
-  mealNameOption: '',
-  mealNameCustom: '',
-  startTime: '',
-  endTime: '',
-  pax: 0,
-  limitedSeating: false,
-  costPerPlate: 0,
-  menuItems: [],
 };
 
 const toFoodFormValues = (item: ItemResult, menuItemsById: Map<string, string>): FoodFormValues => {
@@ -187,14 +128,9 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
 
   const ceremonyForm = useForm<CeremonyFormValues>({ defaultValues: emptyCeremonyEntry });
   const foodForm = useForm<FoodFormValues>({ defaultValues: emptyFoodEntry });
-  const ceremonyNameOption = ceremonyForm.watch('eventNameOption');
-  const mealNameOption = foodForm.watch('mealNameOption');
-  const foodPax = foodForm.watch('pax');
-  const foodLimitedSeating = foodForm.watch('limitedSeating');
 
-  // The full Menu Item master list, fetched once — same reasoning items-
-  // section.tsx's own identical query already documents. Any authenticated
-  // role can call GET /menu-items, so this resolves names for F&B Head's
+  // The full Menu Item master list, fetched once (not per keystroke). Any
+  // authenticated role can call GET /menu-items, so this resolves names for F&B Head's
   // own read-only view too, not just Event Manager's edit forms.
   const menuItemsQuery = tsr.listMenuItems.useQuery({ queryKey: ['menu-items'], queryData: { query: {} } });
   const menuItemOptions: MenuItemChip[] = (menuItemsQuery.data?.body ?? []).map((menuItem) => ({
@@ -328,8 +264,7 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
     const mealName =
       values.mealNameOption === CUSTOM_MEAL_NAME_OPTION ? values.mealNameCustom.trim() : values.mealNameOption;
     // Each chip becomes an { id } reference or a { name } reference — the
-    // server resolves either (find-or-create), same convention item-card.
-    // tsx's own identical handleSaveItem already establishes. Simpler than
+    // server resolves either (find-or-create). Simpler than
     // the wizard's own resolveMenuItemChips: this screen has a real Item
     // endpoint to lean on, so there's no need to pre-resolve a name to an id
     // client-side before submitting.
@@ -417,333 +352,128 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
     );
   }
 
-  const ceremonySubmitLabel = editingCeremony ? 'Save Ceremony Event' : 'Add Ceremony Event';
-  const foodSubmitLabel = editingFood ? 'Save Food/Dining Event' : 'Add Food/Dining Event';
-  const costFieldLabel = foodLimitedSeating ? 'Flat Cost' : 'Cost per Plate';
-  const safeFoodPax = Number.isFinite(foodPax) ? foodPax : 0;
-
   let reminderContent: ReactNode;
   if (sessionsStartingOnDate.length === 0) {
     reminderContent = (
-      <Typography variant="bodyM" sx={reminderStyles}>
+      <Alert severity="info">
         No Session starts on this date — it falls within a multi-day Session whose Items are shown under that Session's
         own start date instead.
-      </Typography>
+      </Alert>
     );
   } else {
     reminderContent = sessionsStartingOnDate.map((session) => (
-      <Typography key={session.id} variant="bodyM" sx={reminderStyles}>
+      <Alert key={session.id} severity="info">
         {session.sessionType} — Venue for this date: {session.venue}
         {/* venueCost is stripped for every role but Event Manager
             (STORY-046) — omitted rather than printing "NaN" when absent. */}
         {session.venueCost !== undefined ? ` · ${formatAmount(session.venueCost)}/-` : ''} (from Event Details)
-      </Typography>
+      </Alert>
     ));
   }
 
+  const canEditDate = canEdit && sessionsStartingOnDate.length > 0;
+
   return (
-    <Stack sx={wrapperStyles}>
-      <Tabs value={activeDate} onChange={(_event, value: string) => handleSelectDate(value)}>
+    <Stack sx={tabSectionStyles}>
+      <Tabs
+        value={activeDate}
+        onChange={(_event, value: string) => handleSelectDate(value)}
+        variant="scrollable"
+        scrollButtons={false}
+        sx={dateTabsStyles}
+      >
         {distinctDates.map((date) => (
           <Tab key={date} value={date} label={formatEventDate(date)} />
         ))}
       </Tabs>
 
-      <Stack>{reminderContent}</Stack>
+      <Stack sx={reminderListStyles}>{reminderContent}</Stack>
 
-      {canEdit && sessionsStartingOnDate.length > 0 && (
-        <>
-          <Paper elevation={0} component="form" onSubmit={handleAddCeremonyEvent} sx={sectionCardStyles}>
-            <Typography variant="titleM" component="h2">
-              Ceremony Events
-            </Typography>
-            <Stack direction="row" sx={rowStyles}>
-              <Controller
-                name="eventNameOption"
-                control={ceremonyForm.control}
-                render={({ field }) => (
-                  <TextField {...field} select label="Event Name" sx={optionFieldStyles}>
-                    <MenuItem value="">Select an event name</MenuItem>
-                    {CEREMONY_EVENT_NAME_PRESETS.map((name) => (
-                      <MenuItem key={name} value={name}>
-                        {name}
-                      </MenuItem>
-                    ))}
-                    <MenuItem value={CUSTOM_CEREMONY_EVENT_OPTION}>{CUSTOM_CEREMONY_EVENT_OPTION}</MenuItem>
-                  </TextField>
-                )}
-              />
-              {ceremonyNameOption === CUSTOM_CEREMONY_EVENT_OPTION && (
-                <TextField
-                  {...ceremonyForm.register('eventNameCustom')}
-                  label="Custom event name"
-                  sx={optionFieldStyles}
-                />
-              )}
-            </Stack>
-            <Stack direction="row" sx={rowStyles}>
-              <Stack sx={timeFieldStyles}>
-                <Typography variant="labelS" sx={miniFieldLabelStyles}>
-                  Start time
-                </Typography>
-                <Controller
-                  name="startTime"
-                  control={ceremonyForm.control}
-                  render={({ field }) => (
-                    <StaticTimePicker
-                      ampm
-                      value={toPickerTime(field.value)}
-                      onChange={(time) => field.onChange(fromPickerTime(time))}
-                    />
-                  )}
-                />
-              </Stack>
-              <Stack sx={timeFieldStyles}>
-                <Typography variant="labelS" sx={miniFieldLabelStyles}>
-                  End time
-                </Typography>
-                <Controller
-                  name="endTime"
-                  control={ceremonyForm.control}
-                  render={({ field }) => (
-                    <StaticTimePicker
-                      ampm
-                      value={toPickerTime(field.value)}
-                      onChange={(time) => field.onChange(fromPickerTime(time))}
-                    />
-                  )}
-                />
-              </Stack>
-            </Stack>
-            {ceremonySubmitError && (
-              <Alert severity="error">
-                <Typography variant="bodyM">{ceremonySubmitError}</Typography>
-              </Alert>
-            )}
-            <Stack direction="row" sx={rowStyles}>
-              <Button
-                type="submit"
-                variant="contained"
-                startIcon={<AddIcon />}
-                sx={addButtonStyles}
-                disabled={!ceremonyForm.formState.isDirty || isMutating}
-              >
-                {ceremonySubmitLabel}
-              </Button>
-              {editingCeremony && (
-                <Button onClick={handleCancelCeremonyEdit} disabled={isMutating}>
-                  Cancel edit
-                </Button>
-              )}
-            </Stack>
-          </Paper>
-
-          <Stack sx={rowListStyles}>
-            {ceremonyEntries.map((entry) => {
-              const isEditing = editingCeremony?.itemId === entry.item.id;
-              return (
-                <Stack
-                  key={entry.item.id}
-                  direction="row"
-                  sx={isEditing ? rowCardEditingStyles : rowCardStyles}
-                  onClick={() => handleEditCeremonyRow(entry)}
-                >
-                  <Typography variant="bodyM">{ceremonyRowLabel(entry.item)}</Typography>
-                  <IconButton
-                    aria-label={`Remove ${entry.item.eventName || 'ceremony event'} row`}
-                    size="small"
-                    onClick={(clickEvent) => {
-                      clickEvent.stopPropagation();
-                      handleRemoveCeremonyRow(entry);
-                    }}
-                    disabled={isMutating}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </Stack>
-              );
-            })}
-          </Stack>
-        </>
+      {/* D6: this tab keeps the two always-open cards (the wizard's
+          two-button pattern is step 4 only); the cards are shared with it. */}
+      {canEditDate && (
+        <CeremonyFormCard
+          form={ceremonyForm}
+          isEditing={editingCeremony !== null}
+          isSubmitDisabled={!ceremonyForm.formState.isDirty}
+          isSubmitting={isMutating}
+          submitError={ceremonySubmitError}
+          onSubmit={handleAddCeremonyEvent}
+          onCancelEdit={handleCancelCeremonyEdit}
+        />
       )}
 
-      {canEdit && sessionsStartingOnDate.length > 0 && (
-        <Paper elevation={0} component="form" onSubmit={handleAddFoodEvent} sx={sectionCardStyles}>
-          <Typography variant="titleM" component="h2">
-            Food/Dining Events
-          </Typography>
-          <Stack direction="row" sx={rowStyles}>
-            <Controller
-              name="mealNameOption"
-              control={foodForm.control}
-              render={({ field }) => (
-                <TextField {...field} select label="Meal Name" sx={optionFieldStyles}>
-                  <MenuItem value="">Select a meal name</MenuItem>
-                  {MEAL_NAME_PRESETS.map((name) => (
-                    <MenuItem key={name} value={name}>
-                      {name}
-                    </MenuItem>
-                  ))}
-                  <MenuItem value={CUSTOM_MEAL_NAME_OPTION}>{CUSTOM_MEAL_NAME_OPTION}</MenuItem>
-                </TextField>
-              )}
-            />
-            {mealNameOption === CUSTOM_MEAL_NAME_OPTION && (
-              <TextField {...foodForm.register('mealNameCustom')} label="Custom meal name" sx={optionFieldStyles} />
-            )}
-          </Stack>
-          <Stack direction="row" sx={rowStyles}>
-            <Stack sx={timeFieldStyles}>
-              <Typography variant="labelS" sx={miniFieldLabelStyles}>
-                Start time
-              </Typography>
-              <Controller
-                name="startTime"
-                control={foodForm.control}
-                render={({ field }) => (
-                  <StaticTimePicker
-                    ampm
-                    value={toPickerTime(field.value)}
-                    onChange={(time) => field.onChange(fromPickerTime(time))}
-                  />
-                )}
-              />
-            </Stack>
-            <Stack sx={timeFieldStyles}>
-              <Typography variant="labelS" sx={miniFieldLabelStyles}>
-                End time
-              </Typography>
-              <Controller
-                name="endTime"
-                control={foodForm.control}
-                render={({ field }) => (
-                  <StaticTimePicker
-                    ampm
-                    value={toPickerTime(field.value)}
-                    onChange={(time) => field.onChange(fromPickerTime(time))}
-                  />
-                )}
-              />
-            </Stack>
-          </Stack>
-          <Stack direction="row" sx={paxRowStyles}>
-            <TextField
-              {...foodForm.register('pax', { valueAsNumber: true })}
-              label="Pax"
-              type="number"
-              slotProps={{ htmlInput: { min: 0 } }}
-            />
-            <Stack direction="row" sx={lsToggleRowStyles}>
-              <Typography variant="labelS" sx={lsLabelStyles(foodLimitedSeating)}>
-                L.S.
-              </Typography>
-              <Controller
-                name="limitedSeating"
-                control={foodForm.control}
-                render={({ field }) => (
-                  <Switch
-                    checked={field.value}
-                    onChange={(changeEvent) => field.onChange(changeEvent.target.checked)}
-                    sx={lsSwitchStyles}
-                    slotProps={{ input: { 'aria-label': 'Limited Seating' } }}
-                  />
-                )}
-              />
-            </Stack>
-            <TextField
-              {...foodForm.register('costPerPlate', { valueAsNumber: true })}
-              label={costFieldLabel}
-              type="number"
-              slotProps={{ htmlInput: { min: 0 } }}
-            />
-          </Stack>
-          <Controller
-            name="menuItems"
-            control={foodForm.control}
-            render={({ field }) => (
-              <MenuItemSearch options={menuItemOptions} value={field.value} onChange={field.onChange} />
-            )}
-          />
-          <Typography variant="bodyM" sx={previewLineStyles}>
-            Shown on Quotation as: {formatQuotationPax(safeFoodPax, foodLimitedSeating)}
-          </Typography>
-          {foodSubmitError && (
-            <Alert severity="error">
-              <Typography variant="bodyM">{foodSubmitError}</Typography>
-            </Alert>
-          )}
-          <Stack direction="row" sx={rowStyles}>
-            <Button
-              type="submit"
-              variant="contained"
-              startIcon={<AddIcon />}
-              sx={addButtonStyles}
-              disabled={!foodForm.formState.isDirty || isMutating}
-            >
-              {foodSubmitLabel}
-            </Button>
-            {editingFood && (
-              <Button onClick={handleCancelFoodEdit} disabled={isMutating}>
-                Cancel edit
-              </Button>
-            )}
-          </Stack>
-        </Paper>
-      )}
-
-      <Stack sx={rowListStyles}>
-        {foodEntries.map((entry) => {
-          const item = entry.item;
-          const isEditing = editingFood?.itemId === item.id;
-          const mealNameLabel = item.mealName || '(blank food row)';
-          const menuItemNames = (item.menuItems ?? []).map((id) => menuItemsById.get(id) ?? id);
-          const menuItemsSuffix = menuItemNames.length > 0 ? ` · ${menuItemNames.join(', ')}` : '';
-          // costPerPlate/totalCost are stripped for every role but Event
-          // Manager (STORY-046) — an F&B Head's own read-only row omits
-          // cost entirely rather than printing "—"/"NaN" for a field it was
-          // never sent.
-          const costSuffix = canEdit ? ` · ${formatAmount(item.costPerPlate ?? 0)}` : '';
-          if (!canEdit) {
-            return (
-              <Stack key={item.id} direction="row" sx={rowCardReadOnlyStyles}>
-                <Typography variant="bodyM">
-                  {mealNameLabel} · {formatQuotationPax(item.pax ?? 0, item.limitedSeating ?? false)}
-                  {costSuffix}
-                  {menuItemsSuffix}
-                </Typography>
-              </Stack>
-            );
-          }
-          return (
-            <Stack
-              key={item.id}
-              direction="row"
-              sx={isEditing ? rowCardEditingStyles : rowCardStyles}
-              onClick={() => handleEditFoodRow(entry)}
-            >
-              <Typography variant="bodyM">
-                {mealNameLabel} · {formatQuotationPax(item.pax ?? 0, item.limitedSeating ?? false)}
-                {costSuffix}
-                {menuItemsSuffix}
-                {item.totalCost !== undefined && item.totalCost !== null
-                  ? ` · Total cost: ${formatAmount(item.totalCost)}`
-                  : ''}
-              </Typography>
-              <IconButton
-                aria-label={`Remove ${item.mealName || 'food event'} row`}
-                size="small"
-                onClick={(clickEvent) => {
-                  clickEvent.stopPropagation();
-                  handleRemoveFoodRow(entry);
+      {canEditDate && ceremonyEntries.length > 0 && (
+        <Box component="ul" aria-label="Ceremony events" sx={itemGridStyles}>
+          {ceremonyEntries.map((entry) => (
+            <li key={entry.item.id}>
+              <ItemCard
+                title={entry.item.eventName || BLANK_CEREMONY_TITLE}
+                editable={{
+                  removeLabel: `Remove ${entry.item.eventName || 'ceremony event'} row`,
+                  isEditing: editingCeremony?.itemId === entry.item.id,
+                  isRemoveDisabled: isMutating,
+                  onEdit: () => handleEditCeremonyRow(entry),
+                  onRemove: () => handleRemoveCeremonyRow(entry),
                 }}
-                disabled={isMutating}
               >
-                <CloseIcon fontSize="small" />
-              </IconButton>
-            </Stack>
-          );
-        })}
-      </Stack>
+                <ItemCardTime duration={formatSessionDuration(entry.item.startTime ?? '', entry.item.endTime ?? '')} />
+              </ItemCard>
+            </li>
+          ))}
+        </Box>
+      )}
+
+      {canEditDate && (
+        <FoodFormCard
+          form={foodForm}
+          menuItemOptions={menuItemOptions}
+          isEditing={editingFood !== null}
+          isSubmitDisabled={!foodForm.formState.isDirty}
+          isSubmitting={isMutating}
+          submitError={foodSubmitError}
+          onSubmit={handleAddFoodEvent}
+          onCancelEdit={handleCancelFoodEdit}
+        />
+      )}
+
+      {foodEntries.length > 0 && (
+        <Box component="ul" aria-label="Food/dining events" sx={itemGridStyles}>
+          {foodEntries.map((entry) => {
+            const { item } = entry;
+            const menuItemNames = (item.menuItems ?? []).map((id) => menuItemsById.get(id) ?? id);
+            // costPerPlate/totalCost are stripped for every role but Event
+            // Manager (STORY-046) — F&B Head's read-only card shows no cost.
+            let cost: string | undefined;
+            if (canEdit) {
+              const totalCost = item.totalCost ?? null;
+              const totalSuffix = totalCost !== null ? ` · Total cost: ${formatAmount(totalCost)}` : '';
+              cost = `₹ ${formatAmount(item.costPerPlate ?? 0)}${totalSuffix}`;
+            }
+            const editable = canEdit
+              ? {
+                  removeLabel: `Remove ${item.mealName || 'food event'} row`,
+                  isEditing: editingFood?.itemId === item.id,
+                  isRemoveDisabled: isMutating,
+                  onEdit: () => handleEditFoodRow(entry),
+                  onRemove: () => handleRemoveFoodRow(entry),
+                }
+              : undefined;
+            return (
+              <li key={item.id}>
+                <ItemCard title={item.mealName || BLANK_FOOD_TITLE} editable={editable}>
+                  <ItemCardFoodDetails
+                    pax={formatQuotationPax(item.pax ?? 0, item.limitedSeating ?? false)}
+                    cost={cost}
+                    menuItemNames={menuItemNames}
+                    menuLabel={`${item.mealName || 'Food'} menu items`}
+                  />
+                </ItemCard>
+              </li>
+            );
+          })}
+        </Box>
+      )}
     </Stack>
   );
 };

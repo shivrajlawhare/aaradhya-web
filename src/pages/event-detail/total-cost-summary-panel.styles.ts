@@ -1,60 +1,75 @@
 import type { SxProps, Theme } from '@mui/material';
-import { colorTokens, spaceTokens } from '../../theme/tokens';
+import { paletteVar, scaleTokens, shadowTokens } from '../../theme/tokens';
 
-// surface-2, space-12, per this story's Tokens line. `display: flex` +
-// `flexDirection: column` is what actually makes `gap` do anything here —
-// Paper's own root has no layout mode of its own (a plain block-level div),
-// so a bare `gap` on it was previously a silent no-op: every direct child
-// (the heading, the line-items Stack, the Grand Total row) rendered back
-// to back with nothing but their own MUI default margins between them,
-// which is what made the panel look like everything ran together with no
-// spacing at all.
+const { radius, space, stroke } = scaleTokens;
+
+// Figma Panel/Cost Summary: a raised card with the hard brand border and
+// shadow, line items as label / value rows, the Extras block, and the
+// orange Grand Total tile.
 export const panelStyles: SxProps<Theme> = {
-  bgcolor: colorTokens.surface2,
+  bgcolor: 'background.paper',
+  border: `${stroke.default}px solid ${paletteVar('brand-borderStrong')}`,
+  borderRadius: `${radius.lg}px`,
+  boxShadow: shadowTokens.hardMd,
+  p: { xs: `${space[16]}px`, md: `${space[24]}px` },
   display: 'flex',
   flexDirection: 'column',
-  p: `${spaceTokens.space12}px`,
-  gap: `${spaceTokens.space16}px`,
+  gap: `${space[16]}px`,
 };
 
 export const lineItemsStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space4}px`,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: `${space[8]}px`,
+  m: 0,
 };
 
-// tabular-nums throughout, per this story's Tokens line — every numeric
-// line item lines up on its digits, not just the Grand Total.
-export const lineItemValueStyles: SxProps<Theme> = {
+export const lineItemStyles: SxProps<Theme> = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'baseline',
+  gap: `${space[16]}px`,
+};
+
+export const lineLabelStyles: SxProps<Theme> = {
+  color: 'text.secondary',
+};
+
+export const lineValueStyles: SxProps<Theme> = {
+  m: 0,
   fontVariantNumeric: 'tabular-nums',
 };
 
-export const extrasFieldsStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space12}px`,
-  flexWrap: 'wrap',
+export const extrasStyles: SxProps<Theme> = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: `${space[12]}px`,
+  pt: `${space[16]}px`,
+  borderTop: `${stroke.hair}px solid ${paletteVar('divider')}`,
 };
 
-// Stacks the "Grand Total" label above its own value rather than leaving
-// them as two adjacent inline elements with nothing between them — neither
-// Typography's own "bodyM"/"display" variant has a `variantMapping` entry
-// in theme.ts, so with no explicit `component` prop MUI renders both as a
-// bare `<span>`, and two inline spans back to back have no natural gap of
-// their own the way two block-level elements (or a Stack's own `gap`)
-// would. This is what actually put the label and the amount "on the same
-// line with no spacing" (this fix's own bug report).
-// Rendered via a `Stack` (below), which already defaults to a flex column
-// container on its own — no `display`/`flexDirection` needed here, unlike
-// panelStyles above (a plain `Paper`, which has no layout mode of its own).
-export const grandTotalRowStyles: SxProps<Theme> = {
-  gap: `${spaceTokens.space4}px`,
-  mt: `${spaceTokens.space8}px`,
+export const extrasLabelStyles: SxProps<Theme> = {
+  color: 'text.secondary',
 };
 
-// type-display (Fraunces) + accent-deep, per this story's Tokens line — the
-// Grand Total is deliberately the single most visually prominent number on
-// the panel (this story's own AC). A very large amount must wrap rather
-// than overflow the card on a narrow viewport, same edge case
-// payments-tab.styles.ts's balance card already guards against.
+export const saveButtonStyles: SxProps<Theme> = {
+  alignSelf: { xs: 'stretch', md: 'flex-start' },
+};
+
+// The orange hero tile. A very large amount wraps rather than overflowing.
+export const grandTotalTileStyles: SxProps<Theme> = {
+  bgcolor: 'primary.main',
+  color: 'primary.contrastText',
+  border: `${stroke.default}px solid ${paletteVar('brand-borderStrong')}`,
+  borderRadius: `${radius.md}px`,
+  px: `${space[20]}px`,
+  py: `${space[16]}px`,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: `${space[4]}px`,
+};
+
 export const grandTotalValueStyles: SxProps<Theme> = {
-  color: colorTokens.accentDeep,
   fontVariantNumeric: 'tabular-nums',
   overflowWrap: 'break-word',
   maxWidth: '100%',

@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react';
-import { Alert, Button, Paper, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Paper, Stack, Typography } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
@@ -15,12 +15,12 @@ import { formatAmount } from './format-amount';
 import RoomLineRows from './room-line-rows';
 import {
   dateFieldsStyles,
-  formCardStyles,
+  dateFieldStyles,
   occupancyOnlyStyles,
   readOnlyRoomLineStyles,
-  sectionStyles,
   summaryLineStyles,
 } from './rooms-tab.styles';
+import { tabActionStyles, tabCardStyles, tabSectionStyles } from './tab-card.styles';
 
 // The role-filtered shape (STORY-052) — this tab is now reached by
 // Housekeeping/Reception too, not just Event Manager, and those two roles
@@ -233,11 +233,11 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
   if (canEdit) {
     content = (
       <>
-        <Paper elevation={0} sx={formCardStyles}>
+        <Paper elevation={0} sx={tabCardStyles}>
           <Typography variant="titleM" component="h2">
             Accommodation
           </Typography>
-          <Stack direction="row" sx={dateFieldsStyles}>
+          <Box sx={dateFieldsStyles}>
             <Controller
               name="checkIn"
               control={control}
@@ -246,7 +246,7 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
                   label="Check-in"
                   value={toPickerDate(field.value)}
                   onChange={(date) => field.onChange(fromPickerDate(date))}
-                  slotProps={{ textField: { onBlur: field.onBlur } }}
+                  slotProps={{ textField: { onBlur: field.onBlur, sx: dateFieldStyles } }}
                 />
               )}
             />
@@ -258,11 +258,11 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
                   label="Check-out"
                   value={toPickerDate(field.value)}
                   onChange={(date) => field.onChange(fromPickerDate(date))}
-                  slotProps={{ textField: { onBlur: field.onBlur } }}
+                  slotProps={{ textField: { onBlur: field.onBlur, sx: dateFieldStyles } }}
                 />
               )}
             />
-          </Stack>
+          </Box>
           {summaryLine}
         </Paper>
         <RoomLineRows
@@ -288,7 +288,12 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
             <Typography variant="bodyM">{saveError}</Typography>
           </Alert>
         )}
-        <Button variant="contained" onClick={handleSave} disabled={!isDirty || updateAccommodationMutation.isPending}>
+        <Button
+          variant="contained"
+          onClick={handleSave}
+          disabled={!isDirty || updateAccommodationMutation.isPending}
+          sx={tabActionStyles}
+        >
           Save accommodation
         </Button>
       </>
@@ -296,7 +301,7 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
   } else {
     content = (
       <>
-        <Paper elevation={0} sx={formCardStyles}>
+        <Paper elevation={0} sx={tabCardStyles}>
           <Typography variant="titleM" component="h2">
             Accommodation
           </Typography>
@@ -316,7 +321,7 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
     );
   }
 
-  return <Stack sx={sectionStyles}>{content}</Stack>;
+  return <Stack sx={tabSectionStyles}>{content}</Stack>;
 };
 
 export default RoomsTab;

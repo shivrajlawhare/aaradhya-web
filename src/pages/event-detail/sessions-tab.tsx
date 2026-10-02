@@ -1,11 +1,24 @@
-import { useState } from 'react';
-import { Button, List, ListItem, Stack, Typography } from '@mui/material';
+import { type ReactNode, useState } from 'react';
+import AddIcon from '@mui/icons-material/Add';
+import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import { Box, Button, Stack, Typography } from '@mui/material';
 import type { z } from 'zod';
+import EmptyState from '../../components/ui/empty-state';
 import { formatSetup } from '../../components/ui/format-setup';
 import { type filteredEventResultSchema, ItemType } from '../../contract';
+import { formatEventDate } from '../../utils/quotation-formatting';
 import { toDateInputValue } from './date-input';
 import SessionForm from './session-form';
-import { listStyles, rowStyles, sectionStyles } from './sessions-tab.styles';
+import {
+  addButtonStyles,
+  cardHeaderStyles,
+  cardStyles,
+  detailIconStyles,
+  detailLineStyles,
+  gridStyles,
+} from './sessions-tab.styles';
+import { tabSectionStyles } from './tab-card.styles';
 
 type PublicEvent = z.infer<typeof filteredEventResultSchema>;
 type SessionResult = PublicEvent['sessions'][number];
@@ -86,40 +99,56 @@ const SessionsTab = ({ event, canEdit, canSeeSetup, canSeeMenu, onEventChanged }
     return <SessionForm eventId={event.id} session={editingSession} onSaved={handleSaved} onCancel={handleCancel} />;
   }
 
-  return (
-    <Stack sx={sectionStyles}>
-      {event.sessions.length === 0 ? (
-        <Typography variant="bodyM">No Sessions yet.</Typography>
-      ) : (
-        <List sx={listStyles} disablePadding>
-          {event.sessions.map((session, index) => (
-            <ListItem key={session.id} sx={rowStyles} divider={index < event.sessions.length - 1}>
-              <Stack>
-                <Typography variant="bodyL">
-                  {session.sessionType} — {session.venue}
-                </Typography>
-                <Typography variant="bodyM">
-                  {toDateInputValue(session.startDate)} to {toDateInputValue(session.endDate)} · {session.pax} pax
-                </Typography>
-                {canSeeSetup && <Typography variant="bodyM">Setup: {formatSetup(session.setup)}</Typography>}
-                {canSeeMenu && <Typography variant="bodyM">Menu: {formatMenu(session.items)}</Typography>}
-              </Stack>
+  const handleEdit = (sessionId: string) => {
+    setEditingSessionId(sessionId);
+    setMode('edit');
+  };
+
+  // D12: DD/MM/YYYY dates and pax, no session status chip.
+  let sessionList: ReactNode;
+  if (event.sessions.length === 0) {
+    sessionList = <EmptyState illustration="no-sessions" title="No Sessions yet." />;
+  } else {
+    sessionList = (
+      <Box component="ul" aria-label="Sessions" sx={gridStyles}>
+        {event.sessions.map((session) => (
+          <Box key={session.id} component="li" sx={cardStyles}>
+            <Box sx={cardHeaderStyles}>
+              <Typography variant="titleS" component="h3">
+                {session.sessionType} — {session.venue}
+              </Typography>
               {canEdit && (
                 <Button
-                  onClick={() => {
-                    setEditingSessionId(session.id);
-                    setMode('edit');
-                  }}
+                  variant="ghost"
+                  size="small"
+                  startIcon={<EditOutlinedIcon />}
+                  aria-label={`Edit ${session.sessionType} session`}
+                  onClick={() => handleEdit(session.id)}
                 >
                   Edit
                 </Button>
               )}
-            </ListItem>
-          ))}
-        </List>
-      )}
+            </Box>
+            <Box sx={detailLineStyles}>
+              <CalendarTodayOutlinedIcon aria-hidden sx={detailIconStyles} />
+              <Typography variant="bodyM" component="span">
+                {formatEventDate(toDateInputValue(session.startDate))} to{' '}
+                {formatEventDate(toDateInputValue(session.endDate))} · {session.pax} pax
+              </Typography>
+            </Box>
+            {canSeeSetup && <Typography variant="bodyM">Setup: {formatSetup(session.setup)}</Typography>}
+            {canSeeMenu && <Typography variant="bodyM">Menu: {formatMenu(session.items)}</Typography>}
+          </Box>
+        ))}
+      </Box>
+    );
+  }
+
+  return (
+    <Stack sx={tabSectionStyles}>
+      {sessionList}
       {canEdit && (
-        <Button variant="contained" onClick={() => setMode('create')}>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setMode('create')} sx={addButtonStyles}>
           Add Session
         </Button>
       )}

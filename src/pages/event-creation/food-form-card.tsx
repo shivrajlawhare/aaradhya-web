@@ -39,6 +39,8 @@ interface FoodFormCardProps {
   isEditing: boolean;
   // A new menu item is being created — submit and Cancel edit wait for it.
   isSubmitting: boolean;
+  // The Event Detail tab's submit also waits for a change.
+  isSubmitDisabled?: boolean;
   submitError: string | null;
   onSubmit: FormEventHandler<HTMLFormElement>;
   onCancelEdit: () => void;
@@ -52,6 +54,7 @@ const FoodFormCard = ({
   menuItemOptions,
   isEditing,
   isSubmitting,
+  isSubmitDisabled = false,
   submitError,
   onSubmit,
   onCancelEdit,
@@ -143,7 +146,12 @@ const FoodFormCard = ({
             </Alert>
           )}
           <Box sx={formActionsStyles}>
-            <Button type="submit" variant="contained" startIcon={<AddIcon />} disabled={isSubmitting}>
+            <Button
+              type="submit"
+              variant="contained"
+              startIcon={<AddIcon />}
+              disabled={isSubmitDisabled || isSubmitting}
+            >
               {submitLabel}
             </Button>
             {isEditing && (

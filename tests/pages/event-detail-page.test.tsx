@@ -12,6 +12,11 @@ import EventDetailPage from '../../src/pages/event-detail/event-detail-page';
 import { EVENT_DETAIL_PATH_PATTERN, eventDetailPath } from '../../src/routes';
 import { AuthProvider, SESSION_STORAGE_KEY } from '../../src/stores/auth-context';
 import { theme } from '../../src/theme/theme';
+import { mockMatchMedia } from '../support/match-media';
+
+// The Review tab's cost panel prints each total as a label / value row.
+const costPanel = () => screen.getByRole('region', { name: 'Total Cost Summary' });
+const costLine = (label: string) => within(costPanel()).getByText(label).nextElementSibling?.textContent;
 
 interface MockClientContact {
   name: string;
@@ -780,6 +785,7 @@ const fillDatePicker = async (user: ReturnType<typeof userEvent.setup>, labelTex
 afterEach(() => {
   vi.unstubAllGlobals();
   localStorage.clear();
+  mockMatchMedia(false);
 });
 
 describe('EventDetailPage', () => {
@@ -920,12 +926,13 @@ describe('EventDetailPage', () => {
     // venueTotal 5000, foodSubtotal 2000, foodTotalInclGst 2000 × 1.18 =
     // 2360, accommodationTotal 10000 + 5% GST = 10500, extrasTotal 3000,
     // grandTotal = 5000 + 2360 + 10500 + 3000 = 20860.
-    expect(await screen.findByText('Venue total: 5,000')).toBeInTheDocument();
-    expect(screen.getByText('Food subtotal: 2,000')).toBeInTheDocument();
-    expect(screen.getByText('Food total (incl. GST): 2,360')).toBeInTheDocument();
-    expect(screen.getByText('Accommodation total: 10,500')).toBeInTheDocument();
-    expect(screen.getByText('Extras total: 3,000')).toBeInTheDocument();
-    const grandTotal = screen.getByText('20,860');
+    await screen.findByText('Venue total');
+    expect(costLine('Venue total')).toBe('5,000');
+    expect(costLine('Food subtotal')).toBe('2,000');
+    expect(costLine('Food total (incl. GST)')).toBe('2,360');
+    expect(costLine('Accommodation total')).toBe('10,500');
+    expect(costLine('Extras total')).toBe('3,000');
+    const grandTotal = within(costPanel()).getByText('20,860');
     expect(grandTotal).toBeInTheDocument();
     // display variant (Fraunces) — the Grand Total is the single most
     // visually prominent number on the panel (this story's own AC).
@@ -938,7 +945,8 @@ describe('EventDetailPage', () => {
     renderPage();
     fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
 
-    expect(await screen.findByText('Venue total: 0')).toBeInTheDocument();
+    await screen.findByText('Venue total');
+    expect(costLine('Venue total')).toBe('0');
 
     fireEvent.change(await screen.findByLabelText('Decoration'), { target: { value: '15000' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save extras' }));
@@ -949,8 +957,8 @@ describe('EventDetailPage', () => {
     // decoration amount, and it comes from a fresh GET (the mock
     // recomputes the whole summary from the now-updated Event), not a
     // client-side recalculation off the PATCH response alone.
-    expect(await screen.findByText('Grand Total')).toBeInTheDocument();
-    expect(await screen.findByText('15,000')).toBeInTheDocument();
+    await waitFor(() => expect(costLine('Extras total')).toBe('15,000'));
+    expect(within(costPanel()).getByText('Grand Total').nextElementSibling?.textContent).toBe('15,000');
   });
 
   // STORY-052's own re-check: extras/Grand Total is the same class of
@@ -1231,6 +1239,7 @@ describe('EventDetailPage', () => {
   });
 
   it('shows occupancy read-only from the Room Type master — no occupancy input', async () => {
+    mockMatchMedia(true);
     seedSession();
     mockEventDetailApi({ event: makeEvent() });
     renderPage();
@@ -1500,7 +1509,7 @@ describe('EventDetailPage', () => {
     expect(screen.getByText('Setup: Theatre')).toBeInTheDocument();
     expect(screen.queryByText(/^Menu:/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add Session' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Edit .* session$/ })).not.toBeInTheDocument();
   });
 
   it('renders the Session form with two explicit date fields and the full setup section', async () => {
@@ -1669,7 +1678,7 @@ describe('EventDetailPage', () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Edit .* session$/ }));
 
     expect(await screen.findByDisplayValue('200')).toBeInTheDocument();
 
@@ -1713,7 +1722,7 @@ describe('EventDetailPage', () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Edit .* session$/ }));
 
     await screen.findByRole('button', { name: 'Save session' });
     expect(screen.queryByText('Items')).not.toBeInTheDocument();
@@ -1728,7 +1737,7 @@ describe('EventDetailPage', () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Edit .* session$/ }));
     fireEvent.change(await screen.findByLabelText('Pax'), { target: { value: '250' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save session' }));
 
@@ -1840,13 +1849,16 @@ describe('EventDetailPage', () => {
       expect(screen.queryByRole('tab', { name: 'Activity' })).not.toBeInTheDocument();
     });
 
-    it('does not render Client Contacts on Client Details for Housekeeping (genuinely absent, STORY-046)', async () => {
+    // CR-1 D17 (DEV-10): Housekeeping's default tab is no longer empty.
+    it('shows Housekeeping the client contacts read-only on Client Details (D17)', async () => {
       seedSession('Housekeeping');
       mockEventDetailApi({ event: makeEvent() });
       renderPage();
 
-      await screen.findByText('ARD-EVT-2026-001');
-      expect(screen.queryByText('Client contacts')).not.toBeInTheDocument();
+      expect(await screen.findByText('Client contacts')).toBeInTheDocument();
+      expect(screen.getByText(/Priya Nair.*9876543210.*Bride/)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Save contacts' })).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
     });
 
     it('shows every tab for Event Manager — unchanged (regression)', async () => {
@@ -1876,5 +1888,110 @@ describe('EventDetailPage', () => {
       expect(screen.queryByText(/^Setup:/)).not.toBeInTheDocument();
       expect(screen.queryByText(/^Menu:/)).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('EventDetailPage — header, Summary Strip and session cards (DEV-10)', () => {
+  const twoSessions = [
+    {
+      id: 'session-1',
+      sessionType: 'Engagement',
+      venue: 'Lawn',
+      venueCost: 80000,
+      startDate: '2026-12-12T00:00:00.000Z',
+      endDate: '2026-12-12T00:00:00.000Z',
+      startTime: null,
+      endTime: null,
+      pax: 250,
+      sessionStatus: 'Active',
+      durationDays: 1,
+      isMultiDay: false,
+      setup: makeSessionSetup(),
+      items: [],
+    },
+    {
+      id: 'session-2',
+      sessionType: 'Wedding',
+      venue: 'Full Banquet',
+      venueCost: 120000,
+      startDate: '2026-12-14T00:00:00.000Z',
+      endDate: '2026-12-14T00:00:00.000Z',
+      startTime: null,
+      endTime: null,
+      pax: 450,
+      sessionStatus: 'Active',
+      durationDays: 1,
+      isMultiDay: false,
+      setup: makeSessionSetup(),
+      items: [],
+    },
+  ];
+
+  const stripValue = (label: string) => screen.getByText(label, { selector: 'dt' }).nextElementSibling?.textContent;
+
+  it('shows the EVENT eyebrow, ID, status and family type, and a Summary Strip with the Grand Total for an Event Manager', async () => {
+    mockMatchMedia(true);
+    seedSession();
+    mockEventDetailApi({ event: makeEvent({ sessions: twoSessions }) });
+    renderPage();
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'ARD-EVT-2026-001' })).toBeInTheDocument();
+    expect(screen.getByText('Event')).toBeInTheDocument();
+    expect(screen.getByText('Wedding')).toBeInTheDocument();
+    expect(stripValue('Dates')).toBe('12 – 14 Dec 2026');
+    expect(stripValue('Venues')).toBe('Lawn · Full Banquet');
+    expect(stripValue('Guests')).toBe('700 pax');
+    expect(stripValue('Sessions')).toBe('2');
+    // Venues only here: 80000 + 120000.
+    expect(stripValue('Grand Total')).toBe('2,00,000');
+    expect(screen.getByRole('button', { name: 'Delete Event' })).toBeInTheDocument();
+  });
+
+  it('leaves the Grand Total and Delete Event out for other roles', async () => {
+    mockMatchMedia(true);
+    seedSession('FnBHead');
+    mockEventDetailApi({ event: makeEvent({ sessions: twoSessions }) });
+    renderPage();
+
+    await screen.findByRole('heading', { level: 1, name: 'ARD-EVT-2026-001' });
+    expect(stripValue('Sessions')).toBe('2');
+    expect(screen.queryByText('Grand Total')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete Event' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
+  });
+
+  it('moves Delete Event into the ⋮ menu on mobile, opening the confirm sheet', async () => {
+    seedSession();
+    mockEventDetailApi({ event: makeEvent({ sessions: twoSessions }) });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'More actions' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete Event' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Delete ARD-EVT-2026-001?' })).toBeInTheDocument();
+  });
+
+  it('renders Event Details session cards with DD/MM/YYYY dates and no status chip (D12)', async () => {
+    seedSession();
+    mockEventDetailApi({ event: makeEvent({ sessions: twoSessions }) });
+    renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
+
+    const list = await screen.findByRole('list', { name: 'Sessions' });
+    const cards = within(list).getAllByRole('listitem');
+    expect(cards).toHaveLength(2);
+    expect(within(cards[0]!).getByText('Engagement — Lawn')).toBeInTheDocument();
+    expect(within(cards[0]!).getByText('12/12/2026 to 12/12/2026 · 250 pax')).toBeInTheDocument();
+    expect(within(list).queryByText('Active')).not.toBeInTheDocument();
+    expect(within(cards[1]!).getByRole('button', { name: 'Edit Wedding session' })).toBeInTheDocument();
+  });
+
+  it('shows the "No Sessions yet." empty state on Event Details', async () => {
+    seedSession();
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
+
+    expect(await screen.findByText('No Sessions yet.')).toBeInTheDocument();
   });
 });

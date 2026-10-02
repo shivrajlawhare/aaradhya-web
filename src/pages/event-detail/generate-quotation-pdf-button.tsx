@@ -1,4 +1,6 @@
-import { Alert, Button, Typography } from '@mui/material';
+import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
+import { Alert, Button, Typography, useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import type { z } from 'zod';
 import type { filteredEventResultSchema } from '../../contract';
 import { useQuotationPdfDownload } from './use-quotation-pdf-download';
@@ -14,6 +16,8 @@ interface GenerateQuotationPdfButtonProps {
 // PDF" shares the same flow via useQuotationPdfDownload.
 const GenerateQuotationPdfButton = ({ event }: GenerateQuotationPdfButtonProps) => {
   const { download, isFetching, error } = useQuotationPdfDownload(event);
+  const theme = useTheme();
+  const size = useMediaQuery(theme.breakpoints.up('md')) ? 'medium' : 'large';
 
   return (
     <>
@@ -22,10 +26,15 @@ const GenerateQuotationPdfButton = ({ event }: GenerateQuotationPdfButtonProps) 
           <Typography variant="bodyM">{error}</Typography>
         </Alert>
       )}
-      <Button variant="contained" onClick={download} disabled={isFetching}>
-        <Typography variant="labelS" component="span">
-          Generate Quotation PDF
-        </Typography>
+      <Button
+        variant="contained"
+        size={size}
+        fullWidth
+        startIcon={<PictureAsPdfOutlinedIcon />}
+        onClick={download}
+        loading={isFetching}
+      >
+        Generate Quotation PDF
       </Button>
     </>
   );

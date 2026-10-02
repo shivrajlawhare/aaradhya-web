@@ -1,10 +1,22 @@
 import { type ChangeEvent, useState } from 'react';
-import { Alert, List, ListItem, Stack, Switch, Typography } from '@mui/material';
+import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
+import RadioButtonUncheckedRoundedIcon from '@mui/icons-material/RadioButtonUncheckedRounded';
+import { Alert, Box, LinearProgress, Paper, Switch, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import { useToast } from '../../components/ui/toast-provider';
 import { DOCUMENT_CHECKLIST_ITEM_KEYS, type filteredEventResultSchema } from '../../contract';
-import { listStyles, rowStyles, sectionStyles } from './documents-tab.styles';
+import {
+  labelStyles,
+  listStyles,
+  pendingIconStyles,
+  progressBarStyles,
+  receivedIconStyles,
+  rowStyles,
+} from './documents-tab.styles';
+import { tabCardStyles } from './tab-card.styles';
+
+const RECEIVED_HEADING_ID = 'documents-received-heading';
 
 type PublicEvent = z.infer<typeof filteredEventResultSchema>;
 type DocumentsChecklist = PublicEvent['documentsChecklist'];
@@ -82,27 +94,51 @@ const DocumentsTab = ({ event, onEventChanged }: DocumentsTabProps) => {
     });
   };
 
+  // D9: "N of 6 received" + progress, from the switches themselves.
+  const receivedCount = DOCUMENT_CHECKLIST_ITEM_KEYS.filter((key) => checklist[key]).length;
+  const receivedPercent = Math.round((receivedCount / DOCUMENT_CHECKLIST_ITEM_KEYS.length) * 100);
+
   return (
-    <Stack sx={sectionStyles}>
-      <List sx={listStyles} disablePadding>
-        {DOCUMENT_CHECKLIST_ITEM_KEYS.map((key, index) => (
-          <ListItem key={key} sx={rowStyles} divider={index < DOCUMENT_CHECKLIST_ITEM_KEYS.length - 1}>
-            <Typography variant="bodyL">{ITEM_LABELS[key]}</Typography>
-            <Switch
-              checked={checklist[key]}
-              onChange={handleToggle(key)}
-              disabled={updateChecklistMutation.isPending}
-              slotProps={{ input: { 'aria-label': ITEM_LABELS[key] } }}
-            />
-          </ListItem>
-        ))}
-      </List>
+    <Paper elevation={0} sx={tabCardStyles}>
+      <Typography variant="titleM" component="h2" id={RECEIVED_HEADING_ID}>
+        {receivedCount} of {DOCUMENT_CHECKLIST_ITEM_KEYS.length} received
+      </Typography>
+      <LinearProgress
+        variant="determinate"
+        value={receivedPercent}
+        aria-labelledby={RECEIVED_HEADING_ID}
+        sx={progressBarStyles}
+      />
+      <Box component="ul" aria-label="Documents checklist" sx={listStyles}>
+        {DOCUMENT_CHECKLIST_ITEM_KEYS.map((key) => {
+          const isReceived = checklist[key];
+          const statusIcon = isReceived ? (
+            <CheckCircleOutlineRoundedIcon aria-hidden sx={receivedIconStyles} />
+          ) : (
+            <RadioButtonUncheckedRoundedIcon aria-hidden sx={pendingIconStyles} />
+          );
+          return (
+            <Box component="li" key={key} sx={rowStyles}>
+              {statusIcon}
+              <Typography variant="bodyL" sx={labelStyles}>
+                {ITEM_LABELS[key]}
+              </Typography>
+              <Switch
+                checked={isReceived}
+                onChange={handleToggle(key)}
+                disabled={updateChecklistMutation.isPending}
+                slotProps={{ input: { 'aria-label': ITEM_LABELS[key] } }}
+              />
+            </Box>
+          );
+        })}
+      </Box>
       {saveError && (
         <Alert severity="error">
           <Typography variant="bodyM">{saveError}</Typography>
         </Alert>
       )}
-    </Stack>
+    </Paper>
   );
 };
 
