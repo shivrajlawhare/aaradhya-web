@@ -1,8 +1,9 @@
 import { Box, Paper, Switch, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
+import ActiveStatusChip from '../../components/ui/active-status-chip';
 import type { Role, userResultSchema } from '../../contract';
-import { canDeleteUser, DeleteUserButton, RoleSelect, UserStatusChip } from './user-controls';
+import { canDeleteUser, DeleteUserButton, RoleSelect } from './user-controls';
 import {
   actionsRowStyles,
   cardStyles,
@@ -43,7 +44,7 @@ const UsersCardList = ({ users, onChanged, onDelete }: UsersCardListProps) => {
             <Typography variant="titleM" component="h3">
               {user.name}
             </Typography>
-            <UserStatusChip active={user.active} />
+            <ActiveStatusChip active={user.active} />
           </Box>
           <Typography variant="bodyM" sx={usernameStyles}>
             {user.username}

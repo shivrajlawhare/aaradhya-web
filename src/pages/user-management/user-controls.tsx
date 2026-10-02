@@ -1,8 +1,8 @@
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
-import { Chip, IconButton, MenuItem, Select, type SxProps, type Theme } from '@mui/material';
+import { IconButton, MenuItem, Select, type SxProps, type Theme } from '@mui/material';
 import { Role, ROLE_OPTIONS } from '../../contract';
 import { getRoleLabel } from '../../utils/role-labels';
-import { deleteButtonStyles, statusChipStyles } from './user-controls.styles';
+import { deleteButtonStyles } from './user-controls.styles';
 
 interface RoleSelectProps {
   role: Role;
@@ -31,19 +31,6 @@ export const RoleSelect = ({ role, userName, disabled, onChange, sx }: RoleSelec
     ))}
   </Select>
 );
-
-interface UserStatusChipProps {
-  active: boolean;
-}
-
-// Figma Chip/Status "• Active" (green) / "• Inactive" (muted).
-export const UserStatusChip = ({ active }: UserStatusChipProps) => {
-  let label = 'Inactive';
-  if (active) {
-    label = 'Active';
-  }
-  return <Chip label={label} size="small" sx={statusChipStyles(active)} />;
-};
 
 interface DeleteUserButtonProps {
   userName: string;

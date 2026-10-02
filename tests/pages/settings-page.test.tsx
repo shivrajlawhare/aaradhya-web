@@ -491,3 +491,106 @@ describe('SettingsPage', () => {
     });
   });
 });
+
+describe('SettingsPage — empty states (DEV-14, D16)', () => {
+  const SECTIONS = [
+    { label: 'Venues', empty: 'No venues yet' },
+    { label: 'Event Types', empty: 'No event types yet' },
+    { label: 'Room Types', empty: 'No room types yet' },
+    { label: 'Menu Items', empty: 'No menu items yet' },
+  ];
+
+  afterEach(() => {
+    mockMatchMedia(false);
+  });
+
+  it.each(SECTIONS)(
+    'shows the table header and "$empty" for an empty $label section on desktop',
+    async ({ label, empty }) => {
+      mockMatchMedia(true);
+      mockSettingsApi({});
+      renderPage();
+
+      const nav = await screen.findByRole('navigation', { name: 'Settings sections' });
+      fireEvent.click(within(nav).getByRole('button', { name: label }));
+
+      const table = await screen.findByRole('table', { name: label });
+      expect(within(table).getByText('Name')).toBeInTheDocument();
+      expect(within(table).queryAllByRole('row')).toHaveLength(1);
+      expect(screen.getByText(empty)).toBeInTheDocument();
+    }
+  );
+
+  it.each(SECTIONS)(
+    'shows "$empty" in place of the cards for an empty $label section on mobile',
+    async ({ label, empty }) => {
+      mockMatchMedia(false);
+      mockSettingsApi({});
+      renderPage();
+
+      const chips = await screen.findByRole('tablist', { name: 'Settings sections' });
+      fireEvent.click(within(chips).getByRole('tab', { name: label }));
+
+      expect(await screen.findByText(empty)).toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: label })).not.toBeInTheDocument();
+    }
+  );
+
+  it('drops the empty state once the section has an entry', async () => {
+    mockMatchMedia(true);
+    mockSettingsApi({ venues: [makeVenue()] });
+    renderPage();
+
+    await screen.findByText('Poolside');
+    expect(screen.queryByText('No venues yet')).not.toBeInTheDocument();
+  });
+});
+
+describe('SettingsPage — columns (DEV-14 check of DEV-07 occupancy and the Menu Items rule)', () => {
+  afterEach(() => {
+    mockMatchMedia(false);
+  });
+
+  it('shows Room Types occupancy right-aligned beside the tariff, and edits it in the dialog', async () => {
+    mockMatchMedia(true);
+    mockSettingsApi({ roomTypes: [makeRoomType({ name: 'Delux', occupancy: 2, defaultTariff: 2800 })] });
+    renderPage();
+
+    const nav = await screen.findByRole('navigation', { name: 'Settings sections' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Room Types' }));
+
+    const table = await screen.findByRole('table', { name: 'Room Types' });
+    const headers = within(table)
+      .getAllByRole('columnheader')
+      .map((cell) => cell.textContent);
+    expect(headers).toEqual(['Name', 'Occupancy', 'Default Tariff', 'Status', 'Edit']);
+    const row = within(table).getByText('Delux').closest('tr')!;
+    expect(within(row).getByText('2')).toHaveStyle({ textAlign: 'right' });
+
+    fireEvent.click(within(row).getByRole('button', { name: 'Edit Delux' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Edit Room Type' });
+    expect(within(dialog).getByLabelText('Occupancy')).toHaveValue(2);
+  });
+
+  it('gives Menu Items no status chip or switch, on desktop and mobile', async () => {
+    mockMatchMedia(true);
+    mockSettingsApi({ menuItems: [makeMenuItem()] });
+    const { unmount } = renderPage();
+
+    const nav = await screen.findByRole('navigation', { name: 'Settings sections' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Menu Items' }));
+    const table = await screen.findByRole('table', { name: 'Menu Items' });
+    expect(within(table).queryByText('Status')).not.toBeInTheDocument();
+    expect(within(table).queryByRole('checkbox')).not.toBeInTheDocument();
+    unmount();
+
+    mockMatchMedia(false);
+    renderPage();
+    const chips = await screen.findByRole('tablist', { name: 'Settings sections' });
+    fireEvent.click(within(chips).getByRole('tab', { name: 'Menu Items' }));
+    const list = await screen.findByRole('list', { name: 'Menu Items' });
+    expect(within(list).queryByText('Active')).not.toBeInTheDocument();
+    expect(within(list).queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(within(list).getByText('Default Cost / Plate: 250')).toBeInTheDocument();
+  });
+});

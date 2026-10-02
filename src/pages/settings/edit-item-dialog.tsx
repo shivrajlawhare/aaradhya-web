@@ -8,9 +8,14 @@ import {
   Stack,
   TextField,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { useForm } from 'react-hook-form';
+import { actionsStyles, dialogStyles } from '../../components/ui/responsive-dialog.styles';
+import { fieldStackStyles } from './edit-item-dialog.styles';
 import OccupancyField from './occupancy-field';
+import { RUPEE_INPUT } from './rupee-input';
 import { type MasterListRow, parseOccupancy, type SectionConfig } from './settings-sections';
 
 interface EditItemFormValues {
@@ -34,13 +39,15 @@ interface EditItemDialogProps {
   onSave: (values: EditItemSubmitValues) => void;
 }
 
-// The Edit action's "small dialog" (this story's own AC offers inline-or-
-// dialog; a Dialog was chosen so editing name/cost never disturbs the
-// table/card list's own layout mid-row). Active isn't editable here — the
-// table/card list's own Switch already handles Deactivate/Reactivate as an
-// immediate, separate action, matching UsersTable's existing split between
-// its role Select and its active Switch.
+const toInputValue = (value: number | null): string => (value === null ? '' : String(value));
+
+// Figma Dialog/Form "Edit <Section>" (UI-29, UI-40): Name, Occupancy (Room
+// Types), the section's cost, then Cancel / Save — Save disabled until
+// something changes. A bottom sheet on mobile. Active isn't edited here:
+// the list's own switch does that immediately.
 const EditItemDialog = ({ section, row, isPending, errorMessage, onClose, onSave }: EditItemDialogProps) => {
+  const theme = useTheme();
+  const isBottomSheet = !useMediaQuery(theme.breakpoints.up('md'));
   const {
     register,
     handleSubmit,
@@ -49,8 +56,8 @@ const EditItemDialog = ({ section, row, isPending, errorMessage, onClose, onSave
   } = useForm<EditItemFormValues>({
     defaultValues: {
       name: row.name,
-      cost: row.cost === null ? '' : String(row.cost),
-      occupancy: row.occupancy === null ? '' : String(row.occupancy),
+      cost: toInputValue(row.cost),
+      occupancy: toInputValue(row.occupancy),
     },
   });
 
@@ -71,10 +78,17 @@ const EditItemDialog = ({ section, row, isPending, errorMessage, onClose, onSave
   };
 
   return (
-    <Dialog open onClose={onClose} component="form" onSubmit={handleSubmit(handleEdit)}>
-      <DialogTitle>Edit {section.label.replace(/s$/, '')}</DialogTitle>
+    <Dialog
+      open
+      onClose={onClose}
+      component="form"
+      onSubmit={handleSubmit(handleEdit)}
+      aria-labelledby="edit-item-title"
+      sx={dialogStyles(isBottomSheet)}
+    >
+      <DialogTitle id="edit-item-title">Edit {section.label.replace(/s$/, '')}</DialogTitle>
       <DialogContent>
-        <Stack sx={{ gap: 4, pt: 2, minWidth: 280 }}>
+        <Stack sx={fieldStackStyles}>
           <TextField label="Name" fullWidth autoFocus {...register('name')} />
           {section.supportsOccupancy && (
             <OccupancyField registration={register('occupancy')} isInvalid={isOccupancyInvalid} />
@@ -84,7 +98,7 @@ const EditItemDialog = ({ section, row, isPending, errorMessage, onClose, onSave
               label={section.costLabel}
               type="number"
               fullWidth
-              slotProps={{ htmlInput: { min: 0 } }}
+              slotProps={RUPEE_INPUT}
               {...register('cost')}
             />
           )}
@@ -95,8 +109,10 @@ const EditItemDialog = ({ section, row, isPending, errorMessage, onClose, onSave
           )}
         </Stack>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+      <DialogActions sx={actionsStyles(isBottomSheet)}>
+        <Button variant="ghost" onClick={onClose}>
+          Cancel
+        </Button>
         <Button type="submit" variant="contained" disabled={!canSubmit || isPending}>
           Save
         </Button>

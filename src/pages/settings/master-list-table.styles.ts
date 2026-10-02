@@ -1,22 +1,43 @@
 import type { SxProps, Theme } from '@mui/material';
-import { colorTokens, radiusTokens } from '../../theme/tokens';
+import { paletteVar, scaleTokens } from '../../theme/tokens';
+
+const { radius, space, stroke } = scaleTokens;
+
+// Figma Table/Master List widths (UI-29 / UI-40): Name fills.
+const OCCUPANCY_COLUMN_WIDTH = 140;
+const COST_COLUMN_WIDTH = 180;
+const STATUS_COLUMN_WIDTH = 180;
+const EDIT_COLUMN_WIDTH = 72;
+
+export const panelBodyStyles: SxProps<Theme> = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: `${space[24]}px`,
+};
 
 export const tableCardStyles: SxProps<Theme> = {
-  flex: 1,
   width: '100%',
-  borderRadius: `${radiusTokens.radiusMd}px`, // radius-md (cards)
-  overflow: 'hidden',
+  border: `${stroke.default}px solid ${paletteVar('divider')}`,
+  borderRadius: `${radius.lg}px`,
+  overflowX: 'auto',
 };
 
-// status-confirmed (Active) / text-faint (Inactive) — this story's own
-// Tokens line, outlined rather than filled so the chip reads as a label,
-// not a second competing color block next to the Edit icon/Switch.
-export const activeChipStyles: SxProps<Theme> = {
-  color: colorTokens.statusConfirmed,
-  borderColor: colorTokens.statusConfirmed,
+export const occupancyCellStyles: SxProps<Theme> = {
+  width: OCCUPANCY_COLUMN_WIDTH,
+  fontVariantNumeric: 'tabular-nums',
 };
 
-export const inactiveChipStyles: SxProps<Theme> = {
-  color: colorTokens.textFaint,
-  borderColor: colorTokens.textFaint,
+export const costCellStyles: SxProps<Theme> = {
+  width: COST_COLUMN_WIDTH,
+  fontVariantNumeric: 'tabular-nums',
+};
+
+export const statusCellStyles: SxProps<Theme> = {
+  width: STATUS_COLUMN_WIDTH,
+  whiteSpace: 'nowrap',
+};
+
+export const editCellStyles: SxProps<Theme> = {
+  width: EDIT_COLUMN_WIDTH,
+  textAlign: 'center',
 };

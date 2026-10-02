@@ -1,7 +1,8 @@
-import { Alert, Button, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useForm } from 'react-hook-form';
-import { fieldStackStyles, formStyles } from './add-item-form.styles';
+import { addButtonStyles, fieldRowStyles, fieldStackStyles, formStyles } from './add-item-form.styles';
 import OccupancyField from './occupancy-field';
+import { RUPEE_INPUT } from './rupee-input';
 import { parseOccupancy, type SectionConfig } from './settings-sections';
 
 interface AddItemFormValues {
@@ -52,33 +53,44 @@ const AddItemForm = ({ section, isPending, errorMessage, onSubmit }: AddItemForm
     });
   };
 
+  const title = `Add ${section.label.replace(/s$/, '')}`;
+
   return (
-    <Paper component="form" onSubmit={handleSubmit(handleAdd)} noValidate sx={formStyles}>
+    <Paper
+      component="form"
+      aria-label={title}
+      elevation={0}
+      onSubmit={handleSubmit(handleAdd)}
+      noValidate
+      sx={formStyles}
+    >
       <Stack sx={fieldStackStyles}>
-        <Typography variant="titleM" component="h2">
-          Add {section.label.replace(/s$/, '')}
+        <Typography variant="titleM" component="h3">
+          {title}
         </Typography>
-        <TextField label="Name" fullWidth {...register('name')} />
-        {section.supportsOccupancy && (
-          <OccupancyField registration={register('occupancy')} isInvalid={isOccupancyInvalid} />
-        )}
-        {section.costLabel && (
-          <TextField
-            label={section.costLabel}
-            type="number"
-            fullWidth
-            slotProps={{ htmlInput: { min: 0 } }}
-            {...register('cost')}
-          />
-        )}
+        <Box sx={fieldRowStyles}>
+          <TextField label="Name" fullWidth {...register('name')} />
+          {section.supportsOccupancy && (
+            <OccupancyField registration={register('occupancy')} isInvalid={isOccupancyInvalid} />
+          )}
+          {section.costLabel && (
+            <TextField
+              label={section.costLabel}
+              type="number"
+              fullWidth
+              slotProps={RUPEE_INPUT}
+              {...register('cost')}
+            />
+          )}
+          <Button type="submit" variant="contained" disabled={!canSubmit || isPending} sx={addButtonStyles}>
+            Add
+          </Button>
+        </Box>
         {errorMessage && (
           <Alert severity="error">
             <Typography variant="bodyM">{errorMessage}</Typography>
           </Alert>
         )}
-        <Button type="submit" variant="contained" disabled={!canSubmit || isPending}>
-          Add
-        </Button>
       </Stack>
     </Paper>
   );

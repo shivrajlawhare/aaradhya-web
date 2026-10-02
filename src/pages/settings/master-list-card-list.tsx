@@ -1,15 +1,15 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import { Box, IconButton, Paper, Stack, Switch, Typography } from '@mui/material';
+import { Box, IconButton, Paper, Switch, Typography } from '@mui/material';
+import ActiveStatusChip from '../../components/ui/active-status-chip';
 import {
   actionsRowStyles,
-  activeStatusStyles,
   cardStyles,
-  costStyles,
-  emptyStateCardStyles,
   headerRowStyles,
-  inactiveStatusStyles,
   listStyles,
+  metaStyles,
+  spacerStyles,
 } from './master-list-card-list.styles';
+import MasterListEmptyState from './master-list-empty-state';
 import type { MasterListRow, SectionConfig } from './settings-sections';
 
 interface MasterListCardListProps {
@@ -20,40 +20,46 @@ interface MasterListCardListProps {
   onEdit: (row: MasterListRow) => void;
 }
 
-// Mobile's card list (this story's own AC): one card per entry —
-// name + default cost + status — below SectionChipRow, matching
-// STORY-055/056's card pattern (events-card-list.tsx). The Deactivate/
-// Reactivate toggle (`supportsStatus`) and the Edit action (`supportsEdit`)
-// are independent — Menu Items has the latter but not the former
-// (settings-sections.ts for why); the actions row renders if either is on.
+// "Occupancy: 2 · Default Tariff: 2800" — the card's meta line; null for a
+// section with nothing to show (Event Types).
+const buildMetaLine = (section: SectionConfig, row: MasterListRow): string | null => {
+  const parts: string[] = [];
+  if (section.supportsOccupancy) {
+    parts.push(`Occupancy: ${row.occupancy}`);
+  }
+  if (section.costLabel) {
+    parts.push(`${section.costLabel}: ${row.cost}`);
+  }
+  return parts.length > 0 ? parts.join(' · ') : null;
+};
+
+// Mobile's master list (Figma Card/Master Item, UI-29/UI-40): name + status
+// chip, the meta line, then the active switch (left) and Edit (right). The
+// switch and the status are for sections that have them — never Menu Items.
+// An empty section shows its empty state (D16).
 const MasterListCardList = ({ section, rows, isMutating, onToggleActive, onEdit }: MasterListCardListProps) => {
   if (rows.length === 0) {
-    return (
-      <Paper elevation={0} sx={emptyStateCardStyles}>
-        <Typography variant="bodyM">No {section.label.toLowerCase()} yet</Typography>
-      </Paper>
-    );
+    return <MasterListEmptyState section={section} />;
   }
 
   return (
-    <Stack sx={listStyles}>
-      {rows.map((row) => (
-        <Paper key={row.id} elevation={0} sx={cardStyles(section.supportsStatus ? row.active : true)}>
-          <Box sx={headerRowStyles}>
-            <Typography variant="titleM">{row.name}</Typography>
-            {section.supportsStatus && (
-              <Typography variant="labelS" sx={row.active ? activeStatusStyles : inactiveStatusStyles}>
-                {row.active ? 'Active' : 'Inactive'}
+    <Box component="ul" aria-label={section.label} sx={listStyles}>
+      {rows.map((row) => {
+        const metaLine = buildMetaLine(section, row);
+        const isActive = !section.supportsStatus || row.active;
+        return (
+          <Paper component="li" key={row.id} elevation={0} sx={cardStyles(isActive)}>
+            <Box sx={headerRowStyles}>
+              <Typography variant="titleM" component="h3">
+                {row.name}
+              </Typography>
+              {section.supportsStatus && <ActiveStatusChip active={row.active} />}
+            </Box>
+            {metaLine && (
+              <Typography variant="bodyM" sx={metaStyles}>
+                {metaLine}
               </Typography>
             )}
-          </Box>
-          {section.costLabel && (
-            <Typography variant="bodyM" sx={costStyles}>
-              {section.supportsOccupancy && `Occupancy: ${row.occupancy} · `}
-              {section.costLabel}: {row.cost}
-            </Typography>
-          )}
-          {(section.supportsStatus || section.supportsEdit) && (
             <Box sx={actionsRowStyles}>
               {section.supportsStatus && (
                 <Switch
@@ -63,16 +69,17 @@ const MasterListCardList = ({ section, rows, isMutating, onToggleActive, onEdit 
                   slotProps={{ input: { 'aria-label': `Toggle active for ${row.name}` } }}
                 />
               )}
+              <Box sx={spacerStyles} />
               {section.supportsEdit && (
                 <IconButton aria-label={`Edit ${row.name}`} disabled={isMutating} onClick={() => onEdit(row)}>
                   <EditOutlinedIcon fontSize="small" />
                 </IconButton>
               )}
             </Box>
-          )}
-        </Paper>
-      ))}
-    </Stack>
+          </Paper>
+        );
+      })}
+    </Box>
   );
 };
 

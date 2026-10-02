@@ -1,9 +1,10 @@
 import { Box, Paper, Switch, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
+import ActiveStatusChip from '../../components/ui/active-status-chip';
 import { visuallyHiddenStyles } from '../../components/ui/visually-hidden.styles';
 import type { Role, userResultSchema } from '../../contract';
-import { canDeleteUser, DeleteUserButton, RoleSelect, UserStatusChip } from './user-controls';
+import { canDeleteUser, DeleteUserButton, RoleSelect } from './user-controls';
 import {
   actionsCellStyles,
   activeCellStyles,
@@ -74,7 +75,7 @@ const UsersTable = ({ users, onChanged, onDelete }: UsersTableProps) => {
                 />
               </TableCell>
               <TableCell sx={activeCellStyles}>
-                <UserStatusChip active={user.active} />
+                <ActiveStatusChip active={user.active} />
                 <Switch
                   checked={user.active}
                   disabled={updateUserMutation.isPending}
