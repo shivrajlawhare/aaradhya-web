@@ -1,22 +1,43 @@
 import type { SxProps, Theme } from '@mui/material';
-import { colorTokens, radiusTokens } from '../../theme/tokens';
+import { paletteVar, scaleTokens } from '../../theme/tokens';
+
+const { radius, stroke } = scaleTokens;
+
+// Figma Table/Users column widths (UI-43): Name fills, the rest fixed so the
+// table still fits beside the form.
+const USERNAME_COLUMN_WIDTH = 140;
+const ROLE_COLUMN_WIDTH = 210;
+const ROLE_SELECT_WIDTH = 180;
+const ACTIVE_COLUMN_WIDTH = 160;
+const ACTIONS_COLUMN_WIDTH = 72;
 
 export const tableCardStyles: SxProps<Theme> = {
   flex: 1,
+  minWidth: 0,
   width: '100%',
-  borderRadius: `${radiusTokens.radiusMd}px`, // radius-md (cards)
-  overflow: 'hidden',
+  border: `${stroke.default}px solid ${paletteVar('divider')}`,
+  borderRadius: `${radius.lg}px`,
+  overflowX: 'auto',
 };
 
-// status-tentative/status-completed tints, repurposed per the story's Tokens
-// line: active reads as "currently live" (tentative's warm amber), inactive
-// as "done, no longer live" (completed's muted grey).
-export const activeChipStyles: SxProps<Theme> = {
-  bgcolor: colorTokens.statusTentativeTint,
-  color: colorTokens.statusTentative,
+export const usernameCellStyles: SxProps<Theme> = {
+  width: USERNAME_COLUMN_WIDTH,
 };
 
-export const inactiveChipStyles: SxProps<Theme> = {
-  bgcolor: colorTokens.statusCompletedTint,
-  color: colorTokens.statusCompleted,
+export const roleCellStyles: SxProps<Theme> = {
+  width: ROLE_COLUMN_WIDTH,
+};
+
+export const roleSelectStyles: SxProps<Theme> = {
+  width: ROLE_SELECT_WIDTH,
+};
+
+export const activeCellStyles: SxProps<Theme> = {
+  width: ACTIVE_COLUMN_WIDTH,
+  whiteSpace: 'nowrap',
+};
+
+export const actionsCellStyles: SxProps<Theme> = {
+  width: ACTIONS_COLUMN_WIDTH,
+  textAlign: 'center',
 };

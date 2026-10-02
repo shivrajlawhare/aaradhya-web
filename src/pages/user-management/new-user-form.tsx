@@ -2,8 +2,11 @@ import { useState } from 'react';
 import { Alert, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { Controller, useForm } from 'react-hook-form';
 import { tsr } from '../../api/client';
+import { ILLUSTRATIONS } from '../../components/ui/illustrations';
+import ThemedImage from '../../components/ui/themed-image';
 import { Role, ROLE_OPTIONS } from '../../contract';
-import { fieldStackStyles, formStyles } from './new-user-form.styles';
+import { getRoleLabel } from '../../utils/role-labels';
+import { fieldStackStyles, formStyles, illustrationStyles } from './new-user-form.styles';
 
 // role stays '' until the operator actually picks one, so the AC's "role
 // required before submit is enabled" is a real, observable gate — not
@@ -19,6 +22,9 @@ interface NewUserFormProps {
   onCreated: () => void;
 }
 
+// Figma "New user" form card (UI-28): Illustration/Users, then Name ·
+// Username · Password · Role (friendly labels, D11) and "Create user",
+// disabled until all four are set.
 const NewUserForm = ({ onCreated }: NewUserFormProps) => {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -62,8 +68,16 @@ const NewUserForm = ({ onCreated }: NewUserFormProps) => {
   };
 
   return (
-    <Paper component="form" onSubmit={handleSubmit(handleCreate)} noValidate sx={formStyles}>
+    <Paper
+      component="form"
+      aria-label="New user"
+      elevation={0}
+      onSubmit={handleSubmit(handleCreate)}
+      noValidate
+      sx={formStyles}
+    >
       <Stack sx={fieldStackStyles}>
+        <ThemedImage {...ILLUSTRATIONS.users} sx={illustrationStyles} />
         <Typography variant="titleM" component="h2">
           New user
         </Typography>
@@ -80,7 +94,7 @@ const NewUserForm = ({ onCreated }: NewUserFormProps) => {
               </MenuItem>
               {ROLE_OPTIONS.map((roleOption) => (
                 <MenuItem key={roleOption} value={roleOption}>
-                  {roleOption}
+                  {getRoleLabel(roleOption)}
                 </MenuItem>
               ))}
             </TextField>

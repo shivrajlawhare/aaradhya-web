@@ -9,19 +9,16 @@ import { theme } from '../../src/theme/theme';
 const jsonResponse = (status: number, body: unknown) =>
   Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
 
-// STORY-081 — ActivityTab now also calls GET /users (changedBy resolution)
-// and GET /menu-items (menuItems diff resolution) alongside GET /change-log,
+// STORY-081 — ActivityTab also calls GET /menu-items (menuItems diff resolution) alongside GET /change-log,
 // so the old single vi.fn().mockReturnValue(...) (every fetch call gets the
 // same canned response) no longer works — routed by URL instead, same
 // pattern this codebase's own multi-endpoint mocks (e.g. event-detail-page.
 // test.tsx's mockEventDetailApi) already establish.
 const mockActivityApi = ({
   changeLog = [],
-  users = [],
   menuItems = [],
 }: {
   changeLog?: unknown[];
-  users?: unknown[];
   menuItems?: unknown[];
 } = {}) => {
   vi.stubGlobal(
@@ -30,9 +27,6 @@ const mockActivityApi = ({
       const url = String(input);
       if (url.includes('/change-log')) {
         return jsonResponse(200, changeLog);
-      }
-      if (url.includes('/users')) {
-        return jsonResponse(200, users);
       }
       if (url.includes('/menu-items')) {
         return jsonResponse(200, menuItems);
@@ -84,7 +78,7 @@ describe('ActivityTab', () => {
     expect(await screen.findByText('No changes yet')).toBeInTheDocument();
   });
 
-  it('renders a humanized field label and old → new, resolving changedBy to a name when known and falling back to the raw id when not (deleted account)', async () => {
+  it('renders a humanized field label and old → new, naming the actor from changedByName (DEV-13) and falling back to the raw id when the account no longer exists', async () => {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
     mockActivityApi({
       changeLog: [
@@ -96,6 +90,7 @@ describe('ActivityTab', () => {
           oldValue: 'Tentative',
           newValue: 'Confirmed',
           changedBy: 'user-1',
+          changedByName: 'Priya Nair',
           timestamp: fiveMinutesAgo,
         },
         {
@@ -106,18 +101,8 @@ describe('ActivityTab', () => {
           oldValue: 'Wedding',
           newValue: 'Engagement',
           changedBy: 'user-deleted',
+          changedByName: null,
           timestamp: fiveMinutesAgo,
-        },
-      ],
-      users: [
-        {
-          id: 'user-1',
-          name: 'Priya Nair',
-          username: 'priya',
-          role: 'EventManager',
-          active: true,
-          createdAt: '',
-          updatedAt: '',
         },
       ],
     });
@@ -145,6 +130,7 @@ describe('ActivityTab', () => {
           oldValue: null,
           newValue: 'First note',
           changedBy: 'user-1',
+          changedByName: 'Priya Nair',
           timestamp: new Date().toISOString(),
         },
       ],
@@ -187,6 +173,7 @@ describe('ActivityTab', () => {
             notes: null,
           },
           changedBy: 'user-1',
+          changedByName: 'Priya Nair',
           timestamp: new Date().toISOString(),
         },
         {
@@ -197,6 +184,7 @@ describe('ActivityTab', () => {
           oldValue: ['menu-item-1'],
           newValue: ['menu-item-1', 'menu-item-2'],
           changedBy: 'user-1',
+          changedByName: 'Priya Nair',
           timestamp: new Date().toISOString(),
         },
         {
@@ -210,6 +198,7 @@ describe('ActivityTab', () => {
             { roomType: 'Suite', occupancy: 2, tariff: 5000, noOfRooms: 1 },
           ],
           changedBy: 'user-1',
+          changedByName: 'Priya Nair',
           timestamp: new Date().toISOString(),
         },
       ],
@@ -242,6 +231,7 @@ describe('ActivityTab', () => {
           oldValue: 100,
           newValue: 120,
           changedBy: 'user-1',
+          changedByName: 'Priya Nair',
           groupId: 'req-1',
           timestamp: now,
         },
@@ -253,6 +243,7 @@ describe('ActivityTab', () => {
           oldValue: 'Lawn',
           newValue: 'Poolside',
           changedBy: 'user-1',
+          changedByName: 'Priya Nair',
           groupId: 'req-1',
           timestamp: now,
         },
@@ -264,6 +255,7 @@ describe('ActivityTab', () => {
           oldValue: 'Tentative',
           newValue: 'Confirmed',
           changedBy: 'user-1',
+          changedByName: 'Priya Nair',
           timestamp: now,
         },
       ],

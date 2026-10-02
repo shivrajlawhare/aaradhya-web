@@ -105,6 +105,9 @@ export const changeLogEntryResultSchema = z.object({
   oldValue: z.unknown(),
   newValue: z.unknown(),
   changedBy: z.string(),
+  // DEV-13 — resolved server-side, so a soft-deleted user still shows by
+  // name; null only if the account no longer exists.
+  changedByName: z.string().nullable(),
   // STORY-081 — absent on any entry written before this field existed; the
   // frontend renders such an entry as its own single-item group.
   groupId: z.string().optional(),
@@ -994,6 +997,17 @@ export const contract = c.router({
       404: apiErrorSchema,
     },
     summary: 'Toggle active and/or change role on a User Account (Event Manager only)',
+  },
+  deleteUser: {
+    method: 'DELETE',
+    path: '/users/:id',
+    pathParams: userIdParamsSchema,
+    responses: {
+      204: c.noBody(),
+      400: apiErrorSchema,
+      404: apiErrorSchema,
+    },
+    summary: 'Soft-delete a User Account — never an Event Manager or yourself (Event Manager only)',
   },
   listEventManagers: {
     method: 'GET',

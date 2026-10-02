@@ -241,7 +241,9 @@ const formatChangeDetail = (parsed: ParsedField, entry: ChangeLogEntry, menuItem
 interface DisplayGroup {
   key: string;
   entries: ChangeLogEntry[];
-  changedBy: string;
+  // The actor's name from GET /change-log — soft-deleted users included
+  // (DEV-13); falls back to the raw id.
+  actorName: string;
   timestamp: string;
 }
 
@@ -258,7 +260,12 @@ const buildGroups = (entries: ChangeLogEntry[]): DisplayGroup[] => {
     const existingIndex = indexByKey.get(key);
     if (existingIndex === undefined) {
       indexByKey.set(key, groups.length);
-      groups.push({ key, entries: [entry], changedBy: entry.changedBy, timestamp: entry.timestamp });
+      groups.push({
+        key,
+        entries: [entry],
+        actorName: entry.changedByName ?? entry.changedBy,
+        timestamp: entry.timestamp,
+      });
     } else {
       groups[existingIndex]!.entries.push(entry);
     }
@@ -271,13 +278,6 @@ const ActivityTab = ({ entityType, entityId }: ActivityTabProps) => {
     queryKey: ['change-log', entityType, entityId],
     queryData: { query: { entityType, entityId } },
   });
-  // EventManager-only, matching this tab's own existing EventManager-only
-  // visibility (event-detail-page.tsx's canSeeActivity) — no new privacy
-  // exposure from resolving changedBy to a name here.
-  const usersQuery = tsr.listUsers.useQuery({ queryKey: ['users'] });
-  const userNameById = new Map((usersQuery.data?.body ?? []).map((user) => [user.id, user.name]));
-  const resolveChangedBy = (userId: string): string => userNameById.get(userId) ?? userId;
-
   const menuItemsQuery = tsr.listMenuItems.useQuery({ queryKey: ['menu-items'], queryData: { query: {} } });
   const menuItemsById = new Map((menuItemsQuery.data?.body ?? []).map((menuItem) => [menuItem.id, menuItem.name]));
 
@@ -306,7 +306,7 @@ const ActivityTab = ({ entityType, entityId }: ActivityTabProps) => {
     <Paper sx={timelineCardStyles}>
       <Stack>
         {groups.map((group, index) => {
-          const actorName = resolveChangedBy(group.changedBy);
+          const { actorName } = group;
           const hasNext = index < groups.length - 1;
           return (
             <Box key={group.key} sx={timelineItemStyles}>

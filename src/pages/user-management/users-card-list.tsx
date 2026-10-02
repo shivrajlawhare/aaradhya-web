@@ -1,16 +1,15 @@
-import { Box, MenuItem, Paper, Select, type SelectChangeEvent, Switch, Typography } from '@mui/material';
+import { Box, Paper, Switch, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
-import { Role, ROLE_OPTIONS, type userResultSchema } from '../../contract';
+import type { Role, userResultSchema } from '../../contract';
+import { canDeleteUser, DeleteUserButton, RoleSelect, UserStatusChip } from './user-controls';
 import {
   actionsRowStyles,
-  activeStatusStyles,
   cardStyles,
   headerRowStyles,
-  inactiveStatusStyles,
   listStyles,
   roleSelectStyles,
-  roleStyles,
+  usernameStyles,
 } from './users-card-list.styles';
 
 type PublicUser = z.infer<typeof userResultSchema>;
@@ -18,68 +17,55 @@ type PublicUser = z.infer<typeof userResultSchema>;
 interface UsersCardListProps {
   users: PublicUser[];
   onChanged: () => void;
+  onDelete: (user: PublicUser) => void;
 }
 
-// Below `md`, UserManagementPage renders this instead of UsersTable — same
-// Name/Role/Active data as the desktop table, one card per user (STORY-056,
-// same responsive pattern as the Events List's own STORY-055). Now also
-// carries the same role-change Select and active-toggle Switch the desktop
-// table has — this view used to be display-only, which left mobile with no
-// way to actually update a user at all (unlike every other role-gated
-// screen's own table/card-list split, which only ever changes *how much*
-// is shown, never *whether an action is reachable*).
-const UsersCardList = ({ users, onChanged }: UsersCardListProps) => {
+// Below `md`, UserManagementPage renders this instead of UsersTable (Figma
+// Card/User, UI-28/UI-43): name + status chip, username, then the role
+// select, the active switch and — for non-Event Managers — delete. Every
+// action the desktop table has is reachable here too.
+const UsersCardList = ({ users, onChanged, onDelete }: UsersCardListProps) => {
   const updateUserMutation = tsr.updateUser.useMutation({ onSuccess: onChanged });
 
   const handleToggleActive = (user: PublicUser) => {
     updateUserMutation.mutate({ params: { id: user.id }, body: { active: !user.active } });
   };
 
-  const handleRoleChange = (user: PublicUser, event: SelectChangeEvent<Role>) => {
-    updateUserMutation.mutate({ params: { id: user.id }, body: { role: event.target.value } });
+  const handleRoleChange = (user: PublicUser, role: Role) => {
+    updateUserMutation.mutate({ params: { id: user.id }, body: { role } });
   };
 
   return (
-    <Box sx={listStyles}>
-      {users.map((user) => {
-        const statusLabel = user.active ? 'Active' : 'Inactive';
-        const statusStyles = user.active ? activeStatusStyles : inactiveStatusStyles;
-
-        return (
-          <Paper key={user.id} elevation={0} sx={cardStyles(user.active)}>
-            <Box sx={headerRowStyles}>
-              <Typography variant="titleM">{user.name}</Typography>
-              <Typography variant="labelS" sx={statusStyles}>
-                {statusLabel}
-              </Typography>
-            </Box>
-            <Typography variant="bodyM" sx={roleStyles}>
-              {user.username}
+    <Box component="ul" aria-label="Users" sx={listStyles}>
+      {users.map((user) => (
+        <Paper component="li" key={user.id} elevation={0} sx={cardStyles(user.active)}>
+          <Box sx={headerRowStyles}>
+            <Typography variant="titleM" component="h3">
+              {user.name}
             </Typography>
-            <Box sx={actionsRowStyles}>
-              <Select<Role>
-                value={user.role}
-                size="small"
-                disabled={updateUserMutation.isPending}
-                onChange={(event) => handleRoleChange(user, event)}
-                sx={roleSelectStyles}
-              >
-                {ROLE_OPTIONS.map((roleOption) => (
-                  <MenuItem key={roleOption} value={roleOption}>
-                    {roleOption}
-                  </MenuItem>
-                ))}
-              </Select>
-              <Switch
-                checked={user.active}
-                disabled={updateUserMutation.isPending}
-                onChange={() => handleToggleActive(user)}
-                slotProps={{ input: { 'aria-label': `Toggle active for ${user.username}` } }}
-              />
-            </Box>
-          </Paper>
-        );
-      })}
+            <UserStatusChip active={user.active} />
+          </Box>
+          <Typography variant="bodyM" sx={usernameStyles}>
+            {user.username}
+          </Typography>
+          <Box sx={actionsRowStyles}>
+            <RoleSelect
+              role={user.role}
+              userName={user.name}
+              disabled={updateUserMutation.isPending}
+              onChange={(role) => handleRoleChange(user, role)}
+              sx={roleSelectStyles}
+            />
+            <Switch
+              checked={user.active}
+              disabled={updateUserMutation.isPending}
+              onChange={() => handleToggleActive(user)}
+              slotProps={{ input: { 'aria-label': `Toggle active for ${user.username}` } }}
+            />
+            {canDeleteUser(user.role) && <DeleteUserButton userName={user.name} onClick={() => onDelete(user)} />}
+          </Box>
+        </Paper>
+      ))}
     </Box>
   );
 };
