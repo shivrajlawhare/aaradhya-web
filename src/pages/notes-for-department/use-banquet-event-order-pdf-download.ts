@@ -1,20 +1,22 @@
 import { useState } from 'react';
-import type { z } from 'zod';
 import { tsr } from '../../api/client';
-import type { filteredEventResultSchema } from '../../contract';
 import { downloadBlob } from '../../utils/download-blob';
 
-type QuotationPdfEvent = Pick<z.infer<typeof filteredEventResultSchema>, 'id' | 'eventId'>;
+interface BanquetEventOrderPdfEvent {
+  id: string;
+  eventId: string;
+}
 
-// Fetches the Event's server-rendered Quotation PDF and downloads it. Shared
-// by the Event Detail "Generate Quotation PDF" button and the Quotation
-// Preview toolbar's "Share PDF" — the same flow, two presentations.
-export const useQuotationPdfDownload = (event: QuotationPdfEvent) => {
+const PDF_ERROR = 'Something went wrong. Please try again.';
+
+// Fetches the server-rendered Notes for Department PDF and saves it as
+// `<eventId>-notes-for-department.pdf` — any role may (DEV-12).
+export const useBanquetEventOrderPdfDownload = (event: BanquetEventOrderPdfEvent) => {
   const [error, setError] = useState<string | null>(null);
 
   // enabled: false — a GET triggered on demand via refetch().
-  const pdfQuery = tsr.getQuotationPdf.useQuery({
-    queryKey: ['quotation-pdf', event.id],
+  const pdfQuery = tsr.getBanquetEventOrderPdf.useQuery({
+    queryKey: ['banquet-event-order-pdf', event.id],
     queryData: { params: { id: event.id } },
     enabled: false,
     retry: false,
@@ -29,11 +31,10 @@ export const useQuotationPdfDownload = (event: QuotationPdfEvent) => {
 
     const result = await pdfQuery.refetch();
     if (result.isError || !result.data || result.data.status !== 200) {
-      setError('Something went wrong. Please try again.');
+      setError(PDF_ERROR);
       return;
     }
-
-    downloadBlob(result.data.body, `${event.eventId}-quotation.pdf`);
+    downloadBlob(result.data.body, `${event.eventId}-notes-for-department.pdf`);
   };
 
   return { download, isFetching: pdfQuery.isFetching, error };

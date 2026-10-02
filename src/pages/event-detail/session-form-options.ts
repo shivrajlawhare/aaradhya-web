@@ -34,6 +34,7 @@ export const VENUE_COST_LOOKUP: Record<string, number> = {
 export const SEATING_ARRANGEMENT_LABELS: Record<SeatingArrangement, string> = {
   [SeatingArrangement.Theatre]: 'Theatre',
   [SeatingArrangement.RoundTables]: 'Round Tables',
+  [SeatingArrangement.SquareTables]: 'Square Tables',
   [SeatingArrangement.Classroom]: 'Classroom',
   [SeatingArrangement.UShape]: 'U-Shape',
   [SeatingArrangement.Cluster]: 'Cluster',

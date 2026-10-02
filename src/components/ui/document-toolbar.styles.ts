@@ -8,7 +8,8 @@ const MOBILE_HEIGHT = 56;
 const MARK_SIZE = 32;
 const DIVIDER_HEIGHT = 28;
 
-// Figma Quotation/Toolbar: pinned over the canvas.
+// Figma Quotation/Toolbar (also the Banquet Event Order toolbar): pinned
+// over the canvas.
 export const toolbarStyles: SxProps<Theme> = {
   position: 'sticky',
   top: 0,
@@ -54,8 +55,8 @@ export const spacerStyles: SxProps<Theme> = {
   flex: 1,
 };
 
-// Mobile "Share PDF": a Tonal icon button.
-export const mobileShareStyles: SxProps<Theme> = {
+// The mobile action (Share PDF / Download PDF): a Tonal icon button.
+export const mobileActionStyles: SxProps<Theme> = {
   bgcolor: paletteVar('brand-tonal'),
   color: paletteVar('brand-onTonal'),
   '&:hover': { bgcolor: paletteVar('action-selected') },

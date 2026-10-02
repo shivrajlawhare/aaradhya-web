@@ -8,7 +8,7 @@ import ErrorState from '../../components/ui/error-state';
 import type { IllustrationName } from '../../components/ui/illustrations';
 import PageLoader from '../../components/ui/page-loader';
 import { Role } from '../../contract';
-import { EVENT_LIST_PATH } from '../../routes';
+import { EVENT_LIST_PATH, notesForDepartmentPath } from '../../routes';
 import { useAuth } from '../../stores/auth-context';
 import ClientDetailsTab from './client-details-tab';
 import DeleteEventDialog from './delete-event-dialog';
@@ -225,6 +225,7 @@ const EventDetailPage = () => {
           isDesktop={isDesktop}
           canEdit={canEdit}
           onDelete={() => setIsDeleteDialogOpen(true)}
+          notesPath={notesForDepartmentPath(event.id)}
         />
         {/* Pill tabs, scrollable — up to 8 for an Event Manager; MUI keeps
             the active tab scrolled into view on a phone. */}

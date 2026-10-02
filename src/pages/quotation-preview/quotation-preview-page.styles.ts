@@ -1,7 +1,7 @@
 import type { SxProps, Theme } from '@mui/material';
+import { TOOLBAR_DESKTOP_HEIGHT } from '../../components/ui/document-toolbar.styles';
 import { paletteVar, scaleTokens, shadowTokens } from '../../theme/tokens';
 import { PAPER_COLORS } from './quotation-document.styles';
-import { TOOLBAR_DESKTOP_HEIGHT } from './quotation-toolbar.styles';
 
 const { radius, space, stroke } = scaleTokens;
 

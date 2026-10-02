@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AppShell from './components/app-shell/app-shell';
 import RequireRole from './components/ui/require-role';
-import { Role } from './contract';
+import { Role, ROLE_OPTIONS } from './contract';
 import CalendarPage from './pages/calendar/calendar-page';
 import DashboardPage from './pages/dashboard/dashboard-page';
 import AccommodationStep from './pages/event-creation/accommodation-step';
@@ -15,6 +15,7 @@ import { WIZARD_STEPS } from './pages/event-creation/wizard-steps';
 import EventDetailPage from './pages/event-detail/event-detail-page';
 import EventListPage from './pages/event-list/event-list-page';
 import LoginPage from './pages/login/login-page';
+import NotesForDepartmentPage from './pages/notes-for-department/notes-for-department-page';
 import QuotationPreviewPage from './pages/quotation-preview/quotation-preview-page';
 import SettingsPage from './pages/settings/settings-page';
 import UserManagementPage from './pages/user-management/user-management-page';
@@ -25,6 +26,7 @@ import {
   EVENT_DETAIL_PATH_PATTERN,
   EVENT_LIST_PATH,
   LOGIN_PATH,
+  NOTES_FOR_DEPARTMENT_PATH_PATTERN,
   QUOTATION_PREVIEW_PATH_PATTERN,
   SETTINGS_PATH,
   USER_MANAGEMENT_PATH,
@@ -182,6 +184,17 @@ const App = () => {
         element={
           <RequireRole roles={[Role.EventManager]}>
             <QuotationPreviewPage />
+          </RequireRole>
+        }
+      />
+      {/* DEV-12 — every role: the Banquet Event Order carries no prices.
+          RequireRole with every role still sends a signed-out visitor to
+          login. No AppShell, like the Quotation Preview. */}
+      <Route
+        path={NOTES_FOR_DEPARTMENT_PATH_PATTERN}
+        element={
+          <RequireRole roles={ROLE_OPTIONS}>
+            <NotesForDepartmentPage />
           </RequireRole>
         }
       />

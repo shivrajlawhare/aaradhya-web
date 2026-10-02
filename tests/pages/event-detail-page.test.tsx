@@ -1995,3 +1995,88 @@ describe('EventDetailPage — header, Summary Strip and session cards (DEV-10)',
     expect(await screen.findByText('No Sessions yet.')).toBeInTheDocument();
   });
 });
+
+describe('EventDetailPage — Notes for Department (DEV-12)', () => {
+  const sessionWithNotes = {
+    id: 'session-1',
+    sessionType: 'Wedding',
+    venue: 'Lawn',
+    venueCost: 50000,
+    startDate: '2026-06-15T00:00:00.000Z',
+    endDate: '2026-06-15T00:00:00.000Z',
+    startTime: null,
+    endTime: null,
+    pax: 200,
+    sessionStatus: 'Active',
+    durationDays: 1,
+    isMultiDay: false,
+    setup: makeSessionSetup(),
+    departmentNotes: { vegPax: 150, nonVegPax: 50, maintenance: ['Sound System'], restaurantNote: null },
+    items: [],
+  };
+
+  it.each(['EventManager', 'FnBHead', 'Housekeeping', 'Reception'])(
+    'offers "Notes for Department" in the desktop header to role %s',
+    async (role) => {
+      mockMatchMedia(true);
+      seedSession(role);
+      mockEventDetailApi({ event: makeEvent() });
+      renderPage();
+
+      const link = await screen.findByRole('link', { name: 'Notes for Department' });
+      expect(link).toHaveAttribute('href', '/events/event-1/notes-for-department');
+    }
+  );
+
+  it('puts it in the ⋮ menu beside Delete Event for an Event Manager on mobile', async () => {
+    seedSession();
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'More actions' }));
+
+    const item = await screen.findByRole('menuitem', { name: 'Notes for Department' });
+    expect(item).toHaveAttribute('href', '/events/event-1/notes-for-department');
+    expect(screen.getByRole('menuitem', { name: 'Delete Event' })).toBeInTheDocument();
+  });
+
+  it('is the header icon button for other roles on mobile', async () => {
+    seedSession('Housekeeping');
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+
+    const link = await screen.findByRole('link', { name: 'Notes for Department' });
+    expect(link).toHaveAttribute('href', '/events/event-1/notes-for-department');
+    expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
+  });
+
+  it('edits the session’s notes, warns when Veg + Non-Veg doesn’t match Pax, and saves them', async () => {
+    seedSession();
+    const { sessionPatchRequests } = mockEventDetailApi({ event: makeEvent({ sessions: [sessionWithNotes] }) });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Edit .* session$/ }));
+
+    const notes = await screen.findByRole('region', { name: 'Notes for Department' });
+    expect(within(notes).getByLabelText('Veg pax')).toHaveValue(150);
+    expect(within(notes).getByText('Sound System')).toBeInTheDocument();
+    expect(within(notes).queryByRole('status')).not.toBeInTheDocument();
+
+    fireEvent.change(within(notes).getByLabelText('Veg pax'), { target: { value: '160' } });
+    expect(within(notes).getByRole('status')).toHaveTextContent('Veg + Non-Veg (210) doesn’t match Pax (200)');
+
+    fireEvent.change(within(notes).getByLabelText('Restaurant note'), { target: { value: 'A la carte billing.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save session' }));
+
+    await waitFor(() => expect(sessionPatchRequests).toHaveLength(1));
+    expect(sessionPatchRequests[0]).toMatchObject({
+      departmentNotes: {
+        vegPax: 160,
+        nonVegPax: 50,
+        maintenance: ['Sound System'],
+        restaurantNote: 'A la carte billing.',
+      },
+    });
+  });
+});

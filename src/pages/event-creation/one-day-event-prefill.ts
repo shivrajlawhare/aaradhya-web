@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import { EMPTY_DEPARTMENT_NOTES } from '../../components/ui/department-notes-fields';
 import {
   ItemType,
   type oneDayEventTemplateResultSchema,
@@ -134,6 +135,7 @@ export const buildOneDayEventWizardData = (
     startTime: session.startTime,
     endTime: session.endTime,
     setup: toWizardSetup(session.setup),
+    departmentNotes: EMPTY_DEPARTMENT_NOTES,
   };
 
   const roomCounts = Object.fromEntries(template.roomLines.map((line) => [line.roomType, line.noOfRooms]));

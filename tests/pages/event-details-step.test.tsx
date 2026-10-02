@@ -510,6 +510,34 @@ describe('EventDetailsStep', () => {
     expect(screen.getByLabelText('Notes')).toHaveValue('');
   });
 
+  it('carries the Notes for Department into the stored row, with the non-blocking pax warning (DEV-12)', async () => {
+    const user = userEvent.setup();
+    renderWizard(eventDetailsPath);
+    await screen.findByLabelText('Event Type');
+    await fillMinimalEvent(user);
+
+    const notes = screen.getByRole('region', { name: 'Notes for Department' });
+    fireEvent.change(within(notes).getByLabelText('Veg pax'), { target: { value: '4' } });
+    fireEvent.change(within(notes).getByLabelText('Non-Veg pax'), { target: { value: '16' } });
+    expect(within(notes).getByRole('status')).toHaveTextContent(/^Veg \+ Non-Veg \(20\) doesn’t match Pax \(\d+\)$/);
+    await user.type(within(notes).getByLabelText('Maintenance'), 'Sound System{Enter}');
+    fireEvent.change(within(notes).getByLabelText('Restaurant note'), {
+      target: { value: 'Billing will be as per a la carte.' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
+    await screen.findByText('Wedding');
+
+    const stored = JSON.parse(sessionStorage.getItem(WIZARD_STORAGE_KEY) ?? '{}');
+    expect(stored['event-details'].sessions[0].departmentNotes).toEqual({
+      vegPax: 4,
+      nonVegPax: 16,
+      maintenance: ['Sound System'],
+      restaurantNote: 'Billing will be as per a la carte.',
+    });
+    expect(within(notes).getByLabelText('Veg pax')).toHaveValue(null);
+  });
+
   it('carries entered Sessions forward across Back/Next between Step 2 and Step 1', async () => {
     const user = userEvent.setup();
     renderWizard(eventDetailsPath);

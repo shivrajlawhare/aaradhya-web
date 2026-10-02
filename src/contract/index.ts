@@ -344,6 +344,8 @@ export enum SessionStatus {
 export enum SeatingArrangement {
   Theatre = 'Theatre',
   RoundTables = 'RoundTables',
+  // DEV-12 — the Notes for Department reference's "Square Table Setup".
+  SquareTables = 'SquareTables',
   Classroom = 'Classroom',
   UShape = 'UShape',
   Cluster = 'Cluster',
@@ -369,6 +371,22 @@ export const sessionSetupSchema = z.object({
   notes: z.string().trim().min(1).optional(),
 });
 
+// DEV-12 (CR-1 D4) — mirrors aaradhya-api's Notes for Department schemas.
+// A whole object on update, like setup.
+export const sessionDepartmentNotesSchema = z.object({
+  vegPax: z.number().int().min(0).optional(),
+  nonVegPax: z.number().int().min(0).optional(),
+  maintenance: z.array(z.string().trim().min(1)).optional(),
+  restaurantNote: z.string().trim().min(1).optional(),
+});
+
+export const sessionDepartmentNotesResultSchema = z.object({
+  vegPax: z.number().nullable(),
+  nonVegPax: z.number().nullable(),
+  maintenance: z.array(z.string()),
+  restaurantNote: z.string().nullable(),
+});
+
 // sessionType/venue required, matching aaradhya-api's own
 // createSessionBodySchema; startDate/endDate are plain strings, same
 // "native <input type=date> already gives 'YYYY-MM-DD', nothing to coerce"
@@ -384,6 +402,7 @@ export const createSessionBodySchema = z.object({
   endTime: z.string().trim().min(1).optional(),
   pax: z.number().min(0).optional(),
   setup: sessionSetupSchema.optional(),
+  departmentNotes: sessionDepartmentNotesSchema.optional(),
 });
 
 // Every field optional (PATCH semantics), unlike createSessionBodySchema —
@@ -401,6 +420,7 @@ export const updateSessionBodySchema = z.object({
   pax: z.number().min(0).optional(),
   sessionStatus: z.nativeEnum(SessionStatus).optional(),
   setup: sessionSetupSchema.optional(),
+  departmentNotes: sessionDepartmentNotesSchema.optional(),
 });
 
 // Exported (not local) — STORY-050's dashboard schema, further down this
@@ -595,6 +615,7 @@ const createEventSessionInputSchema = z.object({
   endTime: z.string().trim().min(1).optional(),
   pax: z.number().min(0).optional(),
   setup: sessionSetupSchema.optional(),
+  departmentNotes: sessionDepartmentNotesSchema.optional(),
   items: z.array(createItemBodySchema).optional(),
 });
 
@@ -685,6 +706,7 @@ export const sessionResultSchema = z.object({
   durationDays: z.number(),
   isMultiDay: z.boolean(),
   setup: sessionSetupResultSchema,
+  departmentNotes: sessionDepartmentNotesResultSchema,
   items: z.array(itemResultSchema),
 });
 
@@ -901,6 +923,38 @@ export const oneDayEventTemplateResultSchema = z.object({
   updatedAt: z.string(),
 });
 
+// DEV-12 (CR-1 D4/D5) — mirrors aaradhya-api's
+// contract/schemas/banquet-event-order.ts: only what a Banquet Event Order
+// page prints, no prices.
+const banquetEventOrderMealSchema = z.object({
+  mealName: z.string(),
+  startTime: z.string().nullable(),
+  endTime: z.string().nullable(),
+  menuItems: z.array(z.string()),
+});
+
+export const banquetEventOrderSessionSchema = z.object({
+  id: z.string(),
+  sessionType: z.string(),
+  venue: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
+  startTime: z.string().nullable(),
+  endTime: z.string().nullable(),
+  pax: z.number(),
+  meals: z.array(banquetEventOrderMealSchema),
+  ceremonies: z.array(z.string()),
+  setup: sessionSetupResultSchema,
+  departmentNotes: sessionDepartmentNotesResultSchema,
+});
+
+export const banquetEventOrderResultSchema = z.object({
+  id: z.string(),
+  eventId: z.string(),
+  clientName: z.string(),
+  sessions: z.array(banquetEventOrderSessionSchema),
+});
+
 export const contract = c.router({
   login: {
     method: 'POST',
@@ -1077,6 +1131,26 @@ export const contract = c.router({
       404: apiErrorSchema,
     },
     summary: 'Generate the client-facing Quotation PDF from live Event data (Event Manager only)',
+  },
+  getBanquetEventOrder: {
+    method: 'GET',
+    path: '/events/:id/banquet-event-order',
+    pathParams: eventIdParamsSchema,
+    responses: {
+      200: banquetEventOrderResultSchema,
+      404: apiErrorSchema,
+    },
+    summary: 'The Banquet Event Order (Notes for Department) — no prices (any authenticated caller)',
+  },
+  getBanquetEventOrderPdf: {
+    method: 'GET',
+    path: '/events/:id/banquet-event-order.pdf',
+    pathParams: eventIdParamsSchema,
+    responses: {
+      200: c.otherResponse({ contentType: 'application/pdf', body: c.type<Blob>() }),
+      404: apiErrorSchema,
+    },
+    summary: 'Generate the Notes for Department PDF from live Event data (any authenticated caller)',
   },
   createSession: {
     method: 'POST',

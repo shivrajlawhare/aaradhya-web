@@ -355,6 +355,36 @@ describe('ReviewStep', () => {
     });
   });
 
+  it('submits each Session’s Notes for Department, blanks left out (DEV-12)', async () => {
+    mockCreateEventApi(201);
+    seedWizardData({
+      'event-details': {
+        sessions: [
+          {
+            id: 's1',
+            sessionType: 'Wedding',
+            venue: 'Poolside',
+            venueCost: 60000,
+            pax: 20,
+            startDate: '2026-09-12',
+            endDate: '2026-09-12',
+            startTime: '',
+            endTime: '',
+            departmentNotes: { vegPax: 4, nonVegPax: null, maintenance: ['Sound System', ' '], restaurantNote: '' },
+          },
+        ],
+      },
+    });
+    renderWizard(reviewPath);
+    await screen.findByText('Poolside');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Quotation' }));
+    expect(await screen.findByText('Quotation preview for evt-1')).toBeInTheDocument();
+
+    const body = lastCreateEventBody as { sessions: { departmentNotes: Record<string, unknown> }[] };
+    expect(body.sessions[0]!.departmentNotes).toEqual({ vegPax: 4, maintenance: ['Sound System'] });
+  });
+
   it('keeps the wizard data intact and shows an error when submission fails', async () => {
     mockCreateEventApi(500);
     seedWizardData();

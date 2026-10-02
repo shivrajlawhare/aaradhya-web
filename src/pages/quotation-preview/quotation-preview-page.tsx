@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
+import IosShareRoundedIcon from '@mui/icons-material/IosShareRounded';
 import PinchOutlinedIcon from '@mui/icons-material/PinchOutlined';
 import { Alert, Box, Typography, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useParams, useSearchParams } from 'react-router-dom';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
+import DocumentToolbar from '../../components/ui/document-toolbar';
 import ErrorState from '../../components/ui/error-state';
 import PageLoader from '../../components/ui/page-loader';
 import type { filteredEventResultSchema } from '../../contract';
@@ -21,7 +23,6 @@ import {
   sideColumnStyles,
   stateStyles,
 } from './quotation-preview-page.styles';
-import QuotationToolbar from './quotation-toolbar';
 import ScaledPaper from './scaled-paper';
 
 type PublicEvent = z.infer<typeof filteredEventResultSchema>;
@@ -178,7 +179,13 @@ const QuotationPreviewPage = () => {
 
   return (
     <Box sx={pageStyles}>
-      <QuotationToolbar event={event} isDesktop={isDesktop} isSharing={pdf.isFetching} onShare={pdf.download} />
+      <DocumentToolbar
+        event={event}
+        title="Event Quotation"
+        mobileTitle="Quotation"
+        action={{ label: 'Share PDF', icon: <IosShareRoundedIcon />, isLoading: pdf.isFetching, onClick: pdf.download }}
+        isDesktop={isDesktop}
+      />
       {content}
     </Box>
   );

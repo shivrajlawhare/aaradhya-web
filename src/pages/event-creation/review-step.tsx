@@ -5,6 +5,7 @@ import { useTheme } from '@mui/material/styles';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { tsr } from '../../api/client';
+import { toDepartmentNotesBody } from '../../components/ui/department-notes-fields';
 import { useToast } from '../../components/ui/toast-provider';
 import { ClientContactRole, ItemType } from '../../contract';
 import { quotationPreviewPath } from '../../routes';
@@ -213,6 +214,7 @@ const mapSessionsForSubmit = (sessions: WizardSessionRow[], byDate: Record<strin
         brideGroomSeating: setup.brideGroomSeating,
         notes: setup.notes.trim() || undefined,
       },
+      departmentNotes: toDepartmentNotesBody(session.departmentNotes),
       items,
     };
   });

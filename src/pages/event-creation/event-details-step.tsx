@@ -26,6 +26,10 @@ import { useTheme } from '@mui/material/styles';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Controller, useForm } from 'react-hook-form';
 import { tsr } from '../../api/client';
+import DepartmentNotesFields, {
+  type DepartmentNotesValues,
+  EMPTY_DEPARTMENT_NOTES,
+} from '../../components/ui/department-notes-fields';
 import { SEATING_ARRANGEMENT_OPTIONS, SeatingArrangement } from '../../contract';
 import { useEventWizard } from '../../stores/event-wizard-context';
 import { formatEventDate, formatSessionDuration } from '../../utils/quotation-formatting';
@@ -138,6 +142,8 @@ export interface WizardSessionRow {
   startTime: string;
   endTime: string;
   setup: WizardSessionSetup;
+  // DEV-12 (D4). Optional: rows stored before it existed have none.
+  departmentNotes?: DepartmentNotesValues;
 }
 
 interface EventDetailsStepData {
@@ -169,6 +175,7 @@ interface EntryFormValues {
   startTime: string;
   endTime: string;
   setup: WizardSessionSetup;
+  departmentNotes: DepartmentNotesValues;
 }
 
 const emptyEntry: EntryFormValues = {
@@ -182,6 +189,7 @@ const emptyEntry: EntryFormValues = {
   startTime: '',
   endTime: '',
   setup: emptySetup,
+  departmentNotes: EMPTY_DEPARTMENT_NOTES,
 };
 
 // A stored row back into entry-card values for editing (DEV-06). A type that
@@ -201,6 +209,7 @@ const toEntryFormValues = (row: WizardSessionRow, activeEventTypeNames: string[]
     startTime: row.startTime,
     endTime: row.endTime,
     setup: { ...emptySetup, ...row.setup },
+    departmentNotes: row.departmentNotes ?? EMPTY_DEPARTMENT_NOTES,
   };
 };
 
@@ -241,6 +250,8 @@ const EventDetailsStep = () => {
     defaultValues: emptyEntry,
   });
   const sessionTypeOption = watch('sessionTypeOption');
+  // For the Notes for Department Veg + Non-Veg check.
+  const entryPax = watch('pax');
 
   const handleVenueChange = (venueName: string) => {
     const selected = activeVenues.find((venue) => venue.name === venueName);
@@ -325,6 +336,7 @@ const EventDetailsStep = () => {
       startTime: values.startTime,
       endTime: values.endTime,
       setup: values.setup,
+      departmentNotes: values.departmentNotes,
     };
 
     const previousRow = rows.find((row) => row.id === editingRowId);
@@ -689,6 +701,11 @@ const EventDetailsStep = () => {
           </Box>
           <TextField {...register('setup.notes')} label="Notes" multiline minRows={3} fullWidth />
         </Stack>
+        <Controller
+          name="departmentNotes"
+          control={control}
+          render={({ field }) => <DepartmentNotesFields value={field.value} pax={entryPax} onChange={field.onChange} />}
+        />
         <Box sx={formActionsStyles}>
           <Button type="submit" variant="contained" startIcon={<AddIcon />}>
             {submitLabel}

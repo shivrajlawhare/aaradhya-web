@@ -22,3 +22,6 @@ export const CALENDAR_PATH = '/calendar';
 export const QUOTATION_PREVIEW_PATH_PATTERN = '/events/:id/quotation-preview';
 export const quotationPreviewPath = (id: string): string => `/events/${id}/quotation-preview`;
 export const SETTINGS_PATH = '/settings';
+// DEV-12 — the Notes for Department (Banquet Event Order) preview.
+export const NOTES_FOR_DEPARTMENT_PATH_PATTERN = '/events/:id/notes-for-department';
+export const notesForDepartmentPath = (id: string): string => `/events/${id}/notes-for-department`;

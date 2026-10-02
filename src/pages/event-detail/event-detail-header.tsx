@@ -1,7 +1,9 @@
-import { type ReactNode, useState } from 'react';
+import { useState } from 'react';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
 import { Box, Button, IconButton, Menu, MenuItem, Typography } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 import type { z } from 'zod';
 import pageHeaderDecorDark from '../../assets/decor/page-header-dark.svg';
 import pageHeaderDecor from '../../assets/decor/page-header.svg';
@@ -30,18 +32,23 @@ interface EventDetailHeaderProps {
   event: HeaderEvent;
   summary: EventSummary;
   isDesktop: boolean;
-  // Delete Event is the Event Manager's only (and so is every action here).
+  // Delete Event is the Event Manager's only.
   canEdit: boolean;
   onDelete: () => void;
-  // The "Notes for Department" slot, filled by DEV-12; sits before Delete.
-  notesAction?: ReactNode;
+  // "Notes for Department" (DEV-12) — the Banquet Event Order preview, for
+  // every role.
+  notesPath: string;
 }
 
-// Figma Event Detail/Header (UI-22): the EVENT eyebrow, the event ID with
-// its status chip, the family type, the decor, the actions and the Summary
-// Strip — one card on desktop; on mobile an identity card (actions in a ⋮
-// menu) above the strip's own tiles.
-const EventDetailHeader = ({ event, summary, isDesktop, canEdit, onDelete, notesAction }: EventDetailHeaderProps) => {
+const NOTES_LABEL = 'Notes for Department';
+
+// Figma Event Detail/Header (UI-22, UI-44): the EVENT eyebrow, the event ID
+// with its status chip, the family type, the decor, the actions ("Notes for
+// Department" for every role, "Delete Event" for the Event Manager) and the
+// Summary Strip — one card on desktop. On mobile an identity card above the
+// strip's own tiles: the Event Manager's actions sit in a ⋮ menu; other roles
+// get the Notes for Department icon button in its place.
+const EventDetailHeader = ({ event, summary, isDesktop, canEdit, onDelete, notesPath }: EventDetailHeaderProps) => {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
 
   const identity = (
@@ -67,24 +74,35 @@ const EventDetailHeader = ({ event, summary, isDesktop, canEdit, onDelete, notes
       onDelete();
     };
 
+    let headerAction = (
+      <IconButton component={RouterLink} to={notesPath} aria-label={NOTES_LABEL}>
+        <DescriptionOutlinedIcon />
+      </IconButton>
+    );
+    if (canEdit) {
+      headerAction = (
+        <IconButton
+          aria-label="More actions"
+          aria-haspopup="menu"
+          onClick={(clickEvent) => setMenuAnchor(clickEvent.currentTarget)}
+        >
+          <MoreVertRoundedIcon />
+        </IconButton>
+      );
+    }
+
     return (
       <Box component="header" sx={mobileHeaderStyles}>
         <Box sx={headerCardStyles}>
           <Box sx={identityRowStyles}>
             {identity}
-            {canEdit && (
-              <IconButton
-                aria-label="More actions"
-                aria-haspopup="menu"
-                onClick={(clickEvent) => setMenuAnchor(clickEvent.currentTarget)}
-              >
-                <MoreVertRoundedIcon />
-              </IconButton>
-            )}
+            {headerAction}
           </Box>
-          {notesAction}
         </Box>
         <Menu anchorEl={menuAnchor} open={menuAnchor !== null} onClose={() => setMenuAnchor(null)}>
+          <MenuItem component={RouterLink} to={notesPath}>
+            {NOTES_LABEL}
+          </MenuItem>
           <MenuItem onClick={handleDeleteFromMenu}>Delete Event</MenuItem>
         </Menu>
         <EventSummaryStrip summary={summary} />
@@ -98,14 +116,22 @@ const EventDetailHeader = ({ event, summary, isDesktop, canEdit, onDelete, notes
         <ThemedImage light={pageHeaderDecor} dark={pageHeaderDecorDark} sx={decorImageStyles} />
       </Box>
       {identity}
-      {canEdit && (
-        <Box sx={actionsStyles}>
-          {notesAction}
+      <Box sx={actionsStyles}>
+        <Button
+          variant="outlined"
+          size="small"
+          component={RouterLink}
+          to={notesPath}
+          startIcon={<DescriptionOutlinedIcon />}
+        >
+          {NOTES_LABEL}
+        </Button>
+        {canEdit && (
           <Button variant="outlined" color="error" size="small" startIcon={<DeleteOutlinedIcon />} onClick={onDelete}>
             Delete Event
           </Button>
-        </Box>
-      )}
+        )}
+      </Box>
       <EventSummaryStrip summary={summary} />
     </Box>
   );

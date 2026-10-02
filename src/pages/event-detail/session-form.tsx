@@ -14,6 +14,12 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Controller, useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
+import DepartmentNotesFields, {
+  type DepartmentNotesValues,
+  EMPTY_DEPARTMENT_NOTES,
+  toDepartmentNotesBody,
+  toDepartmentNotesValues,
+} from '../../components/ui/department-notes-fields';
 import { useToast } from '../../components/ui/toast-provider';
 import { type filteredEventResultSchema, SEATING_ARRANGEMENT_OPTIONS, SeatingArrangement } from '../../contract';
 import TimePickerCard from '../event-creation/time-picker-card';
@@ -103,6 +109,7 @@ interface SessionFormValues {
     brideGroomSeating: boolean;
     notes: string;
   };
+  departmentNotes: DepartmentNotesValues;
 }
 
 // A value already in SESSION_TYPE_PRESETS/VENUE_PRESETS pre-selects that
@@ -128,6 +135,7 @@ const toFormValues = (session: SessionResult | undefined): SessionFormValues => 
       endTime: '',
       pax: 0,
       setup: DEFAULT_SETUP,
+      departmentNotes: EMPTY_DEPARTMENT_NOTES,
     };
   }
 
@@ -158,6 +166,7 @@ const toFormValues = (session: SessionResult | undefined): SessionFormValues => 
           notes: setup.notes ?? '',
         }
       : DEFAULT_SETUP,
+    departmentNotes: toDepartmentNotesValues(session.departmentNotes),
   };
 };
 
@@ -181,10 +190,13 @@ const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) 
     setValue,
     setError,
     clearErrors,
+    watch,
     formState: { isDirty },
   } = useForm<SessionFormValues>({
     defaultValues: toFormValues(session),
   });
+  // For the Notes for Department Veg + Non-Veg check.
+  const pax = watch('pax');
 
   // A 400 here is specifically the end_date/start_date range rejection
   // (STORY-027/STORY-028's own validation) — this story's own AC requires
@@ -280,6 +292,7 @@ const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) 
         brideGroomSeating: values.setup.brideGroomSeating,
         notes: values.setup.notes.trim() || undefined,
       },
+      departmentNotes: toDepartmentNotesBody(values.departmentNotes),
     };
 
     if (session) {
@@ -461,6 +474,11 @@ const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) 
         </Box>
         <TextField {...register('setup.notes')} label="Notes" multiline minRows={2} fullWidth />
       </Stack>
+      <Controller
+        name="departmentNotes"
+        control={control}
+        render={({ field }) => <DepartmentNotesFields value={field.value} pax={pax} onChange={field.onChange} />}
+      />
       {submitError && (
         <Alert severity="error">
           <Typography variant="bodyM">{submitError}</Typography>

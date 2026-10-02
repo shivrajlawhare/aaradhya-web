@@ -82,6 +82,7 @@ const SESSION_FIELD_LABELS: Record<string, string> = {
   pax: 'Pax',
   sessionStatus: 'Status',
   setup: 'Setup',
+  departmentNotes: 'Notes for Department',
 };
 
 const ITEM_FIELD_LABELS: Record<string, string> = {
@@ -159,6 +160,30 @@ const formatSetupDiff = (oldValue: unknown, newValue: unknown): string => {
   return changedParts.length > 0 ? changedParts.join(', ') : 'No sub-fields changed';
 };
 
+const DEPARTMENT_NOTES_SUBFIELD_LABELS: Record<string, string> = {
+  vegPax: 'Veg pax',
+  nonVegPax: 'Non-Veg pax',
+  maintenance: 'Maintenance',
+  restaurantNote: 'Restaurant note',
+};
+
+const formatDepartmentNotesValue = (value: unknown): string =>
+  Array.isArray(value) ? value.join(', ') || '—' : formatValue(value);
+
+// DEV-12 — like Setup: only the Notes for Department fields that changed
+// ("Veg pax: 4 → 10, Maintenance: Sound System → —").
+const formatDepartmentNotesDiff = (oldValue: unknown, newValue: unknown): string => {
+  const oldNotes: Record<string, unknown> = typeof oldValue === 'object' && oldValue !== null ? { ...oldValue } : {};
+  const newNotes: Record<string, unknown> = typeof newValue === 'object' && newValue !== null ? { ...newValue } : {};
+  const changedParts = Object.keys(DEPARTMENT_NOTES_SUBFIELD_LABELS)
+    .filter((key) => JSON.stringify(oldNotes[key] ?? null) !== JSON.stringify(newNotes[key] ?? null))
+    .map(
+      (key) =>
+        `${DEPARTMENT_NOTES_SUBFIELD_LABELS[key]}: ${formatDepartmentNotesValue(oldNotes[key])} → ${formatDepartmentNotesValue(newNotes[key])}`
+    );
+  return changedParts.length > 0 ? changedParts.join(', ') : 'No sub-fields changed';
+};
+
 // Resolves each stored Menu Item id to its real name — the second,
 // independent fix for the product owner's "menu items as their object id"
 // complaint (the first is the real Sessions & Items tab, STORY-079); this
@@ -200,6 +225,9 @@ const formatRoomLinesDiff = (oldValue: unknown, newValue: unknown): string => {
 const formatChangeDetail = (parsed: ParsedField, entry: ChangeLogEntry, menuItemsById: Map<string, string>): string => {
   if (parsed.subfield === 'setup') {
     return formatSetupDiff(entry.oldValue, entry.newValue);
+  }
+  if (parsed.subfield === 'departmentNotes') {
+    return formatDepartmentNotesDiff(entry.oldValue, entry.newValue);
   }
   if (parsed.subfield === 'menuItems') {
     return formatMenuItemsDiff(entry.oldValue, entry.newValue, menuItemsById);
