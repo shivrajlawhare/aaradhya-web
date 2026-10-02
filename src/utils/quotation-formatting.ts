@@ -129,3 +129,11 @@ export const formatQuotationRupees = (amount: number): string =>
 // established (STORY-070), just with a trailing "/-" this column also
 // happens to print.
 export const formatQuotationItemCost = (amount: number): string => `${amount}/-`;
+
+// '₹ X,XX,XXX' — example_quatation_3.pdf's own format (DEV-09) for the
+// Accommodation totals (Total Charges, Discount, Final Amount) and the Total
+// Cost Summary's last "Total Cost" column. Not rounded: a fractional figure
+// (Food Cost with GST at .5) keeps its paise; only the Grand Total rounds,
+// via formatQuotationRupees.
+export const formatQuotationRupeeAmount = (amount: number): string =>
+  `₹ ${new Intl.NumberFormat('en-IN').format(amount)}`;

@@ -305,10 +305,10 @@ describe('QuotationDocument', () => {
     const footerCells = within(rows[5]!).getAllByRole('cell');
     expect(footerCells[3]!.textContent).toBe('Total Occ.');
     expect(footerCells[4]!.textContent).toBe('46');
-    expect(footerCells[4]!).toHaveStyle({ backgroundColor: 'rgb(169, 209, 142)' });
+    expect(footerCells[4]!).toHaveStyle({ backgroundColor: 'rgb(216, 242, 228)' });
     expect(footerCells[6]!.textContent).toBe('Total Charges');
-    expect(footerCells[7]!.textContent).toBe('Rs. 1,04,000 /-');
-    expect(footerCells[7]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
+    expect(footerCells[7]!.textContent).toBe('₹ 1,04,000');
+    expect(footerCells[7]!).toHaveStyle({ backgroundColor: 'rgb(252, 239, 208)' });
   });
 
   it('reorders custom Room Types before Extra Beds even when Extra Beds appears earlier in the raw stored order', () => {
@@ -339,14 +339,14 @@ describe('QuotationDocument', () => {
     // Header + 1 placeholder row + footer.
     expect(rows).toHaveLength(3);
     expect(within(rows[2]!).getByText('0')).toBeInTheDocument();
-    expect(within(rows[2]!).getByText('Rs. 0 /-')).toBeInTheDocument();
+    expect(within(rows[2]!).getByText('₹ 0')).toBeInTheDocument();
   });
 
   it('treats a fully-absent accommodation block the same as an empty one, without crashing', () => {
     renderDocument({ accommodation: undefined });
 
     const table = screen.getByRole('table', { name: 'Accommodation Details' });
-    expect(within(table).getByText('Rs. 0 /-')).toBeInTheDocument();
+    expect(within(table).getByText('₹ 0')).toBeInTheDocument();
   });
 
   describe('per-date Event Details tables (STORY-071)', () => {
@@ -493,7 +493,7 @@ describe('QuotationDocument', () => {
       const cell = within(row).getAllByRole('cell')[0]!;
       expect(cell).toHaveAttribute('colspan', '5');
       expect(cell.textContent).toBe('Engagement Sangeet - Poolside');
-      expect(cell).toHaveStyle({ backgroundColor: 'rgb(217, 217, 217)' });
+      expect(cell).toHaveStyle({ backgroundColor: 'rgb(246, 239, 232)' });
     });
 
     it('renders a Ceremony row with time appended (no venue)', () => {
@@ -685,11 +685,10 @@ describe('QuotationDocument', () => {
       expect(halfBanquetRow[0]!.textContent).toBe('Wedding Venue and Catering – 26/02/2027');
       expect(halfBanquetRow[0]!).toHaveAttribute('rowspan', '2');
       expect(halfBanquetRow[1]!.textContent).toBe('Half Banquet');
-      // A venue row never carries a food GST amount — cell 5 (GST on food)
-      // stays blank; the venue cost itself sits in cell 6 (Total Cost with
-      // GST).
+      // A venue row never carries a GST amount — cell 5 stays blank; the
+      // venue cost sits in the last Total Cost column, with ₹ (example 3).
       expect(halfBanquetRow[5]!.textContent).toBe('');
-      expect(halfBanquetRow[6]!.textContent).toBe('60000');
+      expect(halfBanquetRow[6]!.textContent).toBe('₹ 60,000');
 
       // Second venue row has no Cost Item cell of its own — the merged
       // cell above accounts for it, same rowSpan pattern Accommodation
@@ -698,7 +697,7 @@ describe('QuotationDocument', () => {
       expect(poolsideRow).toHaveLength(6);
       expect(poolsideRow[0]!.textContent).toBe('Poolside');
       expect(poolsideRow[4]!.textContent).toBe('');
-      expect(poolsideRow[5]!.textContent).toBe('60000');
+      expect(poolsideRow[5]!.textContent).toBe('₹ 60,000');
     });
 
     it("bills a limited-seating Meal Item's Total Cost at pax=1, not the literal headcount (FR-QUO-8)", () => {
@@ -779,10 +778,10 @@ describe('QuotationDocument', () => {
       // GST on food = 27037.5 - 25750 = 1287.5.
       expect(cells[4]!.textContent).toBe('25750');
       expect(cells[5]!.textContent).toBe('1287.5');
-      expect(cells[6]!.textContent).toBe('27037.5');
-      expect(cells[0]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
-      expect(cells[5]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
-      expect(cells[6]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
+      expect(cells[6]!.textContent).toBe('₹ 27,037.5');
+      expect(cells[0]!).toHaveStyle({ backgroundColor: 'rgb(252, 239, 208)' });
+      expect(cells[5]!).toHaveStyle({ backgroundColor: 'rgb(252, 239, 208)' });
+      expect(cells[6]!).toHaveStyle({ backgroundColor: 'rgb(252, 239, 208)' });
     });
 
     it('uses a custom foodGstRatePercent instead of the 5% default (SRS §4.9)', () => {
@@ -800,11 +799,12 @@ describe('QuotationDocument', () => {
       const table = screen.getByRole('table', { name: 'Total Cost Summary' });
       const foodCostRow = within(table).getByText('Food Cost').closest('tr')!;
       // 10×100 = 1000; ×1.18 = 1180, not the 5%-default 1050.
-      expect(within(foodCostRow).getByText('1180')).toBeInTheDocument();
+      expect(within(foodCostRow).getByText('₹ 1,180')).toBeInTheDocument();
     });
 
-    // DEV-07: the Final Amount plus 5% GST — 104000 → 109200.
-    it('renders an Accommodation row with only Total Cost with GST populated', () => {
+    // D2: the Final Amount, its 5% GST, and their sum — 104000 · 5200 ·
+    // ₹ 1,09,200.
+    it('renders the Accommodation row as the Final Amount, its 5% GST, and the total', () => {
       renderDocument({
         accommodation: makeAccommodation({ totalCharges: 104000, finalAmount: 104000 }),
       });
@@ -812,10 +812,18 @@ describe('QuotationDocument', () => {
       const table = screen.getByRole('table', { name: 'Total Cost Summary' });
       const accommodationRow = within(table).getByText('Accommodation').closest('tr')!;
       const cells = within(accommodationRow).getAllByRole('cell');
-      expect(cells.map((cell) => cell.textContent)).toEqual(['Accommodation', '', '', '', '', '', '109200']);
+      expect(cells.map((cell) => cell.textContent)).toEqual([
+        'Accommodation',
+        '',
+        '',
+        '',
+        '104000',
+        '5200',
+        '₹ 1,09,200',
+      ]);
     });
 
-    it('renders manual line items with name/note/amount, blank note when absent (STORY-068)', () => {
+    it('renders manual line items with the note merged across Description → GST, blank when absent (STORY-068)', () => {
       renderDocument({
         extraLineItems: [
           makeManualLineItem({
@@ -833,7 +841,8 @@ describe('QuotationDocument', () => {
       expect(
         within(decorationRow).getByText('poolside engg sangeet + Wedding(Vidhi mandap with saptapadi)')
       ).toBeInTheDocument();
-      expect(within(decorationRow).getByText('150000')).toBeInTheDocument();
+      expect(within(decorationRow).getByText('₹ 1,50,000')).toBeInTheDocument();
+      expect(within(decorationRow).getAllByRole('cell')[1]).toHaveAttribute('colspan', '5');
 
       const photographerRow = within(table).getByText('Photographer').closest('tr')!;
       const photographerCells = within(photographerRow).getAllByRole('cell');
@@ -841,7 +850,7 @@ describe('QuotationDocument', () => {
 
       const bhatjiRow = within(table).getByText('Bhatji').closest('tr')!;
       expect(within(bhatjiRow).getByText('wedding')).toBeInTheDocument();
-      expect(within(bhatjiRow).getByText('7000')).toBeInTheDocument();
+      expect(within(bhatjiRow).getByText('₹ 7,000')).toBeInTheDocument();
     });
 
     it('renders "Grand Total" in the Cost Per Plate column, shaded amber, summing every category', () => {
@@ -870,8 +879,8 @@ describe('QuotationDocument', () => {
       // display. Now in cell 6 (Total Cost with GST) — the new GST on food
       // column (cell 5) stays blank on this row.
       expect(cells[6]!.textContent).toBe('Rs. 84,163 /-');
-      expect(cells[3]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
-      expect(cells[6]!).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
+      expect(cells[3]!).toHaveStyle({ backgroundColor: 'rgb(252, 239, 208)' });
+      expect(cells[6]!).toHaveStyle({ backgroundColor: 'rgb(252, 239, 208)' });
     });
 
     // Full end-to-end reproduction of example_quatation_1.pdf's own Total
@@ -948,7 +957,7 @@ describe('QuotationDocument', () => {
       // 597150 — example_quatation_1.pdf's own printed Food Cost figure.
       expect(within(foodCostRow).getByText('597150')).toBeInTheDocument();
       // 597150 × 1.05 = 627007.5, printed with its exact decimal, unrounded.
-      expect(within(foodCostRow).getByText('627007.5')).toBeInTheDocument();
+      expect(within(foodCostRow).getByText('₹ 6,27,007.5')).toBeInTheDocument();
 
       const grandTotalRow = within(table).getByText('Grand Total').closest('tr')!;
       // venueTotal 180000 + foodCostWithGst 627007.5 + accommodation 109200
@@ -956,12 +965,23 @@ describe('QuotationDocument', () => {
       expect(within(grandTotalRow).getByText('Rs. 10,73,208 /-')).toBeInTheDocument();
     });
 
-    it('labels the GST-on-food column with the actual foodGstRatePercent, not a hardcoded 5%', () => {
+    it('labels the GST column with the actual foodGstRatePercent, not a hardcoded 5%', () => {
       renderDocument({ foodGstRatePercent: 18 });
 
       const table = screen.getByRole('table', { name: 'Total Cost Summary' });
-      expect(within(table).getByText('GST on food 18%')).toBeInTheDocument();
-      expect(within(table).queryByText('GST on food 5%')).not.toBeInTheDocument();
+      expect(within(table).getByRole('columnheader', { name: 'GST 18%' })).toBeInTheDocument();
+      expect(within(table).queryByText('GST 5%')).not.toBeInTheDocument();
+    });
+
+    it('uses the D13 headers: Particulars · Description · Pax · Cost Per Plate · Total Cost · GST 5% · Total Cost', () => {
+      renderDocument();
+
+      const table = screen.getByRole('table', { name: 'Total Cost Summary' });
+      expect(
+        within(table)
+          .getAllByRole('columnheader')
+          .map((header) => header.textContent)
+      ).toEqual(['Particulars', 'Description', 'Pax', 'Cost Per Plate', 'Total Cost', 'GST 5%', 'Total Cost']);
     });
 
     it('always starts its own page in the generated PDF, regardless of how many per-date sections precede it', () => {
@@ -974,13 +994,19 @@ describe('QuotationDocument', () => {
   });
 
   describe('static footer (STORY-073)', () => {
-    it('renders all 13 Terms & Conditions bullets, verbatim and in order, character-for-character against the reference PDFs', () => {
+    it("renders the 14 CR-1 Terms & Conditions bullets verbatim and in order, with only bullet 1's first clause bold", () => {
       renderDocument();
 
       const list = screen.getByRole('list', { name: 'Terms & Conditions' });
       const items = within(list).getAllByRole('listitem');
-      expect(items).toHaveLength(13);
+      expect(items).toHaveLength(14);
+      const bold = within(list).getAllByText((_content, element) => element?.tagName === 'STRONG');
+      expect(bold.map((element) => element.textContent)).toEqual([
+        'GST at 18% will be applicable on venue rental and related charges',
+      ]);
+      expect(items[0]!.firstElementChild).toBe(bold[0]);
       expect(items.map((item) => item.textContent)).toEqual([
+        'GST at 18% will be applicable on venue rental and related charges, while other services will be taxed as per their respective applicable GST rates.',
         'The venue rental charges shall be considered as the booking amount and must be paid to confirm the booking.',
         'The remaining balance must be paid on the day of the event or prior to the commencement of the function.',
         'Any additional services or requirements requested beyond this quotation will be charged separately.',
@@ -1039,6 +1065,19 @@ describe('QuotationDocument', () => {
         ['IFSC', 'BKID0001423'],
         ['GST Number', '27ABLFA0695F1ZC'],
       ]);
+    });
+
+    it('places Documents Required beside Bank Account Details, with Regards under the Bank column', () => {
+      renderDocument();
+
+      const documentsList = screen.getByRole('list', { name: 'Documents Required from Bride and Groom' });
+      const bankTable = screen.getByRole('table', { name: 'Bank Account Details' });
+      const documentsColumn = documentsList.parentElement!;
+      const bankColumn = bankTable.parentElement!;
+      expect(documentsColumn.parentElement).toBe(bankColumn.parentElement);
+      expect(documentsColumn.parentElement).toHaveStyle({ display: 'grid' });
+      expect(within(bankColumn).getByText('Regards')).toBeInTheDocument();
+      expect(within(bankColumn).getByText('Aaradhya Banquets')).toBeInTheDocument();
     });
 
     it('renders "Regards" then "Aaradhya Banquets" as the final closing lines, with no trailing comma', () => {

@@ -37,6 +37,7 @@ import QuotationDocument, {
   type QuotationDocumentSession,
 } from '../../src/pages/quotation-preview/quotation-document';
 import { theme } from '../../src/theme/theme';
+import { EXAMPLE_3_EVENT, EXAMPLE_3_MENU_ITEMS } from '../support/example-quotation-3';
 
 const renderFixture = (options: {
   clientContacts: QuotationDocumentClientContact[];
@@ -407,12 +408,12 @@ describe('Quotation fidelity — example_quatation_1.pdf (Sneha & Nishant)', () 
       ['Executive', '3', '3500', '2', '14000'],
       ['Dormatory', '6', '5000', '2', '20000'],
       ['Extra Beds', '0', '700', '0', '0'],
-      ['Total Occ.', '46', '', 'Total Charges', 'Rs. 1,04,000 /-'],
+      ['Total Occ.', '46', '', 'Total Charges', '₹ 1,04,000'],
     ]);
     const totalOccCell = within(rows[4]!).getAllByRole('cell')[4]!;
-    expect(totalOccCell).toHaveStyle({ backgroundColor: 'rgb(169, 209, 142)' });
+    expect(totalOccCell).toHaveStyle({ backgroundColor: 'rgb(216, 242, 228)' });
     const totalChargesCell = within(rows[4]!).getAllByRole('cell')[7]!;
-    expect(totalChargesCell).toHaveStyle({ backgroundColor: 'rgb(255, 217, 102)' });
+    expect(totalChargesCell).toHaveStyle({ backgroundColor: 'rgb(252, 239, 208)' });
   });
 
   it('renders the 10/12/2026 Event Details table exactly, Ceremony row merged and shaded', () => {
@@ -439,7 +440,7 @@ describe('Quotation fidelity — example_quatation_1.pdf (Sneha & Nishant)', () 
     const ceremonyCell = within(rows[2]!).getAllByRole('cell')[0]!;
     expect(ceremonyCell).toHaveAttribute('colspan', '5');
     expect(ceremonyCell.textContent).toBe('Engagement Sangeet - Poolside');
-    expect(ceremonyCell).toHaveStyle({ backgroundColor: 'rgb(217, 217, 217)' });
+    expect(ceremonyCell).toHaveStyle({ backgroundColor: 'rgb(246, 239, 232)' });
 
     expect(
       within(rows[3]!)
@@ -536,26 +537,32 @@ describe('Quotation fidelity — example_quatation_1.pdf (Sneha & Nishant)', () 
 
     const foodCostRow = within(table).getByText('Food Cost').closest('tr')!;
     expect(within(foodCostRow).getByText('597150')).toBeInTheDocument();
-    expect(within(foodCostRow).getByText('627007.5')).toBeInTheDocument();
+    expect(within(foodCostRow).getByText('₹ 6,27,007.5')).toBeInTheDocument();
 
     const accommodationRow = within(table).getByText('Accommodation').closest('tr')!;
-    expect(within(accommodationRow).getByText('109200')).toBeInTheDocument();
+    // The Final Amount (no discount) · 5% GST · total — the PDF's 1,09,200.
+    expect(
+      within(accommodationRow)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent)
+        .slice(-3)
+    ).toEqual(['104000', '5200', '₹ 1,09,200']);
 
     const decorationRow = within(table).getByText('Decoration').closest('tr')!;
     expect(
       within(decorationRow).getByText('poolside engg sangeet + Wedding(Vidhi mandap with saptapadi)')
     ).toBeInTheDocument();
-    expect(within(decorationRow).getByText('150000')).toBeInTheDocument();
+    expect(within(decorationRow).getByText('₹ 1,50,000')).toBeInTheDocument();
     expect(within(table).getByText('Bhatji').closest('tr')!).toHaveTextContent('wedding');
 
     const grandTotalRow = within(table).getByText('Grand Total').closest('tr')!;
     expect(within(grandTotalRow).getByText('Rs. 10,73,208 /-')).toBeInTheDocument();
   });
 
-  it('renders the static footer verbatim: 13 Terms & Conditions bullets, 6 Documents, Bank Details, closing lines', () => {
+  it('renders the static footer verbatim: 14 Terms & Conditions bullets, 6 Documents, Bank Details, closing lines', () => {
     renderFixture({ clientContacts, sessions, accommodation, extraLineItems });
 
-    expect(within(screen.getByRole('list', { name: 'Terms & Conditions' })).getAllByRole('listitem')).toHaveLength(13);
+    expect(within(screen.getByRole('list', { name: 'Terms & Conditions' })).getAllByRole('listitem')).toHaveLength(14);
     expect(
       within(screen.getByRole('list', { name: 'Documents Required from Bride and Groom' })).getAllByRole('listitem')
     ).toHaveLength(6);
@@ -876,7 +883,7 @@ describe('Quotation fidelity — example_quatation_2.pdf (Saish Rege)', () => {
       ['Executive', '3', '3800', '2', '15200'],
       ['Dormatory', '6', '6000', '2', '24000'],
       ['Extra Beds', '1', '700', '0', '0'],
-      ['Total Occ.', '46', '', 'Total Charges', 'Rs. 1,17,600 /-'],
+      ['Total Occ.', '46', '', 'Total Charges', '₹ 1,17,600'],
     ]);
     const checkInCell = within(rows[0]!).getAllByRole('cell')[0]!;
     expect(checkInCell.textContent).toBe('25-02-202712pm');
@@ -928,16 +935,16 @@ describe('Quotation fidelity — example_quatation_2.pdf (Saish Rege)', () => {
     // One venue row per Session sharing 26/02/2027 (Halad, Engagement), not
     // one for the date — verified distinctly rather than merged into one.
     const halfBanquetRow = within(table).getByText('Half Banquet').closest('tr')!;
-    expect(within(halfBanquetRow).getByText('60000')).toBeInTheDocument();
+    expect(within(halfBanquetRow).getByText('₹ 60,000')).toBeInTheDocument();
     // Session.venue printed verbatim ("Poolside/Half Banquet"), not the
     // reference PDF's own unexplained "Poolside" shorthand — see this
     // file's own top-of-file comment (divergence #1).
     const engagementVenueRow = within(table).getByText('Poolside/Half Banquet').closest('tr')!;
-    expect(within(engagementVenueRow).getAllByRole('cell').at(-1)!.textContent).toBe('60000');
+    expect(within(engagementVenueRow).getAllByRole('cell').at(-1)!.textContent).toBe('₹ 60,000');
 
     const foodCostRow = within(table).getByText('Food Cost').closest('tr')!;
     expect(within(foodCostRow).getByText('391500')).toBeInTheDocument();
-    expect(within(foodCostRow).getByText('411075')).toBeInTheDocument();
+    expect(within(foodCostRow).getByText('₹ 4,11,075')).toBeInTheDocument();
 
     // Divergence #2 (this file's own top-of-file comment): real entry
     // order (Breakfast, Welcome Drink, Lunch) is preserved for the
@@ -957,15 +964,15 @@ describe('Quotation fidelity — example_quatation_2.pdf (Saish Rege)', () => {
     expect(weddingFoodRowLabels).toEqual(['Breakfast', 'Welcome Drink', 'Lunch']);
 
     const accommodationRow = within(table).getByText('Accommodation').closest('tr')!;
-    expect(within(accommodationRow).getByText('123480')).toBeInTheDocument();
+    expect(within(accommodationRow).getByText('₹ 1,23,480')).toBeInTheDocument();
 
     const decorationRow = within(table).getByText('Decoration').closest('tr')!;
     expect(within(decorationRow).getAllByRole('cell')[1]!.textContent).toBe('');
-    expect(within(decorationRow).getByText('170000')).toBeInTheDocument();
+    expect(within(decorationRow).getByText('₹ 1,70,000')).toBeInTheDocument();
 
     const bhatjiRow = within(table).getByText('Bhatji').closest('tr')!;
     expect(within(bhatjiRow).getByText('wedding')).toBeInTheDocument();
-    expect(within(bhatjiRow).getByText('5000')).toBeInTheDocument();
+    expect(within(bhatjiRow).getByText('₹ 5,000')).toBeInTheDocument();
 
     const grandTotalRow = within(table).getByText('Grand Total').closest('tr')!;
     expect(within(grandTotalRow).getByText('Rs. 9,49,555 /-')).toBeInTheDocument();
@@ -974,12 +981,143 @@ describe('Quotation fidelity — example_quatation_2.pdf (Saish Rege)', () => {
   it("renders the static footer identically to example_quatation_1.pdf's own fixture (same fixed constants, no per-Event drift)", () => {
     renderFixture({ clientContacts, sessions, accommodation, extraLineItems });
 
-    expect(within(screen.getByRole('list', { name: 'Terms & Conditions' })).getAllByRole('listitem')).toHaveLength(13);
+    expect(within(screen.getByRole('list', { name: 'Terms & Conditions' })).getAllByRole('listitem')).toHaveLength(14);
     expect(
       within(screen.getByRole('list', { name: 'Documents Required from Bride and Groom' })).getAllByRole('listitem')
     ).toHaveLength(6);
     expect(screen.getByText('Aaradhya Adorer')).toBeInTheDocument();
     expect(screen.getByText('Regards')).toBeInTheDocument();
     expect(screen.getByText('Aaradhya Banquets')).toBeInTheDocument();
+  });
+});
+
+// DEV-09 — example_quatation_3.pdf (aaradhya-api docs/example_quatations):
+// the redesign's quotation, with the accommodation discount (D2/D3), the
+// D13 Total Cost Summary headers, and accommodation GST in the summary.
+// Divergences kept deliberately (UI-42): app formats (DD/MM/YYYY, one venue
+// per session), the app's meal/venue names ("Full Banquet", not the PDF's
+// hand-typed "Banquet Hall"), and no spurious "0 0" row.
+describe('Quotation fidelity — example_quatation_3.pdf (Prathamesh Parab, 10% discount)', () => {
+  const menuNameById = new Map(EXAMPLE_3_MENU_ITEMS.map((menuItem) => [menuItem.id, menuItem.name]));
+  const sessions: QuotationDocumentSession[] = EXAMPLE_3_EVENT.sessions.map((session) => ({
+    ...session,
+    items: session.items.map((item) => ({
+      ...item,
+      menuItemNames: item.menuItems.map((id) => menuNameById.get(id) ?? id),
+    })),
+  }));
+
+  const renderExample3 = () =>
+    renderFixture({
+      clientContacts: EXAMPLE_3_EVENT.clientContacts,
+      sessions,
+      accommodation: EXAMPLE_3_EVENT.accommodation,
+      extraLineItems: EXAMPLE_3_EVENT.extraLineItems,
+    });
+
+  const cellTexts = (row: HTMLElement) =>
+    within(row)
+      .getAllByRole('cell')
+      .map((cell) => cell.textContent);
+
+  it('renders Accommodation Details with Total Nights, taxable lines, and the Discount 10% / Final Amount rows', () => {
+    renderExample3();
+
+    const table = screen.getByRole('table', { name: 'Accommodation Details' });
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map((header) => header.textContent)
+    ).toEqual([
+      'Check in',
+      'Check out',
+      'Total Nights',
+      'Room Type',
+      'Occ.',
+      'Tariff',
+      'No. Of Rooms',
+      'Total Taxable Amount',
+    ]);
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows.map((row) => cellTexts(row).slice(-5))).toEqual([
+      ['Delux', '2', '2800', '14', '78400'],
+      ['Executive', '3', '3800', '2', '15200'],
+      ['Family Room', '6', '6000', '2', '24000'],
+      ['Extra Beds', '0', '700', '0', '0'],
+      ['Total Occ.', '46', '', 'Total Charges', '₹ 1,17,600'],
+      ['', 'Discount 10%', '₹ 11,760'],
+      ['', 'Final Amount', '₹ 1,05,840'],
+    ]);
+    expect(cellTexts(rows[0]!).slice(0, 3)).toEqual(['13-05-202712pm', '15-05-202711am', '2']);
+    const finalAmountCell = within(rows[6]!).getAllByRole('cell')[2]!;
+    expect(finalAmountCell).toHaveStyle({ backgroundColor: 'rgb(252, 239, 208)' });
+  });
+
+  it('renders both day tables in entry order, with the Haldi and Muhurta ceremony bands', () => {
+    renderExample3();
+
+    const haldiDay = screen.getByRole('table', { name: 'Event Details – 14/05/2027' });
+    expect(
+      within(haldiDay)
+        .getAllByRole('row')
+        .slice(1)
+        .map((row) => cellTexts(row).slice(0, 4))
+    ).toEqual([
+      ['Hi Tea', '5pm to 6:30pm', '40', '150/-'],
+      ['Haldi 7pm to 9:30pm - Poolside'],
+      ['Mocktails', '8:30pm', '40', '40/-'],
+      ['Dinner', '9:30pm to 11pm', '40', '650/-'],
+    ]);
+
+    const weddingDay = screen.getByRole('table', { name: 'Event Details – 15/05/2027' });
+    expect(
+      within(weddingDay)
+        .getAllByRole('row')
+        .slice(1)
+        .map((row) => cellTexts(row).slice(0, 4))
+    ).toEqual([
+      ['Breakfast', '8am to 9:30am', '150', '160/-'],
+      ['Welcome Drink', '10:30am to 11am', '1000', '20/-'],
+      ['Muhurta 12:30pm - Full Banquet'],
+      ['Lunch', '12:30pm to 3pm', '1000', '380/-'],
+      ['Hi-Tea', '', '200', '80/-'],
+    ]);
+  });
+
+  it('reproduces every Total Cost Summary figure, through Grand Total Rs. 9,75,412 /-', () => {
+    renderExample3();
+
+    const table = screen.getByRole('table', { name: 'Total Cost Summary' });
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map((header) => header.textContent)
+    ).toEqual(['Particulars', 'Description', 'Pax', 'Cost Per Plate', 'Total Cost', 'GST 5%', 'Total Cost']);
+    expect(within(table).getByText('Wedding Venue and Catering – 14/05/2027')).toHaveAttribute('rowspan', '4');
+    expect(within(table).getByText('Wedding Venue and Catering – 15/05/2027')).toHaveAttribute('rowspan', '5');
+
+    // Every body row, without the merged Particulars cells.
+    const rows = within(table).getAllByRole('row').slice(1);
+    const withoutParticulars = rows.map((row) => {
+      const texts = cellTexts(row);
+      return texts.length === 7 && texts[0]!.startsWith('Wedding Venue') ? texts.slice(1) : texts;
+    });
+    expect(withoutParticulars).toEqual([
+      ['Poolside', '', '', '', '', '₹ 60,000'],
+      ['Hi Tea', '40', '150', '6000', '300', ''],
+      ['Mocktails', '40', '40', '1600', '80', ''],
+      ['Dinner', '40', '650', '26000', '1300', ''],
+      ['Full Banquet', '', '', '', '', '₹ 1,20,000'],
+      ['Breakfast', '150', '160', '24000', '1200', ''],
+      ['Welcome Drink', '1000', '20', '20000', '1000', ''],
+      ['Lunch', '1000', '380', '380000', '19000', ''],
+      ['Hi-Tea', '200', '80', '16000', '800', ''],
+      ['Food Cost', '', '', '', '473600', '23680', '₹ 4,97,280'],
+      ['Accommodation', '', '', '', '105840', '5292', '₹ 1,11,132'],
+      ['Decoration', 'Poolside + Banquet Hall (No Vidhi Mandap)', '₹ 1,50,000'],
+      ['DJ + Sound System', '', '₹ 30,000'],
+      ['Bhatji', 'wedding + punyawachan', '₹ 7,000'],
+      ['', '', '', 'Grand Total', '', '', 'Rs. 9,75,412 /-'],
+    ]);
   });
 });

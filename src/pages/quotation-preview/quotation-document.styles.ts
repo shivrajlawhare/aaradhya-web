@@ -1,270 +1,276 @@
 import type { SxProps, Theme } from '@mui/material';
+import { fontFamilyTokens } from '../../theme/tokens';
 
-// This story's own Tokens line: "N/A — the Quotation's own typography/color
-// is a fixed reproduction of the reference PDFs' letterhead styling, not
-// the app's interactive-UI token set." Every value below is therefore
-// pinned directly against example_quatation_1.pdf/example_quatation_2.pdf
-// (docs/example_quatations, aaradhya-api repo), not theme/tokens.ts —
-// deliberately not reusing colorTokens.accent (this app's own orange) for
-// the section-heading blue, or fontFamilyTokens.body/.display, since both
-// PDFs use a plain serif body face and a distinct blue for every "Client
-// Details"/"Event Details" heading that has nothing to do with the app's
-// own interactive theme.
-export const DOCUMENT_FONT_FAMILY = '"Times New Roman", Times, serif';
-const HEADING_BLUE = '#1F4E79';
-const BORDER_COLOR = '#000000';
-
-export const rootStyles: SxProps<Theme> = {
-  bgcolor: '#FFFFFF',
-  color: '#000000',
-  fontFamily: DOCUMENT_FONT_FAMILY,
-  p: '32px',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '20px',
-  maxWidth: 900,
-  mx: 'auto',
-  width: '100%',
-  boxSizing: 'border-box',
+// Figma Quotation/Document (UI-21 / UI-42): the paper is bound only to the
+// Primitives collection, never to theme tokens, so it stays light paper in
+// dark mode and prints the same everywhere (preview and the server-side
+// PDF render). Fonts are the app's own families.
+export const PAPER_COLORS = {
+  white: '#FFFFFF',
+  espresso50: '#F6EFE8',
+  espresso100: '#EDE3D6',
+  espresso700: '#432A1D',
+  espresso900: '#200F07',
+  custard100: '#FFF9EB',
+  leaf100: '#D8F2E4',
+  saffron100: '#FCEFD0',
+  orange500: '#F77331',
 };
 
+// A4 at 96 dpi — the paper is a fixed sheet, scaled (not reflowed) on
+// small screens by the preview page.
+export const PAPER_WIDTH = 794;
+const PAPER_PADDING = 48;
+const HAIRLINE = `1px solid ${PAPER_COLORS.espresso100}`;
+const BODY_FONT_SIZE = '11px';
+
+export const rootStyles: SxProps<Theme> = {
+  width: PAPER_WIDTH,
+  boxSizing: 'border-box',
+  bgcolor: PAPER_COLORS.white,
+  color: PAPER_COLORS.espresso900,
+  fontFamily: fontFamilyTokens.body,
+  fontSize: BODY_FONT_SIZE,
+  lineHeight: 1.5,
+  p: `${PAPER_PADDING}px`,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '28px',
+  // Exact paper colours in the PDF (shaded cells, the orange rule).
+  printColorAdjust: 'exact',
+  WebkitPrintColorAdjust: 'exact',
+};
+
+// Letterhead: lockup left, org details right, an orange 2 px rule under.
 export const headerRowStyles: SxProps<Theme> = {
   display: 'flex',
   justifyContent: 'space-between',
-  alignItems: 'flex-start',
-  flexWrap: 'wrap',
+  alignItems: 'center',
   gap: '16px',
-  pb: '12px',
-  borderBottom: `1px solid ${BORDER_COLOR}`,
+  pb: '16px',
+  borderBottom: `2px solid ${PAPER_COLORS.orange500}`,
 };
 
 export const brandLockupStyles: SxProps<Theme> = {
   display: 'flex',
   alignItems: 'center',
-  gap: '12px',
+  gap: '10px',
 };
 
 export const markImageStyles: SxProps<Theme> = {
-  width: 56,
-  height: 56,
+  width: 32,
+  height: 32,
   flexShrink: 0,
 };
 
-// Replaces the previous hand-typed "AARADHYA"/"A COMPLETE DESTINATION"
-// Typography lines with the org's own real wordmark image (intrinsic
-// 50727×10000, ~5.07:1) — `width: auto` preserves that aspect ratio off a
-// single fixed height, matching the reference PDFs' own header proportions
-// (crown mark roughly square, wordmark spanning a wider strip beside it).
+// The wordmark image (~5.07:1) off a fixed height.
 export const headerTextImageStyles: SxProps<Theme> = {
-  height: '44px',
+  height: '20px',
   width: 'auto',
 };
 
 export const orgDetailsStyles: SxProps<Theme> = {
   textAlign: 'right',
-  color: '#000000',
+  fontSize: '10px',
+  lineHeight: 1.6,
+  color: PAPER_COLORS.espresso700,
 };
 
-// Font styling only — textAlign: 'right' lives on the wrapping Box above
-// (orgDetailsStyles) and is inherited by these lines rather than repeated
-// on each one.
-export const orgDetailsLineStyles: SxProps<Theme> = {
-  fontFamily: DOCUMENT_FONT_FAMILY,
-  fontSize: '11px',
-  lineHeight: 1.5,
-};
-
-// A 3-column grid (empty | title | date) keeps "Event Quotation" visually
-// centered on the row regardless of how wide the date text on its right is
-// — an inline flex row with the date simply pushed right wouldn't center
-// the title against the page, only against the remaining space.
 export const titleRowStyles: SxProps<Theme> = {
-  display: 'grid',
-  gridTemplateColumns: '1fr auto 1fr',
-  alignItems: 'center',
-  columnGap: '8px',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'baseline',
+  gap: '16px',
 };
 
 export const titleTextStyles: SxProps<Theme> = {
-  fontFamily: DOCUMENT_FONT_FAMILY,
+  fontFamily: fontFamilyTokens.display,
   fontWeight: 700,
-  fontSize: '20px',
-  textAlign: 'center',
-  gridColumn: 2,
+  fontSize: '26px',
+  lineHeight: 1.2,
+  m: 0,
 };
 
 export const quotationDateStyles: SxProps<Theme> = {
-  gridColumn: 3,
-  justifySelf: 'end',
-  fontFamily: DOCUMENT_FONT_FAMILY,
-  fontWeight: 700,
-  fontSize: '12px',
+  fontSize: BODY_FONT_SIZE,
+  color: PAPER_COLORS.espresso700,
 };
 
 export const sectionStyles: SxProps<Theme> = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '6px',
+  gap: '10px',
 };
 
-// `breakBefore` is the modern CSS Fragmentation property; `pageBreakBefore`
-// is the older alias some print engines still key off — both target the
-// same outcome, harmless to set together. Has no visible effect on-screen
-// (only `@media print`/PDF generation honors either property), so the live
-// preview is unchanged wherever this is used below.
-const pageBreakBeforeStyles: SxProps<Theme> = {
+// Only print/PDF honours these; the on-screen sheet is unchanged.
+const pageBreakBeforeStyles = {
   breakBefore: 'page',
   pageBreakBefore: 'always',
 };
 
-// Each per-date Event Details table always starts its own page in the
-// generated PDF — applied to every one of them, including the first, so
-// page 1 ends right after Accommodation Details rather than spilling the
-// first date's own table onto it.
+// Each per-date Event Details table starts its own PDF page, including the
+// first, so page 1 ends after Accommodation Details.
 export const dateSectionStyles: SxProps<Theme> = {
-  ...sectionStyles,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
   ...pageBreakBeforeStyles,
 };
 
-// Total Cost Summary always starts its own page too, regardless of how many
-// per-date sections precede it (and however much of the last one's own page
-// they leave free) — a separate, deliberately-forced break of its own, not
-// a side effect of dateSectionStyles above.
+// The Total Cost Summary always starts its own page too.
 export const totalCostSummarySectionStyles: SxProps<Theme> = {
-  ...sectionStyles,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
   ...pageBreakBeforeStyles,
 };
 
+// Bricolage Bold 14 with a 4 × 16 orange accent bar.
 export const sectionHeadingStyles: SxProps<Theme> = {
-  fontFamily: DOCUMENT_FONT_FAMILY,
-  fontStyle: 'italic',
+  fontFamily: fontFamilyTokens.display,
   fontWeight: 700,
-  color: HEADING_BLUE,
-  fontSize: '13px',
+  fontSize: '14px',
+  lineHeight: '18px',
+  color: PAPER_COLORS.espresso900,
+  m: 0,
+  pl: '12px',
+  position: 'relative',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    left: 0,
+    top: '1px',
+    width: '4px',
+    height: '16px',
+    borderRadius: '2px',
+    bgcolor: PAPER_COLORS.orange500,
+  },
 };
 
-export const tableScrollStyles: SxProps<Theme> = {
-  overflowX: 'auto',
-};
-
+// The theme's own table look (56 px body rows, uppercase letter-spaced
+// heads on brand.subtle) must not leak onto the paper: the head rule needs
+// a selector stronger than the theme's '.MuiTableHead-root .MuiTableCell-head'.
 export const tableStyles: SxProps<Theme> = {
   borderCollapse: 'collapse',
   width: '100%',
   '& th, & td': {
-    border: `1px solid ${BORDER_COLOR}`,
-    fontFamily: DOCUMENT_FONT_FAMILY,
-    fontSize: '12px',
-    padding: '4px 8px',
+    border: HAIRLINE,
+    fontFamily: fontFamilyTokens.body,
+    fontSize: BODY_FONT_SIZE,
+    lineHeight: 1.5,
+    height: 'auto',
+    padding: '6px 8px',
     verticalAlign: 'top',
-    color: '#000000',
+    color: PAPER_COLORS.espresso900,
   },
-  '& th': {
-    fontWeight: 700,
-    textAlign: 'left',
+  '& .MuiTableHead-root .MuiTableCell-head': {
+    fontFamily: fontFamilyTokens.body,
+    fontSize: BODY_FONT_SIZE,
+    fontWeight: 600,
+    lineHeight: 1.4,
+    letterSpacing: 'normal',
+    textTransform: 'none',
+    color: PAPER_COLORS.espresso900,
+    bgcolor: PAPER_COLORS.custard100,
   },
+  '& tr': { breakInside: 'avoid' },
 };
 
 export const rowLabelCellStyles: SxProps<Theme> = {
-  fontWeight: 700,
+  fontWeight: 600,
 };
 
-// textAlign: 'right' — both reference PDFs right-align every numeric
-// column (Occ./Tariff/No. Of Rooms/Total including GST here, STORY-070;
-// No. Of Guests/Selected Venue Cost in STORY-069's own Event Details), a
-// detail STORY-069 itself didn't apply — fixed here rather than left
-// inconsistent, since it's the same shared style both tables already use.
 export const numericCellStyles: SxProps<Theme> = {
   fontVariantNumeric: 'tabular-nums',
   textAlign: 'right',
+  whiteSpace: 'nowrap',
 };
 
-// Sampled from example_quatation_1.pdf/example_quatation_2.pdf's own Total
-// Occ./Total Charges footer cell shading (STORY-070's own AC, SRS §4.7e) —
-// a visual best-effort match, not a pixel-exact extraction (no tooling here
-// samples a PDF's own fill color), the same kind of explicit, separate,
-// one-time design decision HEADING_BLUE above already is.
-const TOTAL_OCCUPANCY_GREEN = '#A9D18E';
-const TOTAL_CHARGES_AMBER = '#FFD966';
+// Header cells over numeric columns line up with their values. '&&'
+// out-ranks tableStyles' own '& th' rule.
+export const numericHeaderStyles: SxProps<Theme> = {
+  '&&': { textAlign: 'right' },
+};
 
-// Includes numericCellStyles' own properties directly rather than an sx
-// array — MUI's TableCell sx typing rejects an array of two SxProps<Theme>
-// values nested together (a plain array of style objects works, but not
-// one mixing already-typed SxProps values), so the numeric-cell look is
-// folded in here instead of composed at the call site.
 export const totalOccupancyCellStyles: SxProps<Theme> = {
-  bgcolor: TOTAL_OCCUPANCY_GREEN,
+  bgcolor: PAPER_COLORS.leaf100,
+  fontWeight: 600,
   fontVariantNumeric: 'tabular-nums',
   textAlign: 'right',
 };
 
-export const totalChargesCellStyles: SxProps<Theme> = {
-  bgcolor: TOTAL_CHARGES_AMBER,
-  fontVariantNumeric: 'tabular-nums',
-  textAlign: 'right',
+export const highlightLabelCellStyles: SxProps<Theme> = {
+  bgcolor: PAPER_COLORS.saffron100,
+  fontWeight: 600,
 };
 
-// Sampled from both reference PDFs' own Ceremony-row shading (STORY-071's
-// own Tokens line) — a visual best-effort match, same "not a pixel-exact
-// extraction" caveat TOTAL_OCCUPANCY_GREEN/TOTAL_CHARGES_AMBER above
-// already carry.
-const CEREMONY_ROW_GREY = '#D9D9D9';
+export const highlightNumericCellStyles: SxProps<Theme> = {
+  bgcolor: PAPER_COLORS.saffron100,
+  fontWeight: 600,
+  fontVariantNumeric: 'tabular-nums',
+  textAlign: 'right',
+  whiteSpace: 'nowrap',
+};
+
+// The discount rows sit under the last two columns only; the cell to their
+// left is blank paper (no fill, no left/top/bottom rules).
+export const discountSpacerCellStyles: SxProps<Theme> = {
+  '&&': { borderLeft: 'none', borderBottom: 'none', borderTop: 'none' },
+};
 
 export const ceremonyRowStyles: SxProps<Theme> = {
-  bgcolor: CEREMONY_ROW_GREY,
-  fontWeight: 700,
+  bgcolor: PAPER_COLORS.espresso50,
+  fontWeight: 600,
 };
 
-// STORY-072 — the Total Cost Summary's own Food Cost and Grand Total rows
-// (SRS §4.7e/FR-QUO-9's color-coding note), reusing the exact same amber
-// shade TOTAL_CHARGES_AMBER above already samples from the reference PDFs'
-// Accommodation footer — the two are visually indistinguishable in both
-// reference documents, not two independently-sampled colors.
-export const costSummaryHighlightLabelCellStyles: SxProps<Theme> = {
-  bgcolor: TOTAL_CHARGES_AMBER,
-  fontWeight: 700,
-};
-
-export const costSummaryHighlightNumericCellStyles: SxProps<Theme> = {
-  bgcolor: TOTAL_CHARGES_AMBER,
-  fontVariantNumeric: 'tabular-nums',
-  textAlign: 'right',
-};
-
-// STORY-073 — the static footer's Terms & Conditions (bulleted) and
-// Documents Required (numbered) lists. A plain margin reset plus a fixed
-// left indent for the marker itself — MUI's own Typography/Box defaults
-// would otherwise carry the app's interactive body-copy margins into this
-// fixed-reproduction section, same "pinned, not inherited" reasoning
-// rootStyles' own DOCUMENT_FONT_FAMILY choice already documents. The
-// inter-item gap is a sibling-combinator margin, not `display: flex` +
-// `gap` on the list itself — flex blockifies every `<li>` into a flex
-// item, which suppresses its `::marker` box entirely in a real browser
-// (jsdom doesn't run layout, so this wouldn't have shown up in a test),
-// silently dropping every bullet/number despite `listStyleType` being set.
-const footerListStyles: SxProps<Theme> = {
-  fontFamily: DOCUMENT_FONT_FAMILY,
-  fontSize: '12px',
-  margin: 0,
-  paddingLeft: '20px',
-  '& li + li': {
-    marginTop: '2px',
-  },
+// A manual line item's note, merged across Description → GST and centred
+// (example_quatation_3.pdf).
+export const mergedDescriptionCellStyles: SxProps<Theme> = {
+  textAlign: 'center',
 };
 
 export const bulletedListStyles: SxProps<Theme> = {
-  ...footerListStyles,
+  m: 0,
+  pl: '20px',
   listStyleType: 'disc',
+  '& li + li': { mt: '4px' },
+  '& li::marker': { color: PAPER_COLORS.orange500 },
 };
 
 export const numberedListStyles: SxProps<Theme> = {
-  ...footerListStyles,
+  m: 0,
+  pl: '20px',
   listStyleType: 'decimal',
+  '& li + li': { mt: '4px' },
+  '& li::marker': { fontWeight: 700 },
 };
 
-// The Quotation's own closing "Regards / Aaradhya Banquets" lines — plain
-// text, no heading/table styling, matching the reference PDFs' own
-// unadorned final two lines.
+// Documents Required (284) beside Bank Account Details (fills), as a print-
+// safe grid that never splits across a page.
+export const documentsAndBankStyles: SxProps<Theme> = {
+  display: 'grid',
+  gridTemplateColumns: '284px minmax(0, 1fr)',
+  columnGap: '24px',
+  alignItems: 'start',
+  breakInside: 'avoid',
+};
+
+export const bankLabelCellStyles: SxProps<Theme> = {
+  width: 140,
+  fontWeight: 600,
+};
+
+export const closingStyles: SxProps<Theme> = {
+  mt: '24px',
+  display: 'flex',
+  flexDirection: 'column',
+};
+
 export const closingLineStyles: SxProps<Theme> = {
-  fontFamily: DOCUMENT_FONT_FAMILY,
-  fontSize: '12px',
+  fontSize: BODY_FONT_SIZE,
+};
+
+export const closingNameStyles: SxProps<Theme> = {
+  fontSize: BODY_FONT_SIZE,
+  fontWeight: 700,
 };

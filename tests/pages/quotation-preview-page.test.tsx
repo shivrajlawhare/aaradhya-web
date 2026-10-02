@@ -9,6 +9,7 @@ import QuotationPreviewPage from '../../src/pages/quotation-preview/quotation-pr
 import { QUOTATION_PREVIEW_PATH_PATTERN, quotationPreviewPath } from '../../src/routes';
 import { AuthProvider, SESSION_STORAGE_KEY } from '../../src/stores/auth-context';
 import { theme } from '../../src/theme/theme';
+import { mockMatchMedia } from '../support/match-media';
 
 interface MockClientContact {
   name: string;
@@ -197,7 +198,7 @@ const mockApi = ({ event, notFound = false }: { event?: MockEvent; notFound?: bo
   );
 };
 
-const renderPage = (id = 'event-1') => {
+const renderPage = (id = 'event-1', search = '') => {
   const queryClient = new QueryClient();
 
   return render(
@@ -206,7 +207,7 @@ const renderPage = (id = 'event-1') => {
         <ThemeProvider theme={theme}>
           <ToastProvider>
             <AuthProvider>
-              <MemoryRouter initialEntries={[quotationPreviewPath(id)]}>
+              <MemoryRouter initialEntries={[`${quotationPreviewPath(id)}${search}`]}>
                 <Routes>
                   <Route path={QUOTATION_PREVIEW_PATH_PATTERN} element={<QuotationPreviewPage />} />
                 </Routes>
@@ -279,10 +280,10 @@ describe('QuotationPreviewPage', () => {
     // no GST — DEV-07) and its Total Charges footer.
     const accommodationTable = screen.getByRole('table', { name: 'Accommodation Details' });
     expect(within(accommodationTable).getByText('10000')).toBeInTheDocument();
-    expect(within(accommodationTable).getByText('Rs. 10,000 /-')).toBeInTheDocument();
+    expect(within(accommodationTable).getByText('₹ 10,000')).toBeInTheDocument();
     // The Total Cost Summary's Accommodation row adds 5% GST: 10500.
     const totalCostSummaryTable = screen.getByRole('table', { name: 'Total Cost Summary' });
-    expect(within(totalCostSummaryTable).getByText('10500')).toBeInTheDocument();
+    expect(within(totalCostSummaryTable).getByText('₹ 10,500')).toBeInTheDocument();
     // venueTotal 5000 + foodTotalInclGst (2000 × 1.18 = 2360) + accommodationTotal 10500 = 17860.
     expect(await screen.findByText('17,860')).toBeInTheDocument();
   });
@@ -303,10 +304,10 @@ describe('QuotationPreviewPage', () => {
 
     await screen.findByText('Client Details');
     expect(screen.getByText('Accommodation Details')).toBeInTheDocument();
-    // Two "Rs. 0 /-" cells for a wholly-empty Event now that STORY-072 adds
-    // its own Grand Total row alongside Accommodation's own Total Charges
-    // footer — both are genuinely zero here, not a single shared element.
-    expect(screen.getAllByText('Rs. 0 /-')).toHaveLength(2);
+    // A zero Total Charges footer (₹, example 3) and a zero Grand Total.
+    const accommodationTable = screen.getByRole('table', { name: 'Accommodation Details' });
+    expect(within(accommodationTable).getByText('₹ 0')).toBeInTheDocument();
+    expect(screen.getAllByText('Rs. 0 /-')).toHaveLength(1);
   });
 
   it('excludes a Cancelled Session from the per-session list, matching the PDF', async () => {
@@ -377,5 +378,61 @@ describe('QuotationPreviewPage', () => {
     expect(Number(pdfText.replace('Grand Total: ', ''))).toBe(grandTotal);
 
     vi.restoreAllMocks();
+  });
+});
+
+describe('QuotationPreviewPage — toolbar and canvas (DEV-09, D9/D10)', () => {
+  it('shows "Back to event", the title, event ID, status chip and Share PDF on desktop', async () => {
+    mockMatchMedia(true);
+    seedSession();
+    mockApi({ event: makeEvent() });
+    renderPage();
+
+    const backLink = await screen.findByRole('link', { name: 'Back to event' });
+    expect(backLink).toHaveAttribute('href', '/events/event-1');
+    expect(screen.getByText('ARD-EVT-2026-001')).toBeInTheDocument();
+    expect(screen.getByText('Tentative')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Share PDF' })).toBeInTheDocument();
+    // One page heading: the document's own "Event Quotation".
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.queryByText('Pinch to zoom')).not.toBeInTheDocument();
+  });
+
+  it('uses icon buttons and a "Pinch to zoom" hint over the scaled paper on mobile', async () => {
+    mockMatchMedia(false);
+    seedSession();
+    mockApi({ event: makeEvent() });
+    renderPage();
+
+    expect(await screen.findByText('Pinch to zoom')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to event' })).toHaveAttribute('href', '/events/event-1');
+    expect(screen.getByText('Quotation')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Share PDF' })).toBeInTheDocument();
+  });
+
+  it('renders only the document in ?print=1 — no toolbar, hint or cost panel (the server-side PDF view)', async () => {
+    mockMatchMedia(true);
+    seedSession();
+    mockApi({ event: makeEvent() });
+    renderPage('event-1', '?print=1');
+
+    expect(await screen.findByRole('heading', { name: 'Event Quotation' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Back to event' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Share PDF' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Pinch to zoom')).not.toBeInTheDocument();
+    expect(screen.queryByText('Grand Total', { selector: 'p' })).not.toBeInTheDocument();
+  });
+
+  it('shows only the mark in the toolbar while the Event is loading', () => {
+    mockMatchMedia(true);
+    seedSession();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise(() => {}))
+    );
+    renderPage();
+
+    expect(screen.getByText('Loading event')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Back to event' })).not.toBeInTheDocument();
   });
 });
