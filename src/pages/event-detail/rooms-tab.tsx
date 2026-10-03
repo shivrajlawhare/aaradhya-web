@@ -6,6 +6,7 @@ import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import AccommodationTotals from '../../components/ui/accommodation-totals';
 import DiscountPercentField from '../../components/ui/discount-percent-field';
+import { getRangeEndDateProps, isEndBeforeStart } from '../../components/ui/range-end-date-props';
 import { useToast } from '../../components/ui/toast-provider';
 import { type filteredAccommodationResultSchema, roomLineSchema, type roomTypeResultSchema } from '../../contract';
 import { parseDiscountPercent } from '../../utils/accommodation-calculations';
@@ -111,8 +112,19 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
     handleSubmit,
     register,
     reset,
+    getValues,
+    setValue,
     formState: { isDirty },
   } = useForm<AccommodationFormValues>({ defaultValues: toFormValues(accommodation) });
+  const checkIn = useWatch({ control, name: 'checkIn' });
+
+  // V5: moving check-in past check-out clears check-out.
+  const handleCheckInChange = (nextCheckIn: string, onChange: (value: string) => void) => {
+    onChange(nextCheckIn);
+    if (isEndBeforeStart(nextCheckIn, getValues('checkOut'))) {
+      setValue('checkOut', '', { shouldDirty: true });
+    }
+  };
   const { fields, append, remove } = useFieldArray({ control, name: 'roomLines' });
   const watchedRoomLines = useWatch({ control, name: 'roomLines' });
 
@@ -245,7 +257,7 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
                 <DatePicker
                   label="Check-in"
                   value={toPickerDate(field.value)}
-                  onChange={(date) => field.onChange(fromPickerDate(date))}
+                  onChange={(date) => handleCheckInChange(fromPickerDate(date), field.onChange)}
                   slotProps={{ textField: { onBlur: field.onBlur, sx: dateFieldStyles } }}
                 />
               )}
@@ -258,6 +270,7 @@ const RoomsTab = ({ eventId, accommodation, canEdit, onEventChanged }: RoomsTabP
                   label="Check-out"
                   value={toPickerDate(field.value)}
                   onChange={(date) => field.onChange(fromPickerDate(date))}
+                  {...getRangeEndDateProps(checkIn)}
                   slotProps={{ textField: { onBlur: field.onBlur, sx: dateFieldStyles } }}
                 />
               )}

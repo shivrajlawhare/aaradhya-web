@@ -20,6 +20,7 @@ import DepartmentNotesFields, {
   toDepartmentNotesBody,
   toDepartmentNotesValues,
 } from '../../components/ui/department-notes-fields';
+import { getRangeEndDateProps, isEndBeforeStart } from '../../components/ui/range-end-date-props';
 import { useToast } from '../../components/ui/toast-provider';
 import { type filteredEventResultSchema, SEATING_ARRANGEMENT_OPTIONS, SeatingArrangement } from '../../contract';
 import TimePickerCard from '../event-creation/time-picker-card';
@@ -187,6 +188,7 @@ const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) 
     control,
     register,
     handleSubmit,
+    getValues,
     setValue,
     setError,
     clearErrors,
@@ -197,6 +199,16 @@ const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) 
   });
   // For the Notes for Department Veg + Non-Veg check.
   const pax = watch('pax');
+  const startDate = watch('startDate');
+
+  // V5: moving the start past the end clears the end (and its error).
+  const handleStartDateChange = (nextStartDate: string, onChange: (value: string) => void) => {
+    onChange(nextStartDate);
+    if (isEndBeforeStart(nextStartDate, getValues('endDate'))) {
+      setValue('endDate', '', { shouldDirty: true });
+      clearErrors('endDate');
+    }
+  };
 
   // A 400 here is specifically the end_date/start_date range rejection
   // (STORY-027/STORY-028's own validation) — this story's own AC requires
@@ -259,7 +271,7 @@ const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) 
     // Blocked client-side before ever reaching the server (this story's own
     // edge case) — plain string comparison, since 'YYYY-MM-DD' values sort
     // lexicographically the same as chronologically; no Date construction.
-    if (values.startDate && values.endDate && values.endDate < values.startDate) {
+    if (isEndBeforeStart(values.startDate, values.endDate)) {
       setError('endDate', { message: 'End date must be on or after start date.' });
       return;
     }
@@ -374,7 +386,7 @@ const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) 
               <DatePicker
                 label="Start date"
                 value={toPickerDate(field.value)}
-                onChange={(date) => field.onChange(fromPickerDate(date))}
+                onChange={(date) => handleStartDateChange(fromPickerDate(date), field.onChange)}
                 slotProps={{ textField: { onBlur: field.onBlur } }}
               />
             )}
@@ -387,6 +399,7 @@ const SessionForm = ({ eventId, session, onSaved, onCancel }: SessionFormProps) 
                 label="End date"
                 value={toPickerDate(field.value)}
                 onChange={(date) => field.onChange(fromPickerDate(date))}
+                {...getRangeEndDateProps(startDate)}
                 slotProps={{
                   textField: {
                     onBlur: field.onBlur,

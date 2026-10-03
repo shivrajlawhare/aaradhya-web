@@ -357,3 +357,46 @@ describe('AccommodationStep', () => {
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 });
+
+describe('Range-limited Check-out date (DEV-19, V5)', () => {
+  const dateField = (labelText: string) => {
+    const field = screen.getByRole('group', { name: labelText }).closest('.MuiFormControl-root');
+    if (!(field instanceof HTMLElement)) {
+      throw new Error(`expected the ${labelText} field`);
+    }
+    return field;
+  };
+  const dateValue = (labelText: string) =>
+    within(dateField(labelText))
+      .getAllByRole('spinbutton')
+      .map((section) => section.textContent)
+      .join('/');
+
+  it('opens the Check-out calendar on the Check-in month, with earlier days disabled', async () => {
+    const user = userEvent.setup();
+    renderWizard(accommodationPath);
+    await screen.findByRole('group', { name: 'Check-in date' });
+    await fillDatePicker(user, 'Check-in date', '13052027');
+
+    await user.click(within(dateField('Check-out date')).getByRole('button', { name: /choose date/i }));
+    const calendar = await screen.findByRole('dialog');
+
+    expect(within(calendar).getByText('May 2027')).toBeInTheDocument();
+    expect(within(calendar).getByRole('gridcell', { name: '12' })).toBeDisabled();
+    expect(within(calendar).getByRole('gridcell', { name: '13' })).toBeEnabled();
+  });
+
+  it('clears Check-out when Check-in moves past it', async () => {
+    const user = userEvent.setup();
+    renderWizard(accommodationPath);
+    await screen.findByRole('group', { name: 'Check-in date' });
+    await fillDatePicker(user, 'Check-in date', '13052027');
+    await fillDatePicker(user, 'Check-out date', '15052027');
+    expect(dateValue('Check-out date')).toBe('15/05/2027');
+
+    await fillDatePicker(user, 'Check-in date', '20052027');
+
+    expect(dateValue('Check-in date')).toBe('20/05/2027');
+    expect(dateValue('Check-out date')).toBe('DD/MM/YYYY');
+  });
+});

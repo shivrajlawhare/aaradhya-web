@@ -6,6 +6,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { tsr } from '../../api/client';
 import AccommodationTotals from '../../components/ui/accommodation-totals';
 import DiscountPercentField from '../../components/ui/discount-percent-field';
+import { getRangeEndDateProps, isEndBeforeStart } from '../../components/ui/range-end-date-props';
 import { useEventWizard } from '../../stores/event-wizard-context';
 import {
   computeDiscount,
@@ -127,7 +128,15 @@ const AccommodationStep = () => {
   // negative — plain string comparison, same "'YYYY-MM-DD' sorts
   // lexicographically the same as chronologically" reasoning
   // event-details-step.tsx's own endDate check documents.
-  const isRangeInvalid = Boolean(checkInDate) && Boolean(checkOutDate) && checkOutDate < checkInDate;
+  const isRangeInvalid = isEndBeforeStart(checkInDate, checkOutDate);
+
+  // V5: moving check-in past check-out clears check-out.
+  const handleCheckInDateChange = (nextCheckInDate: string) => {
+    setCheckInDate(nextCheckInDate);
+    if (isEndBeforeStart(nextCheckInDate, checkOutDate)) {
+      setCheckOutDate('');
+    }
+  };
   const totalNights = !isRangeInvalid ? computeTotalNights(checkInDate, checkOutDate) : null;
   // A room line entered before check-in/check-out are both set still needs
   // some total to display — falls back to 1 (matching aaradhya-api's own
@@ -262,7 +271,7 @@ const AccommodationStep = () => {
             <DatePicker
               label="Check-in date"
               value={toPickerDate(checkInDate)}
-              onChange={(date) => setCheckInDate(fromPickerDate(date))}
+              onChange={(date) => handleCheckInDateChange(fromPickerDate(date))}
             />
             <TimePickerCard value={checkInTime} onChange={setCheckInTime} />
           </Stack>
@@ -274,6 +283,7 @@ const AccommodationStep = () => {
               label="Check-out date"
               value={toPickerDate(checkOutDate)}
               onChange={(date) => setCheckOutDate(fromPickerDate(date))}
+              {...getRangeEndDateProps(checkInDate)}
               slotProps={{ textField: { error: isRangeInvalid } }}
             />
             <TimePickerCard value={checkOutTime} onChange={setCheckOutTime} />

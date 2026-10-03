@@ -2197,3 +2197,29 @@ describe('EventDetailPage — Sessions & Items editor (DEV-17)', () => {
     expect(await within(itemList()).findByText('1. Tea')).toBeInTheDocument();
   });
 });
+
+describe('EventDetailPage — session form date range (DEV-19, V5)', () => {
+  const dateValue = (labelText: string) =>
+    within(screen.getByRole('group', { name: labelText }))
+      .getAllByRole('spinbutton')
+      .map((section) => section.textContent)
+      .join('/');
+
+  it('clears the End date when the Start date moves past it', async () => {
+    const user = userEvent.setup();
+    seedSession();
+    mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Event Details' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Session' }));
+    await screen.findByRole('group', { name: 'Start date' });
+
+    await fillDatePicker(user, 'Start date', '02032027');
+    await fillDatePicker(user, 'End date', '05032027');
+    expect(dateValue('End date')).toBe('05/03/2027');
+
+    await fillDatePicker(user, 'Start date', '10032027');
+
+    expect(dateValue('End date')).toBe('DD/MM/YYYY');
+  });
+});

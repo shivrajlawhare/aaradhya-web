@@ -699,3 +699,47 @@ describe('EventDetailsStep — edit an added row (DEV-06)', () => {
     expect(screen.getByRole('heading', { name: 'Added events' })).toBeInTheDocument();
   });
 });
+
+describe('Range-limited End date (DEV-19, V5)', () => {
+  // The picker field around a date group, and its calendar button.
+  const dateField = (labelText: string) => {
+    const field = screen.getByRole('group', { name: labelText }).closest('.MuiFormControl-root');
+    if (!(field instanceof HTMLElement)) {
+      throw new Error(`expected the ${labelText} field`);
+    }
+    return field;
+  };
+  const dateValue = (labelText: string) =>
+    within(dateField(labelText))
+      .getAllByRole('spinbutton')
+      .map((section) => section.textContent)
+      .join('/');
+
+  it('opens the End date calendar on the Start date’s month, with earlier days disabled', async () => {
+    const user = userEvent.setup();
+    renderWizard(eventDetailsPath);
+    await screen.findByLabelText('Event Type');
+    await fillDatePicker(user, 'Start date', '02032027');
+
+    await user.click(within(dateField('End date')).getByRole('button', { name: /choose date/i }));
+    const calendar = await screen.findByRole('dialog');
+
+    expect(within(calendar).getByText('March 2027')).toBeInTheDocument();
+    expect(within(calendar).getByRole('gridcell', { name: '1' })).toBeDisabled();
+    expect(within(calendar).getByRole('gridcell', { name: '2' })).toBeEnabled();
+  });
+
+  it('clears the End date when the Start date moves past it', async () => {
+    const user = userEvent.setup();
+    renderWizard(eventDetailsPath);
+    await screen.findByLabelText('Event Type');
+    await fillDatePicker(user, 'Start date', '02032027');
+    await fillDatePicker(user, 'End date', '05032027');
+    expect(dateValue('End date')).toBe('05/03/2027');
+
+    await fillDatePicker(user, 'Start date', '10032027');
+
+    expect(dateValue('Start date')).toBe('10/03/2027');
+    expect(dateValue('End date')).toBe('DD/MM/YYYY');
+  });
+});

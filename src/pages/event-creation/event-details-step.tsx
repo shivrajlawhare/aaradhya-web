@@ -30,6 +30,7 @@ import DepartmentNotesFields, {
   type DepartmentNotesValues,
   EMPTY_DEPARTMENT_NOTES,
 } from '../../components/ui/department-notes-fields';
+import { getRangeEndDateProps, isEndBeforeStart } from '../../components/ui/range-end-date-props';
 import { SEATING_ARRANGEMENT_OPTIONS, SeatingArrangement } from '../../contract';
 import { useEventWizard } from '../../stores/event-wizard-context';
 import { formatEventDate, formatSessionDuration } from '../../utils/quotation-formatting';
@@ -246,12 +247,23 @@ const EventDetailsStep = () => {
   // GET hasn't resolved yet is worse than a brief spinner.
   const isMasterListsLoading = eventTypesQuery.isPending || venuesQuery.isPending;
 
-  const { control, register, handleSubmit, watch, setValue, setError, clearErrors, reset } = useForm<EntryFormValues>({
-    defaultValues: emptyEntry,
-  });
+  const { control, register, handleSubmit, watch, getValues, setValue, setError, clearErrors, reset } =
+    useForm<EntryFormValues>({
+      defaultValues: emptyEntry,
+    });
   const sessionTypeOption = watch('sessionTypeOption');
   // For the Notes for Department Veg + Non-Veg check.
   const entryPax = watch('pax');
+  const entryStartDate = watch('startDate');
+
+  // V5: moving the start past the end clears the end (and its error).
+  const handleStartDateChange = (startDate: string, onChange: (value: string) => void) => {
+    onChange(startDate);
+    if (isEndBeforeStart(startDate, getValues('endDate'))) {
+      setValue('endDate', '', { shouldDirty: true });
+      clearErrors('endDate');
+    }
+  };
 
   const handleVenueChange = (venueName: string) => {
     const selected = activeVenues.find((venue) => venue.name === venueName);
@@ -314,7 +326,7 @@ const EventDetailsStep = () => {
     // AC) — plain string comparison, since 'YYYY-MM-DD' values sort
     // lexicographically the same as chronologically; matches
     // session-form.tsx's own identical check.
-    if (values.startDate && values.endDate && values.endDate < values.startDate) {
+    if (isEndBeforeStart(values.startDate, values.endDate)) {
       setError('endDate', { message: 'End date must be on or after start date.' });
       return;
     }
@@ -589,7 +601,7 @@ const EventDetailsStep = () => {
                 <DatePicker
                   label="Start date"
                   value={toPickerDate(field.value)}
-                  onChange={(date) => field.onChange(fromPickerDate(date))}
+                  onChange={(date) => handleStartDateChange(fromPickerDate(date), field.onChange)}
                   slotProps={{ textField: { onBlur: field.onBlur, fullWidth: true } }}
                 />
               )}
@@ -602,6 +614,7 @@ const EventDetailsStep = () => {
                   label="End date"
                   value={toPickerDate(field.value)}
                   onChange={(date) => field.onChange(fromPickerDate(date))}
+                  {...getRangeEndDateProps(entryStartDate)}
                   slotProps={{
                     textField: {
                       onBlur: field.onBlur,
