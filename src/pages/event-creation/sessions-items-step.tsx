@@ -1,35 +1,26 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { Alert, Stack, Tab, Tabs, Typography, useMediaQuery } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import { useForm } from 'react-hook-form';
+import { Alert, Typography } from '@mui/material';
 import { tsr } from '../../api/client';
-import ItemCard from '../../components/ui/item-card';
-import { ItemCardFoodDetails, ItemCardTime } from '../../components/ui/item-card-details';
+import SessionsItemsEditor, {
+  type SaveOutcome,
+  type SessionsItemsEditorItem,
+} from '../../components/ui/sessions-items-editor/sessions-items-editor';
 import { ItemType } from '../../contract';
 import { useEventWizard } from '../../stores/event-wizard-context';
-import { formatEventDate, formatQuotationPax, formatSessionDuration } from '../../utils/quotation-formatting';
+import { formatSessionDuration } from '../../utils/quotation-formatting';
 import { getDistinctDates } from '../../utils/session-dates';
 import { formatAmount } from '../event-detail/format-amount';
 import type { MenuItemChip } from '../event-detail/menu-item-search';
-import CeremonyFormCard from './ceremony-form-card';
 import type { WizardSessionRow } from './event-details-step';
-import FoodFormCard from './food-form-card';
 import {
   type CeremonyFormValues,
   CUSTOM_CEREMONY_EVENT_OPTION,
   CUSTOM_MEAL_NAME_OPTION,
-  emptyCeremonyEntry,
-  emptyFoodEntry,
   type FoodFormValues,
   toCeremonyFormValues,
   toFoodFormValues,
-  type WizardCeremonyItem,
   type WizardDateEntry,
-  type WizardFoodItem,
 } from './sessions-items-forms';
-import { dateTabsStyles, reminderListStyles, wrapperStyles } from './sessions-items-step.styles';
-import WizardItemActions, { type WizardItemCardKind } from './wizard-item-actions';
-import WizardItemGroup from './wizard-item-group';
 
 export type { WizardCeremonyItem, WizardDateEntry, WizardFoodItem } from './sessions-items-forms';
 
@@ -67,17 +58,41 @@ const isEventDetailsSessionsShape = (value: unknown): value is EventDetailsSessi
 const BLANK_CEREMONY_TITLE = '(blank ceremony row)';
 const BLANK_FOOD_TITLE = '(blank food row)';
 
+const SAVED: SaveOutcome = { isSaved: true };
+
 // Time+random, not a module-level counter — same reasoning as
 // client-details-step.tsx's own createRowId.
 const createRowId = (): string => `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-// Wizard Step 4 (STORY-067; D6 two-button pattern, DEV-08). Date tabs
-// derived from Step 2's own Sessions; a sticky "Add Ceremony" / "Add
-// Food/Dining Event" row opens one card at a time; per-date rows are
-// grouped below and mirrored into the wizard store on every change.
+const toEditorItem = (entry: WizardDateEntry): SessionsItemsEditorItem => {
+  if (entry.type === ItemType.Event) {
+    return {
+      kind: 'ceremony',
+      id: entry.id,
+      title: entry.eventName || BLANK_CEREMONY_TITLE,
+      removeLabel: `Remove ${entry.eventName || 'ceremony event'} row`,
+      duration: formatSessionDuration(entry.startTime, entry.endTime),
+      formValues: toCeremonyFormValues(entry),
+    };
+  }
+  return {
+    kind: 'food',
+    id: entry.id,
+    title: entry.mealName || BLANK_FOOD_TITLE,
+    removeLabel: `Remove ${entry.mealName || 'food event'} row`,
+    pax: entry.pax,
+    limitedSeating: entry.limitedSeating,
+    costPerPlate: entry.costPerPlate,
+    menuItemNames: entry.menuItems.map((menuItem) => menuItem.name),
+    menuLabel: `${entry.mealName || 'Food'} menu items`,
+    formValues: toFoodFormValues(entry),
+  };
+};
+
+// Wizard Step 4 (STORY-067; DEV-17 shared editor). Date tabs derived from
+// Step 2's own Sessions; the date's Items are kept in add order and mirrored
+// into the wizard store on every change.
 const SessionsItemsStep = () => {
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { data, setStepData } = useEventWizard();
   const stored = data['sessions-items'];
   const restored = isSessionsItemsStepData(stored) ? stored : undefined;
@@ -107,14 +122,6 @@ const SessionsItemsStep = () => {
     setStepData('sessions-items', { byDate, visitedDates, allDatesVisited });
   }, [byDate, visitedDates, distinctDates, setStepData]);
 
-  const [openCard, setOpenCard] = useState<WizardItemCardKind | null>(null);
-  const [editingCeremonyId, setEditingCeremonyId] = useState<string | null>(null);
-  const [editingFoodId, setEditingFoodId] = useState<string | null>(null);
-  const [foodSubmitError, setFoodSubmitError] = useState<string | null>(null);
-
-  const ceremonyForm = useForm<CeremonyFormValues>({ defaultValues: emptyCeremonyEntry });
-  const foodForm = useForm<FoodFormValues>({ defaultValues: emptyFoodEntry });
-
   // The full Menu Item master list, fetched once here rather than
   // per-keystroke — same reasoning items-section.tsx's own identical query
   // documents.
@@ -125,61 +132,18 @@ const SessionsItemsStep = () => {
   }));
   const createMenuItemMutation = tsr.createMenuItem.useMutation();
 
-  const resetCeremonyCard = () => {
-    ceremonyForm.reset(emptyCeremonyEntry);
-    setEditingCeremonyId(null);
-  };
-
-  const resetFoodCard = () => {
-    foodForm.reset(emptyFoodEntry);
-    setEditingFoodId(null);
-    setFoodSubmitError(null);
-  };
-
-  const resetCard = (kind: WizardItemCardKind) => {
-    if (kind === 'ceremony') {
-      resetCeremonyCard();
-    } else {
-      resetFoodCard();
-    }
-  };
-
-  // Opens a card, closing (and clearing) the other one — one card at a time.
-  const openCardOf = (kind: WizardItemCardKind) => {
-    if (openCard && openCard !== kind) {
-      resetCard(openCard);
-    }
-    setOpenCard(kind);
-  };
-
-  // The open card's own button closes it; the other button switches cards.
-  const handleToggleCard = (kind: WizardItemCardKind) => {
-    if (openCard === kind) {
-      resetCard(kind);
-      setOpenCard(null);
-      return;
-    }
-    openCardOf(kind);
-  };
-
   const handleSelectDate = (date: string) => {
     setActiveDate(date);
     setVisitedDates((current) => (current.includes(date) ? current : [...current, date]));
-    resetCeremonyCard();
-    resetFoodCard();
   };
 
   const activeDateEntries = byDate[activeDate] ?? [];
-  const ceremonyEntries = activeDateEntries.filter(
-    (entry): entry is WizardCeremonyItem => entry.type === ItemType.Event
-  );
-  const foodEntries = activeDateEntries.filter((entry): entry is WizardFoodItem => entry.type === ItemType.Meal);
   const activeDateSessions = sessions.filter(
     (session) => activeDate >= session.startDate && activeDate <= session.endDate
   );
 
-  // Adds a new row, or replaces the row being edited in place; either way
-  // the card stays open and empty for the next entry.
+  // Adds a new row at the bottom, or replaces the row being edited in place
+  // (V6).
   const upsertActiveDateEntry = (item: WizardDateEntry, editingId: string | null) => {
     setByDate((current) => {
       const existing = current[activeDate] ?? [];
@@ -188,40 +152,20 @@ const SessionsItemsStep = () => {
     });
   };
 
-  const removeActiveDateEntry = (id: string) => {
-    setByDate((current) => ({
-      ...current,
-      [activeDate]: (current[activeDate] ?? []).filter((entry) => entry.id !== id),
-    }));
-  };
-
-  const handleSubmitCeremony = ceremonyForm.handleSubmit((values) => {
+  const handleSaveCeremony = (values: CeremonyFormValues, editingId: string | null): Promise<SaveOutcome> => {
     const eventName =
       values.eventNameOption === CUSTOM_CEREMONY_EVENT_OPTION ? values.eventNameCustom.trim() : values.eventNameOption;
     upsertActiveDateEntry(
       {
-        id: editingCeremonyId ?? createRowId(),
+        id: editingId ?? createRowId(),
         type: ItemType.Event,
         eventName,
         startTime: values.startTime,
         endTime: values.endTime,
       },
-      editingCeremonyId
+      editingId
     );
-    resetCeremonyCard();
-  });
-
-  const handleEditCeremonyRow = (item: WizardCeremonyItem) => {
-    openCardOf('ceremony');
-    setEditingCeremonyId(item.id);
-    ceremonyForm.reset(toCeremonyFormValues(item));
-  };
-
-  const handleRemoveCeremonyRow = (id: string) => {
-    removeActiveDateEntry(id);
-    if (editingCeremonyId === id) {
-      resetCeremonyCard();
-    }
+    return Promise.resolve(SAVED);
   };
 
   // Each chip with an empty id is a not-yet-real Menu Item the user typed
@@ -257,15 +201,13 @@ const SessionsItemsStep = () => {
     return resolved;
   };
 
-  const handleSubmitFood = foodForm.handleSubmit(async (values) => {
-    setFoodSubmitError(null);
+  const handleSaveFood = async (values: FoodFormValues, editingId: string | null): Promise<SaveOutcome> => {
     const mealName =
       values.mealNameOption === CUSTOM_MEAL_NAME_OPTION ? values.mealNameCustom.trim() : values.mealNameOption;
     const hadNewChips = values.menuItems.some((chip) => chip.id === '');
     const resolvedMenuItems = await resolveMenuItemChips(values.menuItems);
     if (resolvedMenuItems === null) {
-      setFoodSubmitError('Something went wrong adding a new menu item. Please try again.');
-      return;
+      return { isSaved: false, error: 'Something went wrong adding a new menu item. Please try again.' };
     }
     if (hadNewChips) {
       menuItemsQuery.refetch();
@@ -273,7 +215,7 @@ const SessionsItemsStep = () => {
 
     upsertActiveDateEntry(
       {
-        id: editingFoodId ?? createRowId(),
+        id: editingId ?? createRowId(),
         type: ItemType.Meal,
         mealName,
         startTime: values.startTime,
@@ -288,23 +230,17 @@ const SessionsItemsStep = () => {
         costPerPlate: Number.isFinite(values.costPerPlate) ? values.costPerPlate : 0,
         menuItems: resolvedMenuItems,
       },
-      editingFoodId
+      editingId
     );
-    resetFoodCard();
-  });
-
-  const handleEditFoodRow = (item: WizardFoodItem) => {
-    openCardOf('food');
-    setEditingFoodId(item.id);
-    setFoodSubmitError(null);
-    foodForm.reset(toFoodFormValues(item));
+    return SAVED;
   };
 
-  const handleRemoveFoodRow = (id: string) => {
-    removeActiveDateEntry(id);
-    if (editingFoodId === id) {
-      resetFoodCard();
-    }
+  const handleRemove = (item: SessionsItemsEditorItem): Promise<SaveOutcome> => {
+    setByDate((current) => ({
+      ...current,
+      [activeDate]: (current[activeDate] ?? []).filter((entry) => entry.id !== item.id),
+    }));
+    return Promise.resolve(SAVED);
   };
 
   if (distinctDates.length === 0) {
@@ -315,11 +251,11 @@ const SessionsItemsStep = () => {
     );
   }
 
-  let reminderContent: ReactNode;
+  let reminder: ReactNode;
   if (activeDateSessions.length === 0) {
-    reminderContent = <Alert severity="info">No Session from Event Details covers this date.</Alert>;
+    reminder = <Alert severity="info">No Session from Event Details covers this date.</Alert>;
   } else {
-    reminderContent = activeDateSessions.map((session) => (
+    reminder = activeDateSessions.map((session) => (
       <Alert key={session.id} severity="info">
         {session.sessionType} — Venue for this date: {session.venue} · {formatAmount(session.venueCost)}/- (from Event
         Details)
@@ -327,89 +263,20 @@ const SessionsItemsStep = () => {
     ));
   }
 
-  let openCardContent: ReactNode = null;
-  if (openCard === 'ceremony') {
-    openCardContent = (
-      <CeremonyFormCard
-        form={ceremonyForm}
-        isEditing={editingCeremonyId !== null}
-        onSubmit={handleSubmitCeremony}
-        onCancelEdit={resetCeremonyCard}
-      />
-    );
-  } else if (openCard === 'food') {
-    openCardContent = (
-      <FoodFormCard
-        form={foodForm}
-        menuItemOptions={menuItemOptions}
-        isEditing={editingFoodId !== null}
-        isSubmitting={createMenuItemMutation.isPending}
-        submitError={foodSubmitError}
-        onSubmit={handleSubmitFood}
-        onCancelEdit={resetFoodCard}
-      />
-    );
-  }
-
   return (
-    <Stack sx={wrapperStyles}>
-      <Tabs
-        value={activeDate}
-        onChange={(_event, value: string) => handleSelectDate(value)}
-        variant="scrollable"
-        scrollButtons={false}
-        sx={dateTabsStyles}
-      >
-        {distinctDates.map((date) => (
-          <Tab key={date} value={date} label={formatEventDate(date)} />
-        ))}
-      </Tabs>
-
-      <Stack sx={reminderListStyles}>{reminderContent}</Stack>
-
-      <WizardItemActions openCard={openCard} isDesktop={isDesktop} onToggle={handleToggleCard} />
-
-      {openCardContent}
-
-      <WizardItemGroup label="Ceremony events" emptyText="No ceremony events yet" count={ceremonyEntries.length}>
-        {ceremonyEntries.map((item) => (
-          <ItemCard
-            key={item.id}
-            title={item.eventName || BLANK_CEREMONY_TITLE}
-            editable={{
-              removeLabel: `Remove ${item.eventName || 'ceremony event'} row`,
-              isEditing: editingCeremonyId === item.id,
-              onEdit: () => handleEditCeremonyRow(item),
-              onRemove: () => handleRemoveCeremonyRow(item.id),
-            }}
-          >
-            <ItemCardTime duration={formatSessionDuration(item.startTime, item.endTime)} />
-          </ItemCard>
-        ))}
-      </WizardItemGroup>
-
-      <WizardItemGroup label="Food/dining events" emptyText="No food/dining events yet" count={foodEntries.length}>
-        {foodEntries.map((item) => (
-          <ItemCard
-            key={item.id}
-            title={item.mealName || BLANK_FOOD_TITLE}
-            editable={{
-              removeLabel: `Remove ${item.mealName || 'food event'} row`,
-              isEditing: editingFoodId === item.id,
-              onEdit: () => handleEditFoodRow(item),
-              onRemove: () => handleRemoveFoodRow(item.id),
-            }}
-          >
-            <ItemCardFoodDetails
-              pax={formatQuotationPax(item.pax, item.limitedSeating)}
-              cost={`₹ ${formatAmount(item.costPerPlate)}`}
-              menuItemNames={item.menuItems.map((menuItem) => menuItem.name)}
-              menuLabel={`${item.mealName || 'Food'} menu items`}
-            />
-          </ItemCard>
-        ))}
-      </WizardItemGroup>
-    </Stack>
+    <SessionsItemsEditor
+      dates={distinctDates}
+      activeDate={activeDate}
+      onSelectDate={handleSelectDate}
+      reminder={reminder}
+      items={activeDateEntries.map(toEditorItem)}
+      canEdit
+      menuItemOptions={menuItemOptions}
+      isSaving={createMenuItemMutation.isPending}
+      onSaveCeremony={handleSaveCeremony}
+      onSaveFood={handleSaveFood}
+      onRemove={handleRemove}
+    />
   );
 };
 

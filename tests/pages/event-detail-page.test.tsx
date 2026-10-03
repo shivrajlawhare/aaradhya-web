@@ -2065,3 +2065,111 @@ describe('EventDetailPage — Notes for Department (DEV-12)', () => {
     });
   });
 });
+
+describe('EventDetailPage — Sessions & Items editor (DEV-17)', () => {
+  const sessionWithItems: MockSession = {
+    id: 'session-1',
+    sessionType: 'Wedding',
+    venue: 'Lawn',
+    venueCost: 50000,
+    startDate: '2026-06-15T00:00:00.000Z',
+    endDate: '2026-06-15T00:00:00.000Z',
+    startTime: null,
+    endTime: null,
+    pax: 200,
+    sessionStatus: 'Active',
+    durationDays: 1,
+    isMultiDay: false,
+    setup: makeSessionSetup(),
+    items: [
+      makeMealItem({
+        id: 'item-1',
+        mealName: 'Breakfast',
+        pax: 100,
+        costPerPlate: 500,
+        menuItems: ['menu-1', 'menu-2'],
+      }),
+      makeMealItem({
+        id: 'item-2',
+        type: 'Event',
+        mealName: null,
+        pax: null,
+        costPerPlate: null,
+        totalCost: null,
+        eventName: 'Muhurta',
+        venue: 'Lawn',
+        startTime: '11:00',
+        endTime: '12:30',
+      }),
+    ],
+  };
+  const menuItems = [makeMenuItem({ id: 'menu-1', name: 'Tea' }), makeMenuItem({ id: 'menu-2', name: 'Coffee' })];
+
+  const itemList = () => screen.getByRole('region', { name: 'Ceremonies & food/dining events' });
+  const rowTexts = () =>
+    within(itemList())
+      .getAllByRole('listitem')
+      .filter((listItem) => listItem.parentElement?.parentElement === itemList())
+      .map((listItem) => listItem.textContent ?? '');
+
+  const openSessionsItemsTab = async () => {
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sessions & Items' }));
+    await within(itemList()).findByText('Breakfast');
+  };
+
+  it('uses the step 4 pattern: one combined list, the buttons below it, the card opened under them', async () => {
+    seedSession();
+    const { itemPostRequests } = mockEventDetailApi({ event: makeEvent({ sessions: [sessionWithItems] }), menuItems });
+    renderPage();
+    await openSessionsItemsTab();
+
+    expect(screen.queryByRole('form')).not.toBeInTheDocument();
+    const toolbar = screen.getByRole('toolbar', { name: 'Add items' });
+    expect(itemList().compareDocumentPosition(toolbar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.click(within(toolbar).getByRole('button', { name: 'Add Ceremony' }));
+    const card = screen.getByRole('form', { name: 'Ceremony Events' });
+    expect(toolbar.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.mouseDown(within(card).getByLabelText('Event Name'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Cake Cutting' }));
+    fireEvent.click(within(card).getByRole('button', { name: 'Add Ceremony Event' }));
+
+    await waitFor(() => expect(itemPostRequests).toHaveLength(1));
+    expect(itemPostRequests[0]).toMatchObject({ type: 'Event', eventName: 'Cake Cutting', venue: 'Lawn' });
+    expect(await screen.findByText('Ceremony event added.')).toBeInTheDocument();
+
+    // The new Item lands at the bottom of the list (V6).
+    await within(itemList()).findByText('Cake Cutting');
+    const rows = rowTexts();
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toContain('Breakfast');
+    expect(rows[1]).toContain('Muhurta');
+    expect(rows[2]).toContain('Cake Cutting');
+  });
+
+  it('shows the Event Manager each food row’s cost line and numbered menu chips', async () => {
+    seedSession();
+    mockEventDetailApi({ event: makeEvent({ sessions: [sessionWithItems] }), menuItems });
+    renderPage();
+    await openSessionsItemsTab();
+
+    expect(within(itemList()).getByText('100 pax × ₹ 500 =')).toHaveTextContent('100 pax × ₹ 500 = ₹ 50,000');
+    const menu = within(itemList()).getByRole('list', { name: 'Breakfast menu items' });
+    expect(await within(menu).findByText('1. Tea')).toBeInTheDocument();
+    expect(within(menu).getByText('2. Coffee')).toBeInTheDocument();
+  });
+
+  it('shows the F&B Head read-only food rows: no buttons, no ceremonies, no cost line', async () => {
+    seedSession('FnBHead');
+    mockEventDetailApi({ event: makeEvent({ sessions: [sessionWithItems] }), menuItems });
+    renderPage();
+    await openSessionsItemsTab();
+
+    expect(screen.queryByRole('toolbar', { name: 'Add items' })).not.toBeInTheDocument();
+    expect(within(itemList()).queryByText('Muhurta')).not.toBeInTheDocument();
+    expect(within(itemList()).queryByText('100 pax × ₹ 500 =')).not.toBeInTheDocument();
+    expect(within(itemList()).queryByRole('button', { name: 'Remove Breakfast row' })).not.toBeInTheDocument();
+    expect(await within(itemList()).findByText('1. Tea')).toBeInTheDocument();
+  });
+});

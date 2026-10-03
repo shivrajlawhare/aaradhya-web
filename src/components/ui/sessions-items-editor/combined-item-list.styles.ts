@@ -1,5 +1,5 @@
 import type { SxProps, Theme } from '@mui/material';
-import { scaleTokens } from '../../theme/tokens';
+import { scaleTokens } from '../../../theme/tokens';
 
 const { space } = scaleTokens;
 
@@ -11,11 +11,14 @@ export const headingStyles: SxProps<Theme> = {
   color: 'text.secondary',
 };
 
+// One column of Card/Item in the date's add order (R2, V6).
 export const listStyles: SxProps<Theme> = {
-  display: 'grid',
-  gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-  gap: { xs: `${space[12]}px`, md: `${space[24]}px` },
-  alignItems: 'start',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: `${space[12]}px`,
+  m: 0,
+  p: 0,
+  listStyle: 'none',
 };
 
 export const emptyTextStyles: SxProps<Theme> = {

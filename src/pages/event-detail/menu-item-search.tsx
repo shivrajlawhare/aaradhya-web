@@ -1,4 +1,5 @@
 import { Autocomplete, Chip, createFilterOptions, TextField } from '@mui/material';
+import { formatNumberedMenuItem } from '../../utils/menu-item-numbering';
 import { chipStyles } from './menu-item-search.styles';
 
 // id === '' marks a chip that hasn't been resolved to a real Menu Item yet
@@ -68,7 +69,7 @@ const MenuItemSearch = ({ options, value, onChange }: MenuItemSearchProps) => (
     renderValue={(selectedValues, getItemProps) =>
       selectedValues.map((option, index) => {
         const { key, ...itemProps } = getItemProps({ index });
-        return <Chip key={key} label={option.name} sx={chipStyles} {...itemProps} />;
+        return <Chip key={key} label={formatNumberedMenuItem(option.name, index)} sx={chipStyles} {...itemProps} />;
       })
     }
     renderInput={(params) => <TextField {...params} label="Menu items" placeholder="Search or add a menu item" />}

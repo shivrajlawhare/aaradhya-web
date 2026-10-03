@@ -1,40 +1,45 @@
 import { type ReactNode, useMemo, useState } from 'react';
-import { Alert, Box, Stack, Tab, Tabs, Typography } from '@mui/material';
-import { useForm } from 'react-hook-form';
+import { Alert, Typography } from '@mui/material';
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
-import ItemCard from '../../components/ui/item-card';
-import { ItemCardFoodDetails, ItemCardTime } from '../../components/ui/item-card-details';
+import SessionsItemsEditor, {
+  type SaveOutcome,
+  type SessionsItemsEditorItem,
+} from '../../components/ui/sessions-items-editor/sessions-items-editor';
 import { useToast } from '../../components/ui/toast-provider';
 import { type createItemBodySchema, type filteredEventResultSchema, ItemType } from '../../contract';
-import { formatEventDate, formatQuotationPax, formatSessionDuration } from '../../utils/quotation-formatting';
+import { formatSessionDuration } from '../../utils/quotation-formatting';
 import { getDistinctDates } from '../../utils/session-dates';
-import CeremonyFormCard from '../event-creation/ceremony-form-card';
-import FoodFormCard from '../event-creation/food-form-card';
 import {
   CEREMONY_EVENT_NAME_PRESETS,
   type CeremonyFormValues,
   CUSTOM_CEREMONY_EVENT_OPTION,
   CUSTOM_MEAL_NAME_OPTION,
-  emptyCeremonyEntry,
-  emptyFoodEntry,
   type FoodFormValues,
   MEAL_NAME_PRESETS,
 } from '../event-creation/sessions-items-forms';
+import type { WizardItemCardKind } from '../event-creation/wizard-item-actions';
 import { toDateInputValue } from './date-input';
 import { formatAmount } from './format-amount';
 import type { MenuItemChip } from './menu-item-search';
-import { dateTabsStyles, itemGridStyles, reminderListStyles } from './sessions-items-tab.styles';
-import { tabSectionStyles } from './tab-card.styles';
 
 type PublicEvent = z.infer<typeof filteredEventResultSchema>;
 type SessionResult = PublicEvent['sessions'][number];
 type ItemResult = NonNullable<SessionResult['items']>[number];
+type ItemBody = z.infer<typeof createItemBodySchema>;
 
 // An Event Item with every field blank still persists as a valid row (both
 // reference quotations print one, STORY-071).
 const BLANK_CEREMONY_TITLE = '(blank ceremony row)';
 const BLANK_FOOD_TITLE = '(blank food row)';
+
+const GENERIC_ERROR = 'Something went wrong. Please try again.';
+
+// "Ceremony event added." / "Food/dining event saved." / "… removed."
+const TOAST_SUBJECTS: Record<WizardItemCardKind, string> = {
+  ceremony: 'Ceremony event',
+  food: 'Food/dining event',
+};
 
 // The wizard's converters take wizard items; these take saved Items.
 const toCeremonyFormValues = (item: ItemResult): CeremonyFormValues => {
@@ -71,11 +76,6 @@ interface DateEntry {
   item: ItemResult;
 }
 
-interface EditingItem {
-  sessionId: string;
-  itemId: string;
-}
-
 // venueCost is stripped for every role but Event Manager (STORY-046) — the
 // reminder omits it rather than printing "NaN" (UI-24: F&B sees no cost).
 const formatVenueCostSuffix = (venueCost: number | undefined): string => {
@@ -93,19 +93,15 @@ interface SessionsItemsTabProps {
   // filterEventForRole sends Housekeeping/Reception no `items` at all, and
   // Reception can't see Sessions in any form). Ceremony Events are never
   // rendered for a non-EventManager caller: F&B Head's own filtered
-  // response never includes them to begin with (Meal Items only), so an
-  // always-empty Ceremony section would serve no purpose.
+  // response never includes them to begin with (Meal Items only).
   canEdit: boolean;
   onEventChanged: () => void;
 }
 
-// STORY-079 — the real, persisted-data counterpart to the wizard's own
-// sessions-items-step.tsx: same day-tabbed Ceremony/Food-Dining UX (a
-// persistent entry form above already-added row cards, click a row to load
-// it back into the form for editing), but every Add/Save/Delete is an
-// immediate, independent API call against the real Event (createItem/
-// updateItem/deleteItem, STORY-032/033) — there's no wizard store, no
-// "Next" gate, and no draft state that could be lost on navigation.
+// STORY-079 — the persisted-data counterpart to wizard step 4, on the same
+// SessionsItemsEditor (V7, DEV-17): every Add/Save/Delete is an immediate,
+// independent API call against the real Event (createItem/updateItem/
+// deleteItem, STORY-032/033).
 //
 // A real Item has no date field of its own — a Session's own `items` array
 // is flat, with no per-calendar-day tag surviving past the wizard's own
@@ -115,10 +111,9 @@ interface SessionsItemsTabProps {
 // multi-day Session: a Session's entire items list is shown under the one
 // date tab matching its own startDate — the same convention quotation-
 // document.tsx's own dateGroups already established for exactly this same
-// data (STORY-071/072), reused here rather than re-litigated. A date only
-// spanned (not started) by an ongoing multi-day Session shows no items of
-// its own and no entry form (there's no Session to attach a new Item to on
-// that date), just an informational note.
+// data (STORY-071/072). A date only spanned (not started) by an ongoing
+// multi-day Session shows no items of its own and no buttons (there's no
+// Session to attach a new Item to on that date), just an informational note.
 const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabProps) => {
   const { showSuccess, showError } = useToast();
   const distinctDates = useMemo(() => getDistinctDates(event.sessions), [event.sessions]);
@@ -129,14 +124,6 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
   // refetch could otherwise leave `activeDateState` pointing at a date with
   // no matching Tab any more.
   const activeDate = distinctDates.includes(activeDateState) ? activeDateState : (distinctDates[0] ?? '');
-
-  const [editingCeremony, setEditingCeremony] = useState<EditingItem | null>(null);
-  const [editingFood, setEditingFood] = useState<EditingItem | null>(null);
-  const [ceremonySubmitError, setCeremonySubmitError] = useState<string | null>(null);
-  const [foodSubmitError, setFoodSubmitError] = useState<string | null>(null);
-
-  const ceremonyForm = useForm<CeremonyFormValues>({ defaultValues: emptyCeremonyEntry });
-  const foodForm = useForm<FoodFormValues>({ defaultValues: emptyFoodEntry });
 
   // The full Menu Item master list, fetched once (not per keystroke). Any
   // authenticated role can call GET /menu-items, so this resolves names for F&B Head's
@@ -153,204 +140,142 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
   const deleteItemMutation = tsr.deleteItem.useMutation();
   const isMutating = createItemMutation.isPending || updateItemMutation.isPending || deleteItemMutation.isPending;
 
-  const handleSelectDate = (date: string) => {
-    setActiveDateState(date);
-    ceremonyForm.reset(emptyCeremonyEntry);
-    foodForm.reset(emptyFoodEntry);
-    setEditingCeremony(null);
-    setEditingFood(null);
-    setCeremonySubmitError(null);
-    setFoodSubmitError(null);
-  };
-
   // Sessions whose own startDate is this exact date — the "owner(s)" of
   // this tab, both for which already-saved Items show here (their entire
-  // flat items list) and which Session a newly-added Item attaches to. Two
-  // Sessions sharing a start date (STORY-071's own Halad+Engagement
-  // example) both contribute their Items here; a brand-new Item targets
-  // the first one, matching review-step.tsx's own mapSessionsForSubmit
-  // "first Session in entry order" convention.
+  // flat items list, in order — V6) and which Session a newly-added Item
+  // attaches to. Two Sessions sharing a start date (STORY-071's own
+  // Halad+Engagement example) both contribute their Items here; a brand-new
+  // Item targets the first one, matching review-step.tsx's own
+  // mapSessionsForSubmit "first Session in entry order" convention.
   const sessionsStartingOnDate = event.sessions.filter((session) => toDateInputValue(session.startDate) === activeDate);
-  const targetSession = editingCeremony
-    ? event.sessions.find((session) => session.id === editingCeremony.sessionId)
-    : sessionsStartingOnDate[0];
-  const foodTargetSession = editingFood
-    ? event.sessions.find((session) => session.id === editingFood.sessionId)
-    : sessionsStartingOnDate[0];
+  const dateEntries: DateEntry[] = sessionsStartingOnDate
+    .flatMap((session) => (session.items ?? []).map((item) => ({ sessionId: session.id, item })))
+    .filter((entry) => canEdit || entry.item.type === ItemType.Meal);
+  const findEntry = (itemId: string | null) => dateEntries.find((entry) => entry.item.id === itemId);
 
-  const dateEntries: DateEntry[] = sessionsStartingOnDate.flatMap((session) =>
-    (session.items ?? []).map((item) => ({ sessionId: session.id, item }))
-  );
-  const ceremonyEntries = dateEntries.filter((entry) => entry.item.type === ItemType.Event);
-  const foodEntries = dateEntries.filter((entry) => entry.item.type === ItemType.Meal);
+  const toEditorItem = ({ item }: DateEntry): SessionsItemsEditorItem => {
+    if (item.type === ItemType.Event) {
+      return {
+        kind: 'ceremony',
+        id: item.id,
+        title: item.eventName || BLANK_CEREMONY_TITLE,
+        removeLabel: `Remove ${item.eventName || 'ceremony event'} row`,
+        duration: formatSessionDuration(item.startTime ?? '', item.endTime ?? ''),
+        formValues: toCeremonyFormValues(item),
+      };
+    }
+    // costPerPlate is stripped for every role but Event Manager (STORY-046)
+    // — F&B Head's read-only card shows no cost and no cost line.
+    let costPerPlate: number | undefined;
+    if (canEdit) {
+      costPerPlate = item.costPerPlate ?? 0;
+    }
+    return {
+      kind: 'food',
+      id: item.id,
+      title: item.mealName || BLANK_FOOD_TITLE,
+      removeLabel: `Remove ${item.mealName || 'food event'} row`,
+      pax: item.pax ?? 0,
+      limitedSeating: item.limitedSeating ?? false,
+      costPerPlate,
+      menuItemNames: (item.menuItems ?? []).map((id) => menuItemsById.get(id) ?? id),
+      menuLabel: `${item.mealName || 'Food'} menu items`,
+      formValues: toFoodFormValues(item, menuItemsById),
+    };
+  };
 
-  const handleAddCeremonyEvent = ceremonyForm.handleSubmit((values) => {
-    if (isMutating) {
-      return;
+  // Creates the Item on the date's first Session, or updates the one being
+  // edited where it already lives.
+  const saveItem = async (
+    kind: WizardItemCardKind,
+    buildBody: (session: SessionResult) => ItemBody,
+    editingId: string | null
+  ): Promise<SaveOutcome> => {
+    const editingEntry = findEntry(editingId);
+    const sessionId = editingEntry?.sessionId ?? sessionsStartingOnDate[0]?.id;
+    const session = event.sessions.find((candidate) => candidate.id === sessionId);
+    if (!session) {
+      return { isSaved: false, error: GENERIC_ERROR };
     }
-    const sessionId = editingCeremony?.sessionId ?? targetSession?.id;
-    if (!sessionId) {
-      return;
+    const body = buildBody(session);
+    try {
+      if (editingEntry) {
+        await updateItemMutation.mutateAsync({
+          params: { id: event.id, sid: session.id, iid: editingEntry.item.id },
+          body,
+        });
+      } else {
+        await createItemMutation.mutateAsync({ params: { id: event.id, sid: session.id }, body });
+      }
+    } catch {
+      showError(GENERIC_ERROR);
+      return { isSaved: false, error: GENERIC_ERROR };
     }
-    setCeremonySubmitError(null);
+    showSuccess(`${TOAST_SUBJECTS[kind]} ${editingEntry ? 'saved' : 'added'}.`);
+    onEventChanged();
+    return { isSaved: true };
+  };
+
+  const handleSaveCeremony = (values: CeremonyFormValues, editingId: string | null) => {
     const eventName =
       values.eventNameOption === CUSTOM_CEREMONY_EVENT_OPTION ? values.eventNameCustom.trim() : values.eventNameOption;
-    // No user-facing Venue field — same convention sessions-items-step.tsx's
-    // own Ceremony form already establishes ("venue is read-only, pulled
-    // from the date's own Session"), applied here against the real owning
-    // Session instead of a wizard-local reminder line.
-    const body: z.infer<typeof createItemBodySchema> = {
-      type: ItemType.Event,
-      eventName,
-      venue: targetSession?.venue ?? '',
-      startTime: values.startTime.trim() || undefined,
-      endTime: values.endTime.trim() || undefined,
-    };
-    const callbacks = {
-      onSuccess: () => {
-        ceremonyForm.reset(emptyCeremonyEntry);
-        showSuccess(editingCeremony ? 'Ceremony event saved.' : 'Ceremony event added.');
-        setEditingCeremony(null);
-        onEventChanged();
-      },
-      onError: () => {
-        setCeremonySubmitError('Something went wrong. Please try again.');
-        showError('Something went wrong. Please try again.');
-      },
-    };
-    if (editingCeremony) {
-      updateItemMutation.mutate(
-        { params: { id: event.id, sid: editingCeremony.sessionId, iid: editingCeremony.itemId }, body },
-        callbacks
-      );
-    } else {
-      createItemMutation.mutate({ params: { id: event.id, sid: sessionId }, body }, callbacks);
-    }
-  });
-
-  const handleEditCeremonyRow = (entry: DateEntry) => {
-    setEditingCeremony({ sessionId: entry.sessionId, itemId: entry.item.id });
-    ceremonyForm.reset(toCeremonyFormValues(entry.item));
-  };
-
-  const handleCancelCeremonyEdit = () => {
-    setEditingCeremony(null);
-    ceremonyForm.reset(emptyCeremonyEntry);
-  };
-
-  const handleRemoveCeremonyRow = (entry: DateEntry) => {
-    if (isMutating) {
-      return;
-    }
-    setCeremonySubmitError(null);
-    deleteItemMutation.mutate(
-      { params: { id: event.id, sid: entry.sessionId, iid: entry.item.id } },
-      {
-        onSuccess: () => {
-          if (editingCeremony?.itemId === entry.item.id) {
-            handleCancelCeremonyEdit();
-          }
-          showSuccess('Ceremony event removed.');
-          onEventChanged();
-        },
-        onError: () => {
-          setCeremonySubmitError('Something went wrong. Please try again.');
-          showError('Something went wrong. Please try again.');
-        },
-      }
+    // No user-facing Venue field — venue is read-only, pulled from the
+    // Item's own Session, never re-entered per Item.
+    return saveItem(
+      'ceremony',
+      (session) => ({
+        type: ItemType.Event,
+        eventName,
+        venue: session.venue,
+        startTime: values.startTime.trim() || undefined,
+        endTime: values.endTime.trim() || undefined,
+      }),
+      editingId
     );
   };
 
-  const handleAddFoodEvent = foodForm.handleSubmit((values) => {
-    if (isMutating) {
-      return;
-    }
-    const sessionId = editingFood?.sessionId ?? foodTargetSession?.id;
-    if (!sessionId) {
-      return;
-    }
-    setFoodSubmitError(null);
+  const handleSaveFood = async (values: FoodFormValues, editingId: string | null) => {
     const mealName =
       values.mealNameOption === CUSTOM_MEAL_NAME_OPTION ? values.mealNameCustom.trim() : values.mealNameOption;
-    // Each chip becomes an { id } reference or a { name } reference — the
-    // server resolves either (find-or-create). Simpler than
-    // the wizard's own resolveMenuItemChips: this screen has a real Item
-    // endpoint to lean on, so there's no need to pre-resolve a name to an id
-    // client-side before submitting.
-    const menuItemsPayload = values.menuItems.map((chip) => (chip.id ? { id: chip.id } : { name: chip.name }));
-    // A chip with an empty id is a not-yet-real Menu Item the server is
-    // about to find-or-create — `menuItemsById` below was built from a
-    // fetch taken before that id existed, so without refetching, this same
-    // Item's own row card would render the brand-new id raw (exactly the
-    // "menu items showing as their object id" bug this story exists to
-    // fix) the instant it reappears via onEventChanged's refetch.
+    // A chip with an empty id is a not-yet-real Menu Item the server
+    // finds-or-creates — `menuItemsById` was built before that id existed,
+    // so the list is refetched after the save or the new row would render
+    // the raw id.
     const hasUnresolvedChip = values.menuItems.some((chip) => chip.id === '');
-    const body = {
-      type: ItemType.Meal as const,
-      mealName,
-      pax: Number.isFinite(values.pax) ? values.pax : 0,
-      costPerPlate: Number.isFinite(values.costPerPlate) ? values.costPerPlate : 0,
-      limitedSeating: values.limitedSeating,
-      menuItems: menuItemsPayload,
-      startTime: values.startTime.trim() || undefined,
-      endTime: values.endTime.trim() || undefined,
-    };
-    const callbacks = {
-      onSuccess: () => {
-        foodForm.reset(emptyFoodEntry);
-        showSuccess(editingFood ? 'Food/dining event saved.' : 'Food/dining event added.');
-        setEditingFood(null);
-        if (hasUnresolvedChip) {
-          menuItemsQuery.refetch();
-        }
-        onEventChanged();
-      },
-      onError: () => {
-        setFoodSubmitError('Something went wrong. Please try again.');
-        showError('Something went wrong. Please try again.');
-      },
-    };
-    if (editingFood) {
-      updateItemMutation.mutate(
-        { params: { id: event.id, sid: editingFood.sessionId, iid: editingFood.itemId }, body },
-        callbacks
-      );
-    } else {
-      createItemMutation.mutate({ params: { id: event.id, sid: sessionId }, body }, callbacks);
-    }
-  });
-
-  const handleEditFoodRow = (entry: DateEntry) => {
-    setEditingFood({ sessionId: entry.sessionId, itemId: entry.item.id });
-    foodForm.reset(toFoodFormValues(entry.item, menuItemsById));
-  };
-
-  const handleCancelFoodEdit = () => {
-    setEditingFood(null);
-    foodForm.reset(emptyFoodEntry);
-  };
-
-  const handleRemoveFoodRow = (entry: DateEntry) => {
-    if (isMutating) {
-      return;
-    }
-    setFoodSubmitError(null);
-    deleteItemMutation.mutate(
-      { params: { id: event.id, sid: entry.sessionId, iid: entry.item.id } },
-      {
-        onSuccess: () => {
-          if (editingFood?.itemId === entry.item.id) {
-            handleCancelFoodEdit();
-          }
-          showSuccess('Food/dining event removed.');
-          onEventChanged();
-        },
-        onError: () => {
-          setFoodSubmitError('Something went wrong. Please try again.');
-          showError('Something went wrong. Please try again.');
-        },
-      }
+    const outcome = await saveItem(
+      'food',
+      () => ({
+        type: ItemType.Meal,
+        mealName,
+        pax: Number.isFinite(values.pax) ? values.pax : 0,
+        costPerPlate: Number.isFinite(values.costPerPlate) ? values.costPerPlate : 0,
+        limitedSeating: values.limitedSeating,
+        menuItems: values.menuItems.map((chip) => (chip.id ? { id: chip.id } : { name: chip.name })),
+        startTime: values.startTime.trim() || undefined,
+        endTime: values.endTime.trim() || undefined,
+      }),
+      editingId
     );
+    if (outcome.isSaved && hasUnresolvedChip) {
+      menuItemsQuery.refetch();
+    }
+    return outcome;
+  };
+
+  const handleRemove = async (editorItem: SessionsItemsEditorItem): Promise<SaveOutcome> => {
+    const entry = findEntry(editorItem.id);
+    if (!entry) {
+      return { isSaved: false, error: GENERIC_ERROR };
+    }
+    try {
+      await deleteItemMutation.mutateAsync({ params: { id: event.id, sid: entry.sessionId, iid: entry.item.id } });
+    } catch {
+      showError(GENERIC_ERROR);
+      return { isSaved: false, error: GENERIC_ERROR };
+    }
+    showSuccess(`${TOAST_SUBJECTS[editorItem.kind]} removed.`);
+    onEventChanged();
+    return { isSaved: true };
   };
 
   if (distinctDates.length === 0) {
@@ -361,16 +286,16 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
     );
   }
 
-  let reminderContent: ReactNode;
+  let reminder: ReactNode;
   if (sessionsStartingOnDate.length === 0) {
-    reminderContent = (
+    reminder = (
       <Alert severity="info">
         No Session starts on this date — it falls within a multi-day Session whose Items are shown under that Session's
         own start date instead.
       </Alert>
     );
   } else {
-    reminderContent = sessionsStartingOnDate.map((session) => (
+    reminder = sessionsStartingOnDate.map((session) => (
       <Alert key={session.id} severity="info">
         {session.sessionType} — Venue for this date: {session.venue}
         {formatVenueCostSuffix(session.venueCost)} (from Event Details)
@@ -378,110 +303,21 @@ const SessionsItemsTab = ({ event, canEdit, onEventChanged }: SessionsItemsTabPr
     ));
   }
 
-  const canEditDate = canEdit && sessionsStartingOnDate.length > 0;
-
   return (
-    <Stack sx={tabSectionStyles}>
-      <Tabs
-        value={activeDate}
-        onChange={(_event, value: string) => handleSelectDate(value)}
-        variant="scrollable"
-        scrollButtons={false}
-        sx={dateTabsStyles}
-      >
-        {distinctDates.map((date) => (
-          <Tab key={date} value={date} label={formatEventDate(date)} />
-        ))}
-      </Tabs>
-
-      <Stack sx={reminderListStyles}>{reminderContent}</Stack>
-
-      {/* D6: this tab keeps the two always-open cards (the wizard's
-          two-button pattern is step 4 only); the cards are shared with it. */}
-      {canEditDate && (
-        <CeremonyFormCard
-          form={ceremonyForm}
-          isEditing={editingCeremony !== null}
-          isSubmitDisabled={!ceremonyForm.formState.isDirty}
-          isSubmitting={isMutating}
-          submitError={ceremonySubmitError}
-          onSubmit={handleAddCeremonyEvent}
-          onCancelEdit={handleCancelCeremonyEdit}
-        />
-      )}
-
-      {canEditDate && ceremonyEntries.length > 0 && (
-        <Box component="ul" aria-label="Ceremony events" sx={itemGridStyles}>
-          {ceremonyEntries.map((entry) => (
-            <li key={entry.item.id}>
-              <ItemCard
-                title={entry.item.eventName || BLANK_CEREMONY_TITLE}
-                editable={{
-                  removeLabel: `Remove ${entry.item.eventName || 'ceremony event'} row`,
-                  isEditing: editingCeremony?.itemId === entry.item.id,
-                  isRemoveDisabled: isMutating,
-                  onEdit: () => handleEditCeremonyRow(entry),
-                  onRemove: () => handleRemoveCeremonyRow(entry),
-                }}
-              >
-                <ItemCardTime duration={formatSessionDuration(entry.item.startTime ?? '', entry.item.endTime ?? '')} />
-              </ItemCard>
-            </li>
-          ))}
-        </Box>
-      )}
-
-      {canEditDate && (
-        <FoodFormCard
-          form={foodForm}
-          menuItemOptions={menuItemOptions}
-          isEditing={editingFood !== null}
-          isSubmitDisabled={!foodForm.formState.isDirty}
-          isSubmitting={isMutating}
-          submitError={foodSubmitError}
-          onSubmit={handleAddFoodEvent}
-          onCancelEdit={handleCancelFoodEdit}
-        />
-      )}
-
-      {foodEntries.length > 0 && (
-        <Box component="ul" aria-label="Food/dining events" sx={itemGridStyles}>
-          {foodEntries.map((entry) => {
-            const { item } = entry;
-            const menuItemNames = (item.menuItems ?? []).map((id) => menuItemsById.get(id) ?? id);
-            // costPerPlate/totalCost are stripped for every role but Event
-            // Manager (STORY-046) — F&B Head's read-only card shows no cost.
-            let cost: string | undefined;
-            if (canEdit) {
-              const totalCost = item.totalCost ?? null;
-              const totalSuffix = totalCost !== null ? ` · Total cost: ${formatAmount(totalCost)}` : '';
-              cost = `₹ ${formatAmount(item.costPerPlate ?? 0)}${totalSuffix}`;
-            }
-            const editable = canEdit
-              ? {
-                  removeLabel: `Remove ${item.mealName || 'food event'} row`,
-                  isEditing: editingFood?.itemId === item.id,
-                  isRemoveDisabled: isMutating,
-                  onEdit: () => handleEditFoodRow(entry),
-                  onRemove: () => handleRemoveFoodRow(entry),
-                }
-              : undefined;
-            return (
-              <li key={item.id}>
-                <ItemCard title={item.mealName || BLANK_FOOD_TITLE} editable={editable}>
-                  <ItemCardFoodDetails
-                    pax={formatQuotationPax(item.pax ?? 0, item.limitedSeating ?? false)}
-                    cost={cost}
-                    menuItemNames={menuItemNames}
-                    menuLabel={`${item.mealName || 'Food'} menu items`}
-                  />
-                </ItemCard>
-              </li>
-            );
-          })}
-        </Box>
-      )}
-    </Stack>
+    <SessionsItemsEditor
+      dates={distinctDates}
+      activeDate={activeDate}
+      onSelectDate={setActiveDateState}
+      reminder={reminder}
+      items={dateEntries.map(toEditorItem)}
+      canEdit={canEdit && sessionsStartingOnDate.length > 0}
+      menuItemOptions={menuItemOptions}
+      isSaving={isMutating}
+      isChangeRequired
+      onSaveCeremony={handleSaveCeremony}
+      onSaveFood={handleSaveFood}
+      onRemove={handleRemove}
+    />
   );
 };
 

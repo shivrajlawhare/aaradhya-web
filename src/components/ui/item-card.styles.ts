@@ -48,6 +48,23 @@ export const detailIconStyles: SxProps<Theme> = {
   fontSize: iconSize.s,
 };
 
+// The type label above the title ("Ceremony" / "Food/dining") — the two
+// kinds share one list (R2).
+export const typeLabelStyles: SxProps<Theme> = {
+  color: paletteVar('brand-tertiary'),
+};
+
+// "500 pax × ₹ 450 = ₹ 2,25,000" (R3): the calculation in secondary text,
+// the total emphasised.
+export const costLineStyles: SxProps<Theme> = {
+  m: 0,
+  color: 'text.secondary',
+};
+
+export const costLineTotalStyles: SxProps<Theme> = {
+  color: 'text.primary',
+};
+
 export const chipListStyles: SxProps<Theme> = {
   display: 'flex',
   flexWrap: 'wrap',

@@ -6,22 +6,6 @@ const { radius, space, stroke } = scaleTokens;
 const FIELD_COLUMN_WIDTH = 404;
 const PAX_FIELD_WIDTH = 110;
 
-export const wrapperStyles: SxProps<Theme> = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: { xs: `${space[16]}px`, md: `${space[24]}px` },
-};
-
-// The pill date tabs hug their content instead of stretching full width.
-export const dateTabsStyles: SxProps<Theme> = {
-  alignSelf: 'flex-start',
-  maxWidth: '100%',
-};
-
-export const reminderListStyles: SxProps<Theme> = {
-  gap: `${space[8]}px`,
-};
-
 // Figma 05 New Event / 4 Sessions & Items: the Ceremony / Food/Dining card —
 // title over a fields column (left) and the two clocks (right); stacked on
 // mobile.

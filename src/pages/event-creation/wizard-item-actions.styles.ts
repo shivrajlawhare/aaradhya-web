@@ -1,20 +1,13 @@
 import type { SxProps, Theme } from '@mui/material';
-import { TOP_BAR_HEIGHT } from '../../components/app-shell/app-shell.styles';
 import { paletteVar, scaleTokens } from '../../theme/tokens';
 
 const { space } = scaleTokens;
 
-// Figma Wizard/Item Actions: sticks to the top of the viewport while the
-// rows below grow (desktop), or just under the fixed 64 px top bar (mobile).
-// The canvas fill keeps scrolled content from showing through.
+// Figma Wizard/Item Actions, Position=Below list (UI-46): a plain row under
+// the combined list — no longer sticky (R2).
 export const toolbarStyles: SxProps<Theme> = {
-  position: 'sticky',
-  top: { xs: TOP_BAR_HEIGHT, md: 0 },
-  zIndex: 1,
   display: 'flex',
   gap: { xs: `${space[8]}px`, md: `${space[12]}px` },
-  py: `${space[12]}px`,
-  bgcolor: paletteVar('background-default'),
   // Size S on mobile with tighter sides, so both labels fit on one 358 px
   // row; desktop keeps size M's 20 px.
   '& .MuiButton-root': { whiteSpace: 'nowrap', px: { xs: `${space[12]}px`, md: `${space[20]}px` } },

@@ -1,9 +1,9 @@
 import type { KeyboardEvent, ReactNode } from 'react';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import { Box, IconButton, Typography } from '@mui/material';
-import { cardStyles, headerStyles } from './item-card.styles';
+import { cardStyles, headerStyles, typeLabelStyles } from './item-card.styles';
 
-interface EditableProps {
+export interface ItemCardEditableProps {
   removeLabel: string;
   isEditing: boolean;
   isRemoveDisabled?: boolean;
@@ -12,9 +12,11 @@ interface EditableProps {
 }
 
 interface ItemCardProps {
+  // "Ceremony" / "Food/dining" — both kinds share one list (R2).
+  typeLabel: string;
   title: string;
   // Absent for a read-only viewer (e.g. the F&B Head): no edit, no delete.
-  editable?: EditableProps;
+  editable?: ItemCardEditableProps;
   children?: ReactNode;
 }
 
@@ -22,11 +24,16 @@ interface ItemCardProps {
 // Event Detail Sessions & Items tab). When editable, clicking it (or
 // Enter/Space) loads it into its card for editing — the same row pattern as
 // step 2's added events; the delete button doesn't trigger the edit.
-const ItemCard = ({ title, editable, children }: ItemCardProps) => {
+const ItemCard = ({ typeLabel, title, editable, children }: ItemCardProps) => {
   const heading = (
-    <Typography variant="titleS" component="p">
-      {title}
-    </Typography>
+    <Box>
+      <Typography variant="labelS" component="p" sx={typeLabelStyles}>
+        {typeLabel}
+      </Typography>
+      <Typography variant="titleS" component="p">
+        {title}
+      </Typography>
+    </Box>
   );
 
   if (!editable) {

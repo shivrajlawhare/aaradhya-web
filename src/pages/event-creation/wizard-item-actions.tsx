@@ -14,9 +14,10 @@ interface WizardItemActionsProps {
   onToggle: (kind: WizardItemCardKind) => void;
 }
 
-// Wizard step 4's sticky action row (D6, Figma Wizard/Item Actions): each
-// button opens its card under the row, or closes it when it's already open.
-// aria-expanded carries the Selected state for assistive tech.
+// The Sessions & Items action row (Figma Wizard/Item Actions, below the
+// combined list — R2): each button opens its card under the row, or closes
+// it when it's already open. aria-expanded carries the Selected state for
+// assistive tech.
 const WizardItemActions = ({ openCard, isDesktop, onToggle }: WizardItemActionsProps) => {
   const size = isDesktop ? 'medium' : 'small';
   const isCeremonyOpen = openCard === 'ceremony';
