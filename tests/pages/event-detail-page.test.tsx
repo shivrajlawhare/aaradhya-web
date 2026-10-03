@@ -56,18 +56,13 @@ interface MockPayment {
   balance: number;
 }
 
-interface MockExtras {
-  decoration: number;
-  photographer: number;
-  bhatji: number;
+interface MockLineItem {
+  name: string;
+  note: string | null;
+  amount: number;
 }
 
-const makeExtras = (overrides: Partial<MockExtras> = {}): MockExtras => ({
-  decoration: 0,
-  photographer: 0,
-  bhatji: 0,
-  ...overrides,
-});
+const lineItem = (name: string, amount: number, note: string | null = null): MockLineItem => ({ name, note, amount });
 
 const makePayment = (overrides: Partial<MockPayment> = {}): MockPayment => ({
   totalEstimatedAmount: 0,
@@ -223,7 +218,7 @@ interface MockEvent {
   accommodation: MockAccommodation;
   payment: MockPayment;
   documentsChecklist: MockDocumentsChecklist;
-  extras: MockExtras;
+  extraLineItems: MockLineItem[];
   sessions: MockSession[];
   createdBy: string;
   createdAt: string;
@@ -350,7 +345,7 @@ const computeQuotationSummary = (event: MockEvent) => {
   const accommodationTaxable = event.accommodation.finalAmount;
   const accommodationGst = roundToCurrency(accommodationTaxable * 0.05);
   const accommodationTotal = roundToCurrency(accommodationTaxable + accommodationGst);
-  const extrasTotal = roundToCurrency(event.extras.decoration + event.extras.photographer + event.extras.bhatji);
+  const extrasTotal = roundToCurrency(event.extraLineItems.reduce((sum, item) => sum + item.amount, 0));
   return {
     venueTotal,
     foodSubtotal,
@@ -376,7 +371,7 @@ const makeEvent = (overrides: Partial<MockEvent> = {}): MockEvent => ({
   accommodation: makeAccommodation(),
   payment: makePayment(),
   documentsChecklist: makeDocumentsChecklist(),
-  extras: makeExtras(),
+  extraLineItems: [],
   sessions: [],
   createdBy: 'manager-1',
   createdAt: '2026-01-01T00:00:00.000Z',
@@ -422,7 +417,7 @@ const mockEventDetailApi = ({
   const accommodationPatchRequests: Record<string, unknown>[] = [];
   const paymentPatchRequests: Record<string, unknown>[] = [];
   const documentsChecklistPatchRequests: Record<string, unknown>[] = [];
-  const extrasPatchRequests: Record<string, unknown>[] = [];
+  const lineItemsPutRequests: Record<string, unknown>[] = [];
   let pdfRequestCount = 0;
   const sessionPostRequests: Record<string, unknown>[] = [];
   const sessionPatchRequests: Record<string, unknown>[] = [];
@@ -471,11 +466,16 @@ const mockEventDetailApi = ({
         currentEvent = { ...currentEvent, documentsChecklist: { ...currentEvent.documentsChecklist, ...body } };
         return jsonResponse(200, currentEvent.documentsChecklist);
       }
-      if (method === 'PATCH' && currentEvent && url.endsWith(`/events/${currentEvent.id}/extras`)) {
-        const body: Partial<MockExtras> = JSON.parse(String(init?.body));
-        extrasPatchRequests.push(body);
-        currentEvent = { ...currentEvent, extras: { ...currentEvent.extras, ...body } };
-        return jsonResponse(200, currentEvent.extras);
+      if (method === 'PUT' && currentEvent && url.endsWith(`/events/${currentEvent.id}/extra-line-items`)) {
+        const body: { extraLineItems: { name: string; note?: string; amount: number }[] } = JSON.parse(
+          String(init?.body)
+        );
+        lineItemsPutRequests.push(body);
+        currentEvent = {
+          ...currentEvent,
+          extraLineItems: body.extraLineItems.map((item) => lineItem(item.name, item.amount, item.note ?? null)),
+        };
+        return jsonResponse(200, currentEvent);
       }
       if (method === 'GET' && currentEvent && url.endsWith(`/events/${currentEvent.id}/quotation-summary`)) {
         return jsonResponse(200, computeQuotationSummary(currentEvent));
@@ -714,7 +714,7 @@ const mockEventDetailApi = ({
     accommodationPatchRequests,
     paymentPatchRequests,
     documentsChecklistPatchRequests,
-    extrasPatchRequests,
+    lineItemsPutRequests,
     sessionPostRequests,
     sessionPatchRequests,
     itemPostRequests,
@@ -869,7 +869,11 @@ describe('EventDetailPage', () => {
     mockEventDetailApi({
       event: makeEvent({
         accommodation: makeAccommodation({ totalCharges: 10000, finalAmount: 10000 }),
-        extras: makeExtras({ decoration: 1000, photographer: 1500, bhatji: 500 }),
+        extraLineItems: [
+          lineItem('Decoration', 1000, 'Mandap florals'),
+          lineItem('Photographer', 1500),
+          lineItem('Bhatji', 500),
+        ],
         sessions: [
           {
             id: 'session-1',
@@ -916,6 +920,7 @@ describe('EventDetailPage', () => {
     expect(costLine('Food total (incl. GST)')).toBe('2,360');
     expect(costLine('Accommodation total')).toBe('10,500');
     expect(costLine('Extras total')).toBe('3,000');
+    expect(within(costPanel()).getByText('Mandap florals')).toBeInTheDocument();
     const grandTotal = within(costPanel()).getByText('20,860');
     expect(grandTotal).toBeInTheDocument();
     // display variant (Fraunces) — the Grand Total is the single most
@@ -923,26 +928,148 @@ describe('EventDetailPage', () => {
     expect(grandTotal).toHaveClass('MuiTypography-display');
   });
 
-  it('lets an Event Manager edit extras and persist via PATCH, refreshing the Grand Total from a fresh quotation-summary call', async () => {
+  const grandTotalValue = () => within(costPanel()).getByText('Grand Total').nextElementSibling?.textContent;
+  const lineItemsEditor = () => within(costPanel()).getByRole('region', { name: 'Line items' });
+
+  // DEV-20 (V1): the extras are the line items — add / edit / remove each
+  // PUT the whole list, toast, and refresh the Grand Total from a fresh
+  // quotation-summary call (the mock recomputes it from the updated Event).
+  it('adds a line item via PUT, toasts, and refreshes the Grand Total', async () => {
     seedSession();
-    const { extrasPatchRequests } = mockEventDetailApi({ event: makeEvent() });
+    const { lineItemsPutRequests } = mockEventDetailApi({ event: makeEvent() });
     renderPage();
     fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
 
     await screen.findByText('Venue total');
-    expect(costLine('Venue total')).toBe('0');
+    expect(grandTotalValue()).toBe('0');
+    expect(within(lineItemsEditor()).getByText('No line items yet')).toBeInTheDocument();
+    // The three fixed fields are gone.
+    expect(screen.queryByLabelText('Decoration')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save extras' })).not.toBeInTheDocument();
 
-    fireEvent.change(await screen.findByLabelText('Decoration'), { target: { value: '15000' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save extras' }));
+    fireEvent.change(within(lineItemsEditor()).getByLabelText('Name'), { target: { value: 'Decoration' } });
+    fireEvent.change(within(lineItemsEditor()).getByLabelText('Note (optional)'), {
+      target: { value: 'Mandap florals' },
+    });
+    fireEvent.change(within(lineItemsEditor()).getByLabelText('Total Cost'), { target: { value: '15000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add line item' }));
 
-    await waitFor(() => expect(extrasPatchRequests).toHaveLength(1));
-    expect(extrasPatchRequests[0]).toMatchObject({ decoration: 15000, photographer: 0, bhatji: 0 });
-    // Grand Total (all-zero Event otherwise) becomes exactly the new
-    // decoration amount, and it comes from a fresh GET (the mock
-    // recomputes the whole summary from the now-updated Event), not a
-    // client-side recalculation off the PATCH response alone.
-    await waitFor(() => expect(costLine('Extras total')).toBe('15,000'));
-    expect(within(costPanel()).getByText('Grand Total').nextElementSibling?.textContent).toBe('15,000');
+    expect(await screen.findByText('Line item added.')).toBeInTheDocument();
+    expect(lineItemsPutRequests).toEqual([
+      { extraLineItems: [{ name: 'Decoration', note: 'Mandap florals', amount: 15000 }] },
+    ]);
+    expect(within(lineItemsEditor()).getByText('Mandap florals')).toBeInTheDocument();
+    expect(within(lineItemsEditor()).getByText('₹ 15,000')).toBeInTheDocument();
+    await waitFor(() => expect(grandTotalValue()).toBe('15,000'));
+    expect(costLine('Extras total')).toBe('15,000');
+    // The form is cleared for the next item.
+    expect(within(lineItemsEditor()).getByLabelText('Name')).toHaveValue('');
+  });
+
+  it('does not PUT a line item without a name', async () => {
+    seedSession();
+    const { lineItemsPutRequests } = mockEventDetailApi({ event: makeEvent() });
+    renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
+
+    await screen.findByText('Venue total');
+    fireEvent.change(within(lineItemsEditor()).getByLabelText('Total Cost'), { target: { value: '500' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add line item' }));
+
+    expect(await screen.findByText('Enter a name.')).toBeInTheDocument();
+    expect(lineItemsPutRequests).toHaveLength(0);
+  });
+
+  it('edits a line item in place via PUT ("Save line item"), toasts, and refreshes the Grand Total', async () => {
+    seedSession();
+    const { lineItemsPutRequests } = mockEventDetailApi({
+      event: makeEvent({ extraLineItems: [lineItem('Decoration', 10000, 'Stage'), lineItem('Bhatji', 7000)] }),
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
+
+    await screen.findByText('Venue total');
+    await waitFor(() => expect(grandTotalValue()).toBe('17,000'));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Decoration line item' }));
+
+    const nameField = within(lineItemsEditor()).getByLabelText('Name');
+    expect(nameField).toHaveValue('Decoration');
+    expect(within(lineItemsEditor()).getByLabelText('Note (optional)')).toHaveValue('Stage');
+    expect(screen.queryByRole('button', { name: 'Add line item' })).not.toBeInTheDocument();
+    fireEvent.change(within(lineItemsEditor()).getByLabelText('Total Cost'), { target: { value: '12500' } });
+    fireEvent.change(within(lineItemsEditor()).getByLabelText('Note (optional)'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save line item' }));
+
+    expect(await screen.findByText('Line item saved.')).toBeInTheDocument();
+    // Same position, note dropped from the body once cleared.
+    expect(lineItemsPutRequests).toEqual([
+      {
+        extraLineItems: [
+          { name: 'Decoration', amount: 12500 },
+          { name: 'Bhatji', amount: 7000 },
+        ],
+      },
+    ]);
+    await waitFor(() => expect(grandTotalValue()).toBe('19,500'));
+    expect(screen.getByRole('button', { name: 'Add line item' })).toBeInTheDocument();
+  });
+
+  it('cancels an edit without a PUT', async () => {
+    seedSession();
+    const { lineItemsPutRequests } = mockEventDetailApi({
+      event: makeEvent({ extraLineItems: [lineItem('Decoration', 10000)] }),
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Decoration line item' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel edit' }));
+
+    expect(screen.getByRole('button', { name: 'Add line item' })).toBeInTheDocument();
+    expect(within(lineItemsEditor()).getByLabelText('Name')).toHaveValue('');
+    expect(lineItemsPutRequests).toHaveLength(0);
+  });
+
+  it('removes a line item via PUT, toasts, and refreshes the Grand Total', async () => {
+    seedSession();
+    const { lineItemsPutRequests } = mockEventDetailApi({
+      event: makeEvent({ extraLineItems: [lineItem('Decoration', 10000), lineItem('Bhatji', 7000)] }),
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
+
+    await waitFor(() => expect(grandTotalValue()).toBe('17,000'));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Decoration line item' }));
+
+    expect(await screen.findByText('Line item removed.')).toBeInTheDocument();
+    expect(lineItemsPutRequests).toEqual([{ extraLineItems: [{ name: 'Bhatji', amount: 7000 }] }]);
+    expect(within(lineItemsEditor()).queryByText('Decoration')).not.toBeInTheDocument();
+    await waitFor(() => expect(grandTotalValue()).toBe('7,000'));
+  });
+
+  it('keeps the typed line item and shows an error toast when the PUT fails', async () => {
+    seedSession();
+    mockEventDetailApi({ event: makeEvent() });
+    const baseFetch = globalThis.fetch;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.method === 'PUT') {
+          return jsonResponse(500, { error: { code: 'INTERNAL_ERROR', message: 'Something broke.' } });
+        }
+        return baseFetch(input, init);
+      })
+    );
+    renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
+
+    await screen.findByText('Venue total');
+    fireEvent.change(within(lineItemsEditor()).getByLabelText('Name'), { target: { value: 'DJ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add line item' }));
+
+    expect(await screen.findByText('Something went wrong. Please try again.')).toBeInTheDocument();
+    expect(within(lineItemsEditor()).getByLabelText('Name')).toHaveValue('DJ');
+    expect(within(lineItemsEditor()).getByText('No line items yet')).toBeInTheDocument();
   });
 
   // STORY-052's own re-check: extras/Grand Total is the same class of
@@ -954,7 +1081,7 @@ describe('EventDetailPage', () => {
   it('does not render the Total Cost Summary panel at all for a non-EventManager session', async () => {
     seedSession('Reception');
     mockEventDetailApi({
-      event: makeEvent({ extras: makeExtras({ decoration: 1000, photographer: 1500, bhatji: 500 }) }),
+      event: makeEvent({ extraLineItems: [lineItem('Decoration', 1000)] }),
     });
     renderPage();
 
@@ -986,12 +1113,13 @@ describe('EventDetailPage', () => {
   it('renders a Grand Total large enough to need thousands-grouping correctly, not as a raw digit string', async () => {
     seedSession();
     mockEventDetailApi({
-      event: makeEvent({ extras: makeExtras({ decoration: 1234567 }) }),
+      event: makeEvent({ extraLineItems: [lineItem('Decoration', 1234567)] }),
     });
     renderPage();
     fireEvent.click(await screen.findByRole('tab', { name: 'Review & Quotation' }));
 
-    expect(await screen.findByText('12,34,567')).toBeInTheDocument();
+    await screen.findByText('Venue total');
+    expect(grandTotalValue()).toBe('12,34,567');
   });
 
   it('shows "Generate Quotation PDF" only for an Event Manager session', async () => {

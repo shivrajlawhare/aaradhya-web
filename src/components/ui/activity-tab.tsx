@@ -2,6 +2,7 @@ import { Avatar, Box, CircularProgress, Paper, Stack, Typography } from '@mui/ma
 import type { z } from 'zod';
 import { tsr } from '../../api/client';
 import { type changeLogEntryResultSchema, SeatingArrangement } from '../../contract';
+import { formatRupees } from '../../pages/event-detail/format-amount';
 import { SEATING_ARRANGEMENT_LABELS } from '../../pages/event-detail/session-form-options';
 import { getInitials } from '../../utils/initials';
 import {
@@ -63,6 +64,7 @@ const TOP_LEVEL_FIELD_LABELS: Record<string, string> = {
   decoration: 'Decoration',
   photographer: 'Photographer',
   bhatji: 'Bhatji',
+  extraLineItems: 'Line items',
   aadharCard: 'Aadhar Card',
   panCard: 'Pan Card',
   leavingBirthCertificate: 'Leaving/Birth Certificate',
@@ -222,6 +224,17 @@ const formatRoomLinesDiff = (oldValue: unknown, newValue: unknown): string => {
     : `${newLines.length} room lines`;
 };
 
+// DEV-20 — PUT /events/:id/extra-line-items logs the whole list; shown as
+// "Decoration ₹ 1,15,000, Bhatji ₹ 7,000" on each side.
+const formatLineItemsValue = (value: unknown): string => {
+  if (!Array.isArray(value) || value.length === 0) {
+    return '—';
+  }
+  return value
+    .map((item: { name?: unknown; amount?: unknown }) => `${String(item.name)} ${formatRupees(Number(item.amount))}`)
+    .join(', ');
+};
+
 const formatChangeDetail = (parsed: ParsedField, entry: ChangeLogEntry, menuItemsById: Map<string, string>): string => {
   if (parsed.subfield === 'setup') {
     return formatSetupDiff(entry.oldValue, entry.newValue);
@@ -234,6 +247,9 @@ const formatChangeDetail = (parsed: ParsedField, entry: ChangeLogEntry, menuItem
   }
   if (parsed.subfield === 'roomLines') {
     return formatRoomLinesDiff(entry.oldValue, entry.newValue);
+  }
+  if (parsed.subfield === 'extraLineItems') {
+    return `${formatLineItemsValue(entry.oldValue)} → ${formatLineItemsValue(entry.newValue)}`;
   }
   return `${formatValue(entry.oldValue)} → ${formatValue(entry.newValue)}`;
 };

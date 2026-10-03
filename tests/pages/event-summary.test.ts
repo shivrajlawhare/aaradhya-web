@@ -73,13 +73,12 @@ describe('computeEventSummary', () => {
     expect(computeEventSummary(EXAMPLE_3_EVENT, true).grandTotal).toBe(975412);
   });
 
-  it('adds the extras and every manual line item, and GST on food at the stored rate', () => {
+  it('adds every extra line item, and GST on food at the stored rate', () => {
     const summary = computeEventSummary(
       {
         sessions: [session({ venueCost: 1000, items: [{ type: ItemType.Meal, pax: 10, costPerPlate: 100 }] })],
         accommodation: { finalAmount: 2000 },
-        extras: { decoration: 300, photographer: 0, bhatji: 0 },
-        extraLineItems: [{ amount: 50 }],
+        extraLineItems: [{ amount: 300 }, { amount: 50 }],
         foodGstRatePercent: 18,
       },
       true

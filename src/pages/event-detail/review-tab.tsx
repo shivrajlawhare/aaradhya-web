@@ -20,7 +20,8 @@ interface ReviewTabProps {
   onEventChanged: () => void;
 }
 
-// STORY-077/STORY-080 — the Total Cost Summary panel ("Save extras") beside
+// STORY-077/STORY-080 — the Total Cost Summary panel (with its Line items
+// editor since DEV-20) beside
 // a Quotation card holding Generate Quotation PDF and the Preview link
 // (Figma UI-25).
 const ReviewTab = ({ event, canEdit, onEventChanged }: ReviewTabProps) => {
@@ -30,8 +31,13 @@ const ReviewTab = ({ event, canEdit, onEventChanged }: ReviewTabProps) => {
 
   return (
     <Box sx={layoutStyles}>
-      {event.extras && (
-        <TotalCostSummaryPanel eventId={event.id} extras={event.extras} canEdit onEventChanged={onEventChanged} />
+      {event.extraLineItems && (
+        <TotalCostSummaryPanel
+          eventId={event.id}
+          extraLineItems={event.extraLineItems}
+          canEdit
+          onEventChanged={onEventChanged}
+        />
       )}
       <Paper elevation={0} sx={tabCardStyles}>
         <Typography variant="titleM" component="h2">

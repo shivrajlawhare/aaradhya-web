@@ -12,7 +12,7 @@ const c = initContract();
  * only routes this app actually consumes are mirrored (currently: login,
  * createUser, listUsers, updateUser, listChangeLog, createEvent, listEvents,
  * getEvent, updateEvent, updateEventAccommodation, updateEventPayment,
- * updateDocumentsChecklist, updateEventExtras, getQuotationSummary,
+ * updateDocumentsChecklist, updateExtraLineItems, getQuotationSummary,
  * getQuotationPdf, createSession, updateSession, listMenuItems,
  * createMenuItem, createItem, updateItem, deleteItem, getCalendar,
  * listEventManagers, getDashboard, listVenues, createVenue, updateVenue,
@@ -290,25 +290,11 @@ export const documentsChecklistResultSchema = z.object({
   weddingCard: z.boolean(),
 });
 
-// One numeric field per fixed key — same "fixed, closed set of named keys"
-// shape documentsChecklistResultSchema above uses, mirroring aaradhya-api's
-// own extrasFieldsSchema (STORY-040).
-const extrasFieldsSchema = z.object({
-  decoration: z.number().min(0).optional(),
-  photographer: z.number().min(0).optional(),
-  bhatji: z.number().min(0).optional(),
-});
-
-export const updateEventExtrasBodySchema = extrasFieldsSchema.strict();
-
-// Every Event always has all three amounts (defaulted to 0), same "always
-// instantiated" convention payment/documentsChecklist already use.
-export const extrasResultSchema = extrasFieldsSchema.required();
-
 // SRS FR-QUO-9a / Assumption A13 — mirrors aaradhya-api's own
 // manualLineItemFieldsSchema/manualLineItemResultSchema (STORY-068): an
-// open-ended manual line item for the Total Cost Summary, additive
-// alongside decoration/photographer/bhatji above, not a replacement.
+// open-ended manual line item for the Total Cost Summary. Since v2.2.0
+// (DEV-20, UI Redesign V1) these are the only extras — the fixed
+// decoration/photographer/bhatji amounts are gone from the API.
 export const manualLineItemSchema = z.object({
   name: z.string().trim().min(1),
   note: z.string().trim().min(1).optional(),
@@ -320,6 +306,14 @@ export const manualLineItemResultSchema = z.object({
   note: z.string().nullable(),
   amount: z.number(),
 });
+
+// DEV-20 — mirrors aaradhya-api's own updateExtraLineItemsBodySchema: the
+// whole list, replaced on every add / edit / remove.
+export const updateExtraLineItemsBodySchema = z
+  .object({
+    extraLineItems: z.array(manualLineItemSchema),
+  })
+  .strict();
 
 // The fields aaradhya-api's computeTotalCostSummary produces
 // (STORY-039) — mirrors quotationSummaryResultSchema field-for-field.
@@ -635,7 +629,6 @@ export const createEventBodySchema = z.object({
   clientContacts: z.array(clientContactSchema).min(1),
   sessions: z.array(createEventSessionInputSchema).optional(),
   accommodation: updateAccommodationBodySchema.optional(),
-  extras: extrasFieldsSchema.optional(),
   extraLineItems: z.array(manualLineItemSchema).optional(),
   // STORY-072 — defaults to 5 server-side when omitted (mirrors
   // aaradhya-api's own createEventBodySchema).
@@ -745,7 +738,6 @@ export const eventResultSchema = z.object({
   accommodation: accommodationResultSchema,
   payment: paymentResultSchema,
   documentsChecklist: documentsChecklistResultSchema,
-  extras: extrasResultSchema,
   extraLineItems: z.array(manualLineItemResultSchema),
   // STORY-072 — mirrors aaradhya-api's own eventResultSchema.
   foodGstRatePercent: z.number(),
@@ -757,7 +749,7 @@ export const eventResultSchema = z.object({
 
 // Mirrors aaradhya-api's own filteredEventResultSchema (STORY-046) — this
 // is what GET /events/:id actually returns for every caller (STORY-052):
-// clientContacts/accommodation/payment/extras are `.optional()`, undefined
+// clientContacts/accommodation/payment/extraLineItems are `.optional()`, undefined
 // entirely for a role STORY-046's own filterEventForRole doesn't grant
 // them to (documentsChecklist stays required — every role sees it, per
 // that story's own decision). Until STORY-052, only an Event Manager ever
@@ -769,7 +761,6 @@ export const filteredEventResultSchema = eventResultSchema.extend({
   clientContacts: z.array(clientContactSchema).optional(),
   accommodation: filteredAccommodationResultSchema.optional(),
   payment: paymentResultSchema.optional(),
-  extras: extrasResultSchema.optional(),
   extraLineItems: z.array(manualLineItemResultSchema).optional(),
   // STORY-072 — hidden for every non-EventManager role, mirrors
   // aaradhya-api's own filteredEventResultSchema.
@@ -1109,16 +1100,17 @@ export const contract = c.router({
     },
     summary: "Toggle items on an Event's Documents Checklist (Event Manager only)",
   },
-  updateEventExtras: {
-    method: 'PATCH',
-    path: '/events/:id/extras',
+  updateExtraLineItems: {
+    method: 'PUT',
+    path: '/events/:id/extra-line-items',
     pathParams: eventIdParamsSchema,
-    body: updateEventExtrasBodySchema,
+    body: updateExtraLineItemsBodySchema,
     responses: {
-      200: extrasResultSchema,
+      200: eventResultSchema,
+      400: apiErrorSchema,
       404: apiErrorSchema,
     },
-    summary: "Edit an Event's Quotation extras — Decoration/Photographer/Bhatji (Event Manager only)",
+    summary: "Replace an Event's extra line items (Event Manager only)",
   },
   getQuotationSummary: {
     method: 'GET',

@@ -187,7 +187,6 @@ export const EXAMPLE_3_EVENT = {
     { name: 'DJ + Sound System', note: null, amount: 30000 },
     { name: 'Bhatji', note: 'wedding + punyawachan', amount: 7000 },
   ],
-  extras: { decoration: 0, photographer: 0, bhatji: 0 },
   foodGstRatePercent: 5,
   payment: { totalEstimatedAmount: 0, advanceRequired: 0, advancePaid: 0, balance: 0 },
   documentsChecklist: [],

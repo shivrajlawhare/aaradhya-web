@@ -219,6 +219,31 @@ describe('ActivityTab', () => {
     expect(screen.getByText('Room Lines: 1 → 2 room lines (1 added)')).toBeInTheDocument();
   });
 
+  it('shows an extraLineItems change as named amounts on each side (DEV-20)', async () => {
+    mockActivityApi({
+      changeLog: [
+        {
+          id: 'entry-line-items',
+          entityType: 'Event',
+          entityId: 'event-1',
+          field: 'extraLineItems',
+          oldValue: [],
+          newValue: [
+            { name: 'Decoration', note: 'Mandap florals', amount: 115000 },
+            { name: 'Bhatji', note: null, amount: 7000 },
+          ],
+          changedBy: 'user-1',
+          changedByName: 'Priya Nair',
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    });
+
+    renderActivityTab();
+
+    expect(await screen.findByText('Line items: — → Decoration ₹ 1,15,000, Bhatji ₹ 7,000')).toBeInTheDocument();
+  });
+
   it('groups every entry sharing one groupId into a single block, keeping an entry with no groupId as its own separate block', async () => {
     const now = new Date().toISOString();
     mockActivityApi({

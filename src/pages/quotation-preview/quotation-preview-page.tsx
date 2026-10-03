@@ -78,9 +78,14 @@ const QuotationView = ({
   );
 
   // Read-only: a place to sanity-check numbers before sharing, not to edit
-  // extras (the Overview tab does that).
-  const panel = event.extras && (
-    <TotalCostSummaryPanel eventId={event.id} extras={event.extras} canEdit={false} onEventChanged={onEventChanged} />
+  // line items (the Review tab does that).
+  const panel = event.extraLineItems && (
+    <TotalCostSummaryPanel
+      eventId={event.id}
+      extraLineItems={event.extraLineItems}
+      canEdit={false}
+      onEventChanged={onEventChanged}
+    />
   );
 
   if (!isDesktop) {

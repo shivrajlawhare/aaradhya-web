@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import AddIcon from '@mui/icons-material/Add';
-import { Alert, Box, Button, MenuItem, Paper, Stack, TextField, Typography, useMediaQuery } from '@mui/material';
+import { Alert, Box, MenuItem, Paper, Stack, TextField, Typography, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { tsr } from '../../api/client';
 import { toDepartmentNotesBody } from '../../components/ui/department-notes-fields';
+import LineItemForm, { type LineItemValues } from '../../components/ui/line-items-editor/line-item-form';
 import { useToast } from '../../components/ui/toast-provider';
 import { ClientContactRole, ItemType } from '../../contract';
 import { quotationPreviewPath } from '../../routes';
@@ -24,11 +23,9 @@ import {
 } from './event-family-type-options';
 import ReviewCostSummary from './review-cost-summary';
 import {
-  addButtonStyles,
   cardStyles,
   eventTypeFieldStyles,
   eventTypeRowStyles,
-  lineItemFieldsStyles,
   submittingNoteStyles,
   wrapperStyles,
 } from './review-step.styles';
@@ -240,14 +237,6 @@ const mapAccommodationForSubmit = (accommodation: AccommodationShape | undefined
   };
 };
 
-interface ManualItemFormValues {
-  name: string;
-  note: string;
-  amount: number;
-}
-
-const emptyManualItem: ManualItemFormValues = { name: '', note: '', amount: 0 };
-
 interface ReviewStepProps {
   // event-wizard-shell.tsx's own onNext hook is wired at the route level
   // (app.tsx), one layer above this component's own EventWizardProvider —
@@ -335,20 +324,9 @@ const ReviewStep = ({ registerSubmit }: ReviewStepProps) => {
     setStepData('review', { eventFamilyTypeOption, eventFamilyTypeCustom, gstPercent, manualLineItems, isSubmitting });
   }, [eventFamilyTypeOption, eventFamilyTypeCustom, gstPercent, manualLineItems, isSubmitting, setStepData]);
 
-  const manualItemForm = useForm<ManualItemFormValues>({ defaultValues: emptyManualItem });
-
-  const handleAddManualItem = manualItemForm.handleSubmit((values) => {
-    setManualLineItems((current) => [
-      ...current,
-      {
-        id: createRowId(),
-        name: values.name.trim(),
-        note: values.note.trim(),
-        amount: Number.isFinite(values.amount) ? values.amount : 0,
-      },
-    ]);
-    manualItemForm.reset(emptyManualItem);
-  });
+  const handleAddManualItem = (values: LineItemValues) => {
+    setManualLineItems((current) => [...current, { id: createRowId(), ...values }]);
+  };
 
   const handleRemoveManualItem = (id: string) => {
     setManualLineItems((current) => current.filter((item) => item.id !== id));
@@ -501,24 +479,11 @@ const ReviewStep = ({ registerSubmit }: ReviewStepProps) => {
         onRemoveManualItem={handleRemoveManualItem}
       />
 
-      <Paper elevation={0} component="form" onSubmit={handleAddManualItem} sx={cardStyles}>
+      <Paper elevation={0} sx={cardStyles}>
         <Typography variant="titleM" component="h2">
           Add Line Item
         </Typography>
-        <Box sx={lineItemFieldsStyles}>
-          <TextField {...manualItemForm.register('name')} label="Name" fullWidth />
-          <TextField {...manualItemForm.register('note')} label="Note (optional)" fullWidth />
-          <TextField
-            {...manualItemForm.register('amount', { valueAsNumber: true })}
-            label="Total Cost"
-            type="number"
-            fullWidth
-            slotProps={{ htmlInput: { min: 0 } }}
-          />
-        </Box>
-        <Button type="submit" variant="contained" fullWidth={!isDesktop} startIcon={<AddIcon />} sx={addButtonStyles}>
-          Add Line Item
-        </Button>
+        <LineItemForm addLabel="Add Line Item" onSubmit={handleAddManualItem} />
       </Paper>
 
       {submitError && (

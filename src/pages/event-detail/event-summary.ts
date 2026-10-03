@@ -23,7 +23,6 @@ interface SummarySession {
 interface SummaryEvent {
   sessions: SummarySession[];
   accommodation?: { finalAmount?: number };
-  extras?: { decoration: number; photographer: number; bhatji: number };
   extraLineItems?: { amount: number }[];
   foodGstRatePercent?: number;
 }
@@ -66,7 +65,8 @@ export const formatDateRange = (start: string, end: string): string => {
 // The Event Detail Summary Strip (D9), computed from the loaded Event — no
 // extra request. Cancelled Sessions don't count, as on the Quotation. The
 // Grand Total mirrors GET /events/:id/quotation-summary: venues + food with
-// GST + accommodation with GST + the extras and every manual line item.
+// GST + accommodation with GST + every extra line item (the only extras
+// since v2.2.0, DEV-20).
 export const computeEventSummary = (event: SummaryEvent, canSeeMoney: boolean): EventSummary => {
   const activeSessions = event.sessions.filter((session) => session.sessionStatus === SessionStatus.Active);
   const dates = activeSessions.flatMap((session) => [
@@ -80,16 +80,10 @@ export const computeEventSummary = (event: SummaryEvent, canSeeMoney: boolean): 
 
   let grandTotal: number | null = null;
   if (canSeeMoney) {
-    const extras = event.extras ?? { decoration: 0, photographer: 0, bhatji: 0 };
     grandTotal = computeQuotationTotals({
       sessions: activeSessions.map((session) => ({ ...session, items: session.items ?? [] })),
       accommodationFinalAmount: event.accommodation?.finalAmount ?? 0,
-      extraLineItemAmounts: [
-        extras.decoration,
-        extras.photographer,
-        extras.bhatji,
-        ...(event.extraLineItems ?? []).map((item) => item.amount),
-      ],
+      extraLineItemAmounts: (event.extraLineItems ?? []).map((item) => item.amount),
       foodGstRatePercent: event.foodGstRatePercent ?? FOOD_GST_RATE_PERCENT_DEFAULT,
     }).grandTotal;
   }

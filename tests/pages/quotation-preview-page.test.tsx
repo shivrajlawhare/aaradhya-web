@@ -73,10 +73,10 @@ interface MockSession {
   items: MockItem[];
 }
 
-interface MockExtras {
-  decoration: number;
-  photographer: number;
-  bhatji: number;
+interface MockLineItem {
+  name: string;
+  note: string | null;
+  amount: number;
 }
 
 interface MockEvent {
@@ -87,7 +87,7 @@ interface MockEvent {
   clientContacts: MockClientContact[];
   accommodation: MockAccommodation;
   sessions: MockSession[];
-  extras: MockExtras;
+  extraLineItems: MockLineItem[];
 }
 
 // Mirrors src/pages/event-detail/format-amount.ts's own formatAmount — the
@@ -121,7 +121,7 @@ const computeQuotationSummary = (event: MockEvent) => {
   const foodTotalInclGst = roundToCurrency(foodSubtotal * (1 + GST_RATE / 100));
   // DEV-07: the Final Amount plus 5% GST.
   const accommodationTotal = roundToCurrency(event.accommodation.finalAmount * 1.05);
-  const extrasTotal = roundToCurrency(event.extras.decoration + event.extras.photographer + event.extras.bhatji);
+  const extrasTotal = roundToCurrency(event.extraLineItems.reduce((sum, item) => sum + item.amount, 0));
   return {
     venueTotal,
     foodSubtotal,
@@ -140,7 +140,7 @@ const makeEvent = (overrides: Partial<MockEvent> = {}): MockEvent => ({
   clientContacts: [{ name: 'Priya Nair', contactNumber: '9876543210', role: 'Bride' }],
   accommodation: makeAccommodation(),
   sessions: [],
-  extras: { decoration: 0, photographer: 0, bhatji: 0 },
+  extraLineItems: [],
   ...overrides,
 });
 
@@ -353,7 +353,7 @@ describe('QuotationPreviewPage', () => {
           items: [{ type: 'Meal', totalCost: 2000, menuItems: [] }],
         },
       ],
-      extras: { decoration: 1000, photographer: 0, bhatji: 0 },
+      extraLineItems: [{ name: 'Decoration', note: null, amount: 1000 }],
     });
     mockApi({ event });
     let downloadedBlob: Blob | undefined;
@@ -421,6 +421,48 @@ describe('QuotationPreviewPage — toolbar and canvas (DEV-09, D9/D10)', () => {
     expect(screen.queryByRole('button', { name: 'Share PDF' })).not.toBeInTheDocument();
     expect(screen.queryByText('Pinch to zoom')).not.toBeInTheDocument();
     expect(screen.queryByText('Grand Total', { selector: 'p' })).not.toBeInTheDocument();
+  });
+
+  // DEV-20 (R10): a line item added on Event Detail is on the Quotation —
+  // the fixed extras were counted in the totals but never printed.
+  const LINE_ITEMS: MockLineItem[] = [
+    { name: 'Decoration', note: 'Mandap + stage florals', amount: 115000 },
+    { name: 'DJ + Sound System', note: null, amount: 30000 },
+    { name: 'Bhatji', note: 'wedding + punyawachan', amount: 7000 },
+  ];
+
+  it('prints every extra line item on the document, and lists them read-only in the cost panel', async () => {
+    mockMatchMedia(true);
+    seedSession();
+    mockApi({ event: makeEvent({ extraLineItems: LINE_ITEMS }) });
+    renderPage();
+
+    const panel = await screen.findByRole('region', { name: 'Total Cost Summary' });
+    const lineItems = within(panel).getByRole('region', { name: 'Line items' });
+    for (const item of LINE_ITEMS) {
+      expect(within(lineItems).getByText(item.name)).toBeInTheDocument();
+      // Twice per name: the document's row and the panel's row.
+      expect(screen.getAllByText(item.name).length).toBeGreaterThanOrEqual(2);
+    }
+    expect(screen.getAllByText('Mandap + stage florals')).toHaveLength(2);
+    expect(screen.getAllByText('wedding + punyawachan')).toHaveLength(2);
+    // Read-only: no actions and no form.
+    expect(within(lineItems).queryByRole('button')).not.toBeInTheDocument();
+    expect(within(lineItems).queryByLabelText('Name')).not.toBeInTheDocument();
+  });
+
+  it('prints every extra line item in ?print=1 (the server-side PDF view)', async () => {
+    mockMatchMedia(true);
+    seedSession();
+    mockApi({ event: makeEvent({ extraLineItems: LINE_ITEMS }) });
+    renderPage('event-1', '?print=1');
+
+    await screen.findByRole('heading', { name: 'Event Quotation' });
+    for (const item of LINE_ITEMS) {
+      expect(screen.getByText(item.name)).toBeInTheDocument();
+    }
+    expect(screen.getByText('Mandap + stage florals')).toBeInTheDocument();
+    expect(screen.getByText('wedding + punyawachan')).toBeInTheDocument();
   });
 
   it('shows only the mark in the toolbar while the Event is loading', () => {

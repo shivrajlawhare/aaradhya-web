@@ -4,7 +4,6 @@ import { paletteVar, scaleTokens } from '../../theme/tokens';
 const { radius, space, stroke } = scaleTokens;
 
 const EVENT_TYPE_FIELD_WIDTH = 320;
-const AMOUNT_FIELD_WIDTH = 200;
 
 export const wrapperStyles: SxProps<Theme> = {
   display: 'flex',
@@ -34,16 +33,6 @@ export const eventTypeFieldStyles: SxProps<Theme> = {
 };
 
 // Name · Note (fills) · Total Cost on desktop; stacked on mobile.
-export const lineItemFieldsStyles: SxProps<Theme> = {
-  display: 'grid',
-  gridTemplateColumns: { xs: '1fr', md: `1fr 2fr ${AMOUNT_FIELD_WIDTH}px` },
-  gap: `${space[12]}px`,
-};
-
-export const addButtonStyles: SxProps<Theme> = {
-  alignSelf: { xs: 'stretch', md: 'flex-start' },
-};
-
 export const submittingNoteStyles: SxProps<Theme> = {
   color: 'text.secondary',
 };

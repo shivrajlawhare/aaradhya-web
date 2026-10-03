@@ -1,14 +1,13 @@
 import { type ReactNode, useState } from 'react';
-import { Alert, Box, Button, CircularProgress, InputAdornment, Paper, TextField, Typography } from '@mui/material';
-import { useForm } from 'react-hook-form';
-import type { z } from 'zod';
+import { Box, CircularProgress, Paper, Typography } from '@mui/material';
 import { tsr } from '../../api/client';
+import LineItemsEditor, {
+  type LineItem,
+  type LineItemChange,
+} from '../../components/ui/line-items-editor/line-items-editor';
 import { useToast } from '../../components/ui/toast-provider';
-import type { extrasResultSchema } from '../../contract';
 import { formatAmount } from './format-amount';
 import {
-  extrasLabelStyles,
-  extrasStyles,
   grandTotalTileStyles,
   grandTotalValueStyles,
   lineItemsStyles,
@@ -16,31 +15,23 @@ import {
   lineLabelStyles,
   lineValueStyles,
   panelStyles,
-  saveButtonStyles,
 } from './total-cost-summary-panel.styles';
 
-type ExtrasResult = z.infer<typeof extrasResultSchema>;
+const SAVE_ERROR = 'Something went wrong. Please try again.';
 
-interface ExtrasFormValues {
-  decoration: number;
-  photographer: number;
-  bhatji: number;
-}
+// UI Redesign 5C.3.
+const CHANGE_TOASTS: Record<LineItemChange, string> = {
+  added: 'Line item added.',
+  saved: 'Line item saved.',
+  removed: 'Line item removed.',
+};
 
-const EXTRA_FIELDS: { name: keyof ExtrasFormValues; label: string }[] = [
-  { name: 'decoration', label: 'Decoration' },
-  { name: 'photographer', label: 'Photographer' },
-  { name: 'bhatji', label: 'Bhatji' },
-];
-
-const RUPEE_ADORNMENT = { input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> } };
-
-interface LineItemProps {
+interface CostLineProps {
   label: string;
   value: string;
 }
 
-const LineItem = ({ label, value }: LineItemProps) => (
+const CostLine = ({ label, value }: CostLineProps) => (
   <Box sx={lineItemStyles}>
     <Typography variant="bodyM" component="dt" sx={lineLabelStyles}>
       {label}
@@ -51,38 +42,36 @@ const LineItem = ({ label, value }: LineItemProps) => (
   </Box>
 );
 
-const toFormValues = (extras: ExtrasResult): ExtrasFormValues => ({
-  decoration: extras.decoration,
-  photographer: extras.photographer,
-  bhatji: extras.bhatji,
-});
+// The PUT body's note is optional but never null (aaradhya-api's
+// manualLineItemFieldsSchema), so a row without one leaves it out.
+const toLineItemBody = ({ name, note, amount }: LineItem) => {
+  if (note) {
+    return { name, note, amount };
+  }
+  return { name, amount };
+};
 
 interface TotalCostSummaryPanelProps {
   eventId: string;
-  // Required, not `PublicEvent['extras']` (`.optional()` since STORY-052) —
-  // this panel is only ever mounted from a call site that has already
-  // narrowed `event.extras` to present (review-tab.tsx's own
-  // `canEdit && event.extras &&` gate; quotation-preview-page.tsx's own
-  // equivalent), so its own prop type states the real precondition
-  // directly rather than re-deriving "optional, but never actually
-  // undefined here" from the full Event shape.
-  extras: ExtrasResult;
-  // Only an Event Manager gets working inputs for Decoration/Photographer/
-  // Bhatji — the extras PATCH is EventManager-only on the backend
-  // (STORY-040), same reasoning every other canEdit-gated panel on this
-  // tab already applies. Every other line on this panel stays read-only
-  // regardless of canEdit (this story's own AC).
+  // The Event's extra line items — since v2.2.0 (DEV-20, V1) the only
+  // extras. Required: both call sites mount the panel only once the
+  // role-filtered `event.extraLineItems` is present (Event Manager only).
+  extraLineItems: LineItem[];
+  // Only an Event Manager gets the Line items editor — the PUT is
+  // EventManager-only on the backend. Read-only (the Quotation Preview)
+  // shows the rows without actions.
   canEdit: boolean;
   onEventChanged: () => void;
 }
 
-const TotalCostSummaryPanel = ({ eventId, extras, canEdit, onEventChanged }: TotalCostSummaryPanelProps) => {
+const TotalCostSummaryPanel = ({ eventId, extraLineItems, canEdit, onEventChanged }: TotalCostSummaryPanelProps) => {
   const { showSuccess, showError } = useToast();
-  const [saveError, setSaveError] = useState<string | null>(null);
+  // Starts from the loaded Event and follows each PUT's response, so a row
+  // shows as soon as it is saved rather than after the Event refetch.
+  const [items, setItems] = useState(extraLineItems);
 
-  // Owns its own live rollup query rather than deriving totals from
-  // event.extras client-side — the Grand Total must be "sourced from a
-  // fresh STORY-041 call" (this story's own AC), not recalculated here.
+  // Owns its own live rollup query rather than deriving totals client-side
+  // — the Grand Total is sourced from a fresh GET /quotation-summary.
   const quotationSummaryQuery = tsr.getQuotationSummary.useQuery({
     queryKey: ['quotation-summary', eventId],
     queryData: { params: { id: eventId } },
@@ -92,109 +81,54 @@ const TotalCostSummaryPanel = ({ eventId, extras, canEdit, onEventChanged }: Tot
     retry: false,
   });
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { isDirty },
-  } = useForm<ExtrasFormValues>({
-    defaultValues: toFormValues(extras),
-  });
+  const updateLineItemsMutation = tsr.updateExtraLineItems.useMutation();
 
-  const updateExtrasMutation = tsr.updateEventExtras.useMutation({
-    onSuccess: (response) => {
-      setSaveError(null);
-      reset(toFormValues(response.body));
-      // Re-fetches the summary rather than recomputing the Grand Total from
-      // this response — the same "sourced from a fresh call" requirement.
-      quotationSummaryQuery.refetch();
-      showSuccess('Extras saved.');
-      onEventChanged();
-    },
-    // updateEventExtras only declares a 404 response (matching the backend
-    // contract exactly) — a schema-validation 400 (e.g. a negative amount
-    // slipping past a number input's own min={0}) isn't a declared member
-    // of this route's error union, so there's no narrower message to
-    // surface here; the fallback covers it honestly. Same reasoning
-    // PaymentsTab/RoomsTab already document for their own saves.
-    onError: () => {
-      setSaveError('Something went wrong. Please try again.');
-      showError('Something went wrong. Please try again.');
-    },
-  });
-
-  const handleSave = handleSubmit((values) => {
-    if (updateExtrasMutation.isPending) {
-      return;
+  // Every add / edit / remove sends the whole list (the PUT replaces it),
+  // then refreshes the summary and the Event. A failure rejects, so the
+  // form keeps what was typed.
+  const handleItemsChange = async (nextItems: LineItem[], change: LineItemChange) => {
+    try {
+      const response = await updateLineItemsMutation.mutateAsync({
+        params: { id: eventId },
+        body: { extraLineItems: nextItems.map(toLineItemBody) },
+      });
+      setItems(response.body.extraLineItems);
+    } catch (error) {
+      showError(SAVE_ERROR);
+      throw error;
     }
-    setSaveError(null);
-    updateExtrasMutation.mutate({ params: { id: eventId }, body: values });
-  });
+    quotationSummaryQuery.refetch();
+    showSuccess(CHANGE_TOASTS[change]);
+    onEventChanged();
+  };
 
   const summary = quotationSummaryQuery.data?.body;
 
-  let extrasContent: ReactNode;
-  if (canEdit) {
-    extrasContent = (
-      <>
-        {EXTRA_FIELDS.map(({ name, label }) => (
-          <TextField
-            key={name}
-            {...register(name, { valueAsNumber: true })}
-            label={label}
-            type="number"
-            fullWidth
-            slotProps={{ htmlInput: { min: 0 }, ...RUPEE_ADORNMENT }}
-          />
-        ))}
-      </>
-    );
+  let totals: ReactNode;
+  if (quotationSummaryQuery.isError) {
+    totals = <Typography variant="bodyM">{SAVE_ERROR}</Typography>;
+  } else if (!summary) {
+    totals = <CircularProgress aria-label="Loading Total Cost Summary" />;
   } else {
-    extrasContent = (
-      <Box component="dl" sx={lineItemsStyles}>
-        {EXTRA_FIELDS.map(({ name, label }) => (
-          <LineItem key={name} label={label} value={formatAmount(extras[name])} />
-        ))}
+    totals = (
+      <Box component="dl" aria-label="Cost totals" sx={lineItemsStyles}>
+        <CostLine label="Venue total" value={formatAmount(summary.venueTotal)} />
+        <CostLine label="Food subtotal" value={formatAmount(summary.foodSubtotal)} />
+        <CostLine label="Food total (incl. GST)" value={formatAmount(summary.foodTotalInclGst)} />
+        <CostLine label="Accommodation total" value={formatAmount(summary.accommodationTotal)} />
+        <CostLine label="Extras total" value={formatAmount(summary.extrasTotal)} />
       </Box>
     );
   }
 
-  let body: ReactNode;
-  if (quotationSummaryQuery.isError) {
-    body = <Typography variant="bodyM">Something went wrong. Please try again.</Typography>;
-  } else if (!summary) {
-    body = <CircularProgress aria-label="Loading Total Cost Summary" />;
-  } else {
-    body = (
-      <>
-        <Box component="dl" aria-label="Cost totals" sx={lineItemsStyles}>
-          <LineItem label="Venue total" value={formatAmount(summary.venueTotal)} />
-          <LineItem label="Food subtotal" value={formatAmount(summary.foodSubtotal)} />
-          <LineItem label="Food total (incl. GST)" value={formatAmount(summary.foodTotalInclGst)} />
-          <LineItem label="Accommodation total" value={formatAmount(summary.accommodationTotal)} />
-          <LineItem label="Extras total" value={formatAmount(summary.extrasTotal)} />
-        </Box>
-        <Box sx={extrasStyles}>
-          <Typography variant="labelS" component="h3" sx={extrasLabelStyles}>
-            Extras
-          </Typography>
-          {extrasContent}
-          {saveError && (
-            <Alert severity="error">
-              <Typography variant="bodyM">{saveError}</Typography>
-            </Alert>
-          )}
-          {canEdit && (
-            <Button
-              variant="contained"
-              onClick={handleSave}
-              disabled={!isDirty || updateExtrasMutation.isPending}
-              sx={saveButtonStyles}
-            >
-              Save extras
-            </Button>
-          )}
-        </Box>
+  return (
+    <Paper elevation={0} component="section" aria-label="Total Cost Summary" sx={panelStyles}>
+      <Typography variant="titleM" component="h2">
+        Total Cost Summary
+      </Typography>
+      {totals}
+      <LineItemsEditor items={items} canEdit={canEdit} onItemsChange={handleItemsChange} />
+      {summary && (
         <Box sx={grandTotalTileStyles}>
           <Typography variant="labelS" component="p">
             Grand Total
@@ -206,16 +140,7 @@ const TotalCostSummaryPanel = ({ eventId, extras, canEdit, onEventChanged }: Tot
             {formatAmount(Math.round(summary.grandTotal))}
           </Typography>
         </Box>
-      </>
-    );
-  }
-
-  return (
-    <Paper elevation={0} component="section" aria-label="Total Cost Summary" sx={panelStyles}>
-      <Typography variant="titleM" component="h2">
-        Total Cost Summary
-      </Typography>
-      {body}
+      )}
     </Paper>
   );
 };
