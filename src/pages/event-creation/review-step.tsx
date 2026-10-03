@@ -510,7 +510,7 @@ const ReviewStep = ({ registerSubmit }: ReviewStepProps) => {
           <TextField {...manualItemForm.register('note')} label="Note (optional)" fullWidth />
           <TextField
             {...manualItemForm.register('amount', { valueAsNumber: true })}
-            label="Total Cost with GST"
+            label="Total Cost"
             type="number"
             fullWidth
             slotProps={{ htmlInput: { min: 0 } }}

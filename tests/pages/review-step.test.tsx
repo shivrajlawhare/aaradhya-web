@@ -243,7 +243,7 @@ describe('ReviewStep', () => {
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Decoration' } });
     fireEvent.change(screen.getByLabelText('Note (optional)'), { target: { value: 'poolside decor' } });
-    fireEvent.change(screen.getByLabelText('Total Cost with GST'), { target: { value: '5000' } });
+    fireEvent.change(screen.getByLabelText('Total Cost'), { target: { value: '5000' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add Line Item' }));
 
     await waitFor(() => expect(screen.getByText('Decoration')).toBeInTheDocument());
@@ -505,7 +505,7 @@ describe('ReviewStep', () => {
     await screen.findByText('Poolside');
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Decoration' } });
-    fireEvent.change(screen.getByLabelText('Total Cost with GST'), { target: { value: '5000' } });
+    fireEvent.change(screen.getByLabelText('Total Cost'), { target: { value: '5000' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add Line Item' }));
     await screen.findByText('Decoration');
 
@@ -552,7 +552,7 @@ describe('ReviewStep', () => {
     const list = await screen.findByRole('list', { name: 'Total Cost Summary' });
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(within(list).getByText('Pax 50 · Cost per Plate 300')).toBeInTheDocument();
-    expect(within(list).getAllByText('Total Cost with GST').length).toBeGreaterThan(0);
+    expect(within(list).getAllByText('Total Cost').length).toBeGreaterThan(0);
     expect(within(list).getByLabelText('GST %')).toHaveValue(5);
     expect(within(list).getByText('Grand Total')).toBeInTheDocument();
     expect(within(list).getByText('81,000')).toBeInTheDocument();
@@ -589,5 +589,68 @@ describe('ReviewStep', () => {
     expect(generateButton).toBeDisabled();
     expect(within(generateButton.parentElement!).getByRole('progressbar')).toBeInTheDocument();
     resolveCreate?.();
+  });
+});
+
+describe('ReviewStep — "Total Cost" copy and Accommodation without GST (DEV-18)', () => {
+  // Example 3's accommodation: 2 nights, 10% discount → Final Amount
+  // 1,05,840 · GST 5% 5,292 · Total 1,11,132.
+  const EXAMPLE_3_ACCOMMODATION = {
+    checkInDate: '2027-05-13',
+    checkInTime: '',
+    checkOutDate: '2027-05-15',
+    checkOutTime: '',
+    discountPercent: 10,
+    roomLines: [
+      { id: 'r1', roomType: 'Delux', occupancy: 2, tariff: 2800, noOfRooms: 14, locked: false },
+      { id: 'r2', roomType: 'Executive', occupancy: 3, tariff: 3800, noOfRooms: 2, locked: false },
+      { id: 'r3', roomType: 'Family Room', occupancy: 6, tariff: 6000, noOfRooms: 2, locked: false },
+      { id: 'r4', roomType: 'Extra Beds', occupancy: 0, tariff: 700, noOfRooms: 0, locked: false },
+    ],
+  };
+
+  it('labels every amount "Total Cost" — no "Total Cost with GST" anywhere on desktop', async () => {
+    seedWizardData();
+    renderWizard(reviewPath);
+    await screen.findByText('Poolside');
+
+    expect(screen.queryByText(/Total Cost with GST/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Total Cost')).toBeInTheDocument();
+    const table = screen.getByRole('table', { name: 'Total Cost Summary' });
+    expect(within(table).getAllByRole('columnheader', { name: 'Total Cost' })).toHaveLength(2);
+  });
+
+  it('labels every amount "Total Cost" on mobile too', async () => {
+    mockMatchMedia(false);
+    seedWizardData();
+    renderWizard(reviewPath);
+    await screen.findByRole('list', { name: 'Total Cost Summary' });
+
+    expect(screen.queryByText(/Total Cost with GST/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Total Cost')).toBeInTheDocument();
+  });
+
+  it('shows the Accommodation row as Final Amount · GST 5% · Total Cost on desktop (example 3)', async () => {
+    seedWizardData({ accommodation: EXAMPLE_3_ACCOMMODATION });
+    renderWizard(reviewPath);
+
+    const row = (await screen.findByText('Accommodation', { selector: 'p' })).closest('tr');
+    if (!(row instanceof HTMLElement)) {
+      throw new Error('expected the Accommodation table row');
+    }
+    expect(within(row).getByText('GST 5% · 5,292')).toBeInTheDocument();
+    const cells = within(row).getAllByRole('cell');
+    expect(cells[3]).toHaveTextContent('1,05,840');
+    expect(cells[4]).toHaveTextContent('1,11,132');
+  });
+
+  it('shows the Accommodation caption "Total Cost ₹ X · GST ₹ Y" with the total on mobile (example 3)', async () => {
+    mockMatchMedia(false);
+    seedWizardData({ accommodation: EXAMPLE_3_ACCOMMODATION });
+    renderWizard(reviewPath);
+
+    const list = await screen.findByRole('list', { name: 'Total Cost Summary' });
+    const caption = within(list).getByText('Total Cost ₹ 1,05,840 · GST ₹ 5,292');
+    expect(caption.closest('li')).toHaveTextContent('1,11,132');
   });
 });

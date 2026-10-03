@@ -4,27 +4,27 @@ import { paletteVar, scaleTokens, shadowTokens } from '../../theme/tokens';
 
 const { radius, space, stroke } = scaleTokens;
 
-const DATES_WIDTH = 200;
-const GUESTS_WIDTH = 120;
-const SESSIONS_WIDTH = 110;
-const GRAND_TOTAL_WIDTH = 184;
+const DATES_WIDTH = 220;
+const SESSIONS_WIDTH = 130;
+const GRAND_TOTAL_WIDTH = 200;
 
-// Figma Summary Strip (73:5489). Desktop: one bordered row of tiles —
-// Dates 200 · Venues (fills) · Guests 120 · Sessions 110 · Grand Total 184.
-// Mobile: separate tiles — Dates · Guests + Sessions · Venues · Grand Total.
+// Figma Summary Strip (73:5489, UI-47 — no Guests tile, R7/V8). Desktop: one
+// bordered row of tiles — Dates 220 · Venues (fills) · Sessions 130 · Grand
+// Total 200. Mobile: separate tiles — Dates · Venues full width, then Sessions
+// + Grand Total side by side (Event Manager) or Sessions full width.
 export const stripStyles = (hasGrandTotal: boolean): SxProps<Theme> => ({
   display: 'grid',
   gridTemplateColumns: {
     xs: '1fr 1fr',
     md: hasGrandTotal
-      ? `${DATES_WIDTH}px minmax(0, 1fr) ${GUESTS_WIDTH}px ${SESSIONS_WIDTH}px ${GRAND_TOTAL_WIDTH}px`
-      : `${DATES_WIDTH}px minmax(0, 1fr) ${GUESTS_WIDTH}px ${SESSIONS_WIDTH}px`,
+      ? `${DATES_WIDTH}px minmax(0, 1fr) ${SESSIONS_WIDTH}px ${GRAND_TOTAL_WIDTH}px`
+      : `${DATES_WIDTH}px minmax(0, 1fr) ${SESSIONS_WIDTH}px`,
   },
   gridTemplateAreas: {
     xs: hasGrandTotal
-      ? '"dates dates" "guests sessions" "venues venues" "total total"'
-      : '"dates dates" "guests sessions" "venues venues"',
-    md: hasGrandTotal ? '"dates venues guests sessions total"' : '"dates venues guests sessions"',
+      ? '"dates dates" "venues venues" "sessions total"'
+      : '"dates dates" "venues venues" "sessions sessions"',
+    md: hasGrandTotal ? '"dates venues sessions total"' : '"dates venues sessions"',
   },
   gap: { xs: `${space[8]}px`, md: 0 },
   border: { md: `${stroke.default}px solid ${paletteVar('divider')}` },

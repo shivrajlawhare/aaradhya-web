@@ -16,7 +16,6 @@ interface SummarySession {
   endDate: string;
   venue: string;
   venueCost?: number;
-  pax: number;
   sessionStatus: SessionStatus;
   items?: SummarySessionItem[];
 }
@@ -32,7 +31,6 @@ interface SummaryEvent {
 export interface EventSummary {
   dates: string;
   venues: string;
-  guests: number;
   sessions: number;
   // Event Manager only — absent when the money fields aren't visible.
   grandTotal: number | null;
@@ -99,7 +97,6 @@ export const computeEventSummary = (event: SummaryEvent, canSeeMoney: boolean): 
   return {
     dates: firstDate && lastDate ? formatDateRange(firstDate, lastDate) : '—',
     venues: venues.length > 0 ? venues.join(' · ') : '—',
-    guests: activeSessions.reduce((total, session) => total + session.pax, 0),
     sessions: activeSessions.length,
     grandTotal,
   };

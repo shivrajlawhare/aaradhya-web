@@ -24,8 +24,8 @@ interface EventSummaryStripProps {
   summary: EventSummary;
 }
 
-// The Event Detail Summary Strip (D9): Dates · Venues · Guests · Sessions,
-// plus the Grand Total for the Event Manager.
+// The Event Detail Summary Strip (D9, V8): Dates · Venues · Sessions, plus
+// the Grand Total for the Event Manager — no Guests tile (R7).
 const EventSummaryStrip = ({ summary }: EventSummaryStripProps) => {
   const hasGrandTotal = summary.grandTotal !== null;
 
@@ -33,7 +33,6 @@ const EventSummaryStrip = ({ summary }: EventSummaryStripProps) => {
     <Box component="dl" aria-label="Event summary" sx={stripStyles(hasGrandTotal)}>
       <SummaryTile area="dates" label="Dates" value={summary.dates} />
       <SummaryTile area="venues" label="Venues" value={summary.venues} />
-      <SummaryTile area="guests" label="Guests" value={`${summary.guests} pax`} />
       <SummaryTile area="sessions" label="Sessions" value={String(summary.sessions)} />
       {summary.grandTotal !== null && (
         <Box sx={grandTotalTileStyles}>

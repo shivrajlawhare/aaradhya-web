@@ -19,13 +19,13 @@ import { getDistinctDates } from './session-dates';
 // (docs/example_quatations/) per SRS FR-QUO-9's own structure:
 //
 //   - One venue row per Session on a date (not one per date) — Sub Cost
-//     Item = that Session's venue, Total Cost with GST = its venue_cost as
+//     Item = that Session's venue, the last Total Cost = its venue_cost as
 //     entered, no GST applied.
 //   - One food row per Meal Item on that date, across every Session that
-//     date has — Pax/Cost per Plate/Total Cost only, no Total Cost with GST
+//     date has — Pax/Cost per Plate/Total Cost only, nothing in the last column
 //     (Ceremony/Event Items never appear here at all).
 //   - A single aggregate Food Cost row: Total Cost = every food row's Total
-//     Cost summed across every date; Total Cost with GST = that sum ×
+//     Cost summed across every date; the last Total Cost = that sum ×
 //     (1 + GST%). Both reference quotations' own printed numbers confirm a
 //     5% default here (597150 × 1.05 = 627007.5; 391500 × 1.05 = 411075),
 //     independent of Accommodation's fixed 5% — FR-QUO-9's own "editable... if it varies" (SRS §4.9/A9) is
@@ -36,7 +36,7 @@ import { getDistinctDates } from './session-dates';
 //   - Zero or more manually-added rows (FR-QUO-9a) — name, optional note,
 //     and a plain entered amount.
 //   - A Grand Total: every venue row + the one Food Cost row + Accommodation
-//     + every manual row, all summed from their own Total Cost with GST —
+//     + every manual row, all summed from their last Total Cost —
 //     verified against both reference quotations' printed Grand Totals
 //     (Rs. 10,73,208 /- and Rs. 9,49,555 /-) to the rupee.
 

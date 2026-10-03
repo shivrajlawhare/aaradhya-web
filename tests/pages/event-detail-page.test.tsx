@@ -1925,7 +1925,8 @@ describe('EventDetailPage — header, Summary Strip and session cards (DEV-10)',
     expect(screen.getByText('Wedding')).toBeInTheDocument();
     expect(stripValue('Dates')).toBe('12 – 14 Dec 2026');
     expect(stripValue('Venues')).toBe('Lawn · Full Banquet');
-    expect(stripValue('Guests')).toBe('700 pax');
+    // R7 (V8): no Guests tile.
+    expect(screen.queryByText('Guests', { selector: 'dt' })).not.toBeInTheDocument();
     expect(stripValue('Sessions')).toBe('2');
     // Venues only here: 80000 + 120000.
     expect(stripValue('Grand Total')).toBe('2,00,000');
@@ -1943,6 +1944,29 @@ describe('EventDetailPage — header, Summary Strip and session cards (DEV-10)',
     expect(screen.queryByText('Grand Total')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete Event' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
+  });
+
+  // DEV-18 (R7, V8): Dates · Venues · Sessions (+ Grand Total for the Event
+  // Manager) — no Guests tile for any role, on desktop or mobile.
+  it.each([
+    ['EventManager', true, ['Dates', 'Venues', 'Sessions', 'Grand Total']],
+    ['FnBHead', true, ['Dates', 'Venues', 'Sessions']],
+    ['Housekeeping', false, ['Dates', 'Venues', 'Sessions']],
+    ['Reception', false, ['Dates', 'Venues', 'Sessions']],
+  ])('shows %s a Summary Strip without Guests (desktop: %s)', async (role, isDesktop, labels) => {
+    mockMatchMedia(isDesktop);
+    seedSession(role);
+    mockEventDetailApi({ event: makeEvent({ sessions: twoSessions }) });
+    renderPage();
+
+    const summary = await screen.findByLabelText('Event summary');
+    expect(
+      within(summary)
+        .getAllByRole('term')
+        .map((term) => term.textContent)
+    ).toEqual(labels);
+    expect(within(summary).queryByText('Guests')).not.toBeInTheDocument();
+    expect(within(summary).queryByText(/pax$/)).not.toBeInTheDocument();
   });
 
   it('moves Delete Event into the ⋮ menu on mobile, opening the confirm sheet', async () => {

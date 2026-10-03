@@ -33,7 +33,7 @@ export const eventTypeFieldStyles: SxProps<Theme> = {
   width: { xs: '100%', md: EVENT_TYPE_FIELD_WIDTH },
 };
 
-// Name · Note (fills) · Total Cost with GST on desktop; stacked on mobile.
+// Name · Note (fills) · Total Cost on desktop; stacked on mobile.
 export const lineItemFieldsStyles: SxProps<Theme> = {
   display: 'grid',
   gridTemplateColumns: { xs: '1fr', md: `1fr 2fr ${AMOUNT_FIELD_WIDTH}px` },

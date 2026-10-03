@@ -13,8 +13,9 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { ACCOMMODATION_GST_RATE_PERCENT } from '../../utils/accommodation-calculations';
 import type { ManualLineItem, TotalCostSummaryResult } from '../../utils/total-cost-summary';
-import { formatAmount } from '../event-detail/format-amount';
+import { formatAmount, formatRupees } from '../event-detail/format-amount';
 import {
   amountCellStyles,
   captionStyles,
@@ -34,6 +35,10 @@ import {
   summaryCardStyles,
   tableStyles,
 } from './review-cost-summary.styles';
+
+// R4/R6: both amount columns read "Total Cost" (no "with GST"); line-item
+// amounts are final, so the label is accurate (V11).
+const TOTAL_COST_LABEL = 'Total Cost';
 
 const PERCENT_ADORNMENT = { input: { endAdornment: <InputAdornment position="end">%</InputAdornment> } };
 
@@ -128,7 +133,7 @@ const ReviewCostSummary = ({
                 <SummaryListItem
                   key={row.id}
                   label={row.label}
-                  caption="Total Cost with GST"
+                  caption={TOTAL_COST_LABEL}
                   amount={<Typography variant="numeric">{formatAmount(row.amount)}</Typography>}
                 />
               ))}
@@ -151,7 +156,7 @@ const ReviewCostSummary = ({
             </Box>
             <Box sx={inlineLabelStyles}>
               <Typography variant="bodyS" sx={foodCostLabelStyles}>
-                Total Cost
+                {TOTAL_COST_LABEL}
               </Typography>
               <Typography variant="numeric" sx={foodCostAmountStyles}>
                 {formatAmount(summary.foodCostTotal)}
@@ -159,7 +164,7 @@ const ReviewCostSummary = ({
             </Box>
             <Box sx={inlineLabelStyles}>
               <Typography variant="bodyS" sx={foodCostLabelStyles}>
-                Total Cost with GST
+                {TOTAL_COST_LABEL}
               </Typography>
               <Typography variant="numeric" sx={foodCostAmountStyles}>
                 {formatAmount(summary.foodCostWithGst)}
@@ -168,7 +173,7 @@ const ReviewCostSummary = ({
           </Box>
           <SummaryListItem
             label="Accommodation"
-            caption="Total Cost with GST"
+            caption={`${TOTAL_COST_LABEL} ${formatRupees(summary.accommodationTaxable)} · GST ${formatRupees(summary.accommodationGst)}`}
             amount={<Typography variant="numeric">{formatAmount(summary.accommodationTotal)}</Typography>}
           />
           {summary.manualLineItems.map((item) => (
@@ -208,10 +213,10 @@ const ReviewCostSummary = ({
               Cost per Plate
             </TableCell>
             <TableCell align="right" sx={headerCellStyles}>
-              Total Cost
+              {TOTAL_COST_LABEL}
             </TableCell>
             <TableCell align="right" sx={headerCellStyles}>
-              Total Cost with GST
+              {TOTAL_COST_LABEL}
             </TableCell>
           </TableRow>
         </TableHead>
@@ -273,11 +278,22 @@ const ReviewCostSummary = ({
             </TableCell>
           </TableRow>
 
+          {/* R5 (UI-47): the Final Amount without GST, its GST under the
+              label, then the total — like the quotation's Accommodation row. */}
           <TableRow>
-            <TableCell>Accommodation</TableCell>
+            <TableCell>
+              <Typography variant="bodyM" component="p">
+                Accommodation
+              </Typography>
+              <Typography variant="bodyS" component="p" sx={captionStyles}>
+                {`GST ${ACCOMMODATION_GST_RATE_PERCENT}% · ${formatAmount(summary.accommodationGst)}`}
+              </Typography>
+            </TableCell>
             <TableCell />
             <TableCell />
-            <TableCell />
+            <TableCell align="right" sx={amountCellStyles}>
+              {formatAmount(summary.accommodationTaxable)}
+            </TableCell>
             <TableCell align="right" sx={amountCellStyles}>
               {formatAmount(summary.accommodationTotal)}
             </TableCell>

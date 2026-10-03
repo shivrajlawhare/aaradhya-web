@@ -193,3 +193,13 @@ describe('Settings — One Day Event (DEV-11)', () => {
     expect(await screen.findByRole('form', { name: 'One Day Event template' })).toBeInTheDocument();
   });
 });
+
+describe('Settings — One Day Event line items copy (DEV-18)', () => {
+  it('labels the line-item amount "Total Cost", never "Total Cost with GST"', async () => {
+    renderSettings();
+    const form = await openOneDayEventSection();
+
+    expect(within(form).queryByText(/Total Cost with GST/)).not.toBeInTheDocument();
+    expect(within(form).getAllByLabelText('Total Cost').length).toBeGreaterThan(0);
+  });
+});

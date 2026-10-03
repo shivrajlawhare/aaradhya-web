@@ -8,7 +8,6 @@ const session = (overrides: Partial<Parameters<typeof computeEventSummary>[0]['s
   endDate: '2026-12-12T00:00:00.000Z',
   venue: 'Lawn',
   venueCost: 80000,
-  pax: 250,
   sessionStatus: SessionStatus.Active,
   items: [],
   ...overrides,
@@ -33,7 +32,7 @@ describe('formatDateRange (Summary Strip)', () => {
 });
 
 describe('computeEventSummary', () => {
-  it('rolls up dates, distinct venues, guests and sessions, ignoring Cancelled sessions', () => {
+  it('rolls up dates, distinct venues and sessions, ignoring Cancelled sessions', () => {
     const summary = computeEventSummary(
       {
         sessions: [
@@ -42,15 +41,13 @@ describe('computeEventSummary', () => {
             startDate: '2026-12-13T00:00:00.000Z',
             endDate: '2026-12-13T00:00:00.000Z',
             venue: 'Poolside',
-            pax: 120,
           }),
           session({
             startDate: '2026-12-14T00:00:00.000Z',
             endDate: '2026-12-14T00:00:00.000Z',
             venue: 'Full Banquet',
-            pax: 450,
           }),
-          session({ venue: 'Lawn', pax: 999, sessionStatus: SessionStatus.Cancelled }),
+          session({ venue: 'Lawn', sessionStatus: SessionStatus.Cancelled }),
         ],
       },
       false
@@ -59,7 +56,6 @@ describe('computeEventSummary', () => {
     expect(summary).toEqual({
       dates: '12 – 14 Dec 2026',
       venues: 'Lawn · Poolside · Full Banquet',
-      guests: 820,
       sessions: 3,
       grandTotal: null,
     });
@@ -70,7 +66,6 @@ describe('computeEventSummary', () => {
 
     expect(summary.dates).toBe('—');
     expect(summary.venues).toBe('—');
-    expect(summary.guests).toBe(0);
     expect(summary.grandTotal).toBe(0);
   });
 

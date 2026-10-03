@@ -475,7 +475,7 @@ const TemplateForm = ({ template, venues, roomTypes, eventTypeNames, menuItemOpt
             />
             <TextField label="Note (optional)" {...register(`lineItems.${index}.note`)} />
             <TextField
-              label="Total Cost with GST"
+              label="Total Cost"
               type="number"
               slotProps={NUMBER_INPUT}
               {...register(`lineItems.${index}.amount`, { valueAsNumber: true })}
